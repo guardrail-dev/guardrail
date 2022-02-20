@@ -70,7 +70,8 @@ object ProtocolGenerator {
   private[this] def fromEnum[L <: LA, F[_], A](
       clsName: String,
       schema: Tracker[Schema[A]],
-      dtoPackage: List[String]
+      dtoPackage: List[String],
+      components: Tracker[Option[Components]]
   )(implicit
       P: ProtocolTerms[L, F],
       F: FrameworkTerms[L, F],
@@ -135,7 +136,7 @@ object ProtocolGenerator {
     for {
       enum          <- extractEnum(schema.map(wrapEnumSchema))
       customTpeName <- SwaggerUtil.customTypeName(schema)
-      tpe           <- SwaggerUtil.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName))
+      tpe           <- SwaggerUtil.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
       fullType      <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -165,7 +166,8 @@ object ProtocolGenerator {
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String],
       supportPackage: List[String],
-      defaultPropertyRequirement: PropertyRequirement
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
   )(implicit
       F: FrameworkTerms[L, F],
       P: ProtocolTerms[L, F],
@@ -188,7 +190,7 @@ object ProtocolGenerator {
     for {
       parents <- hierarchy.model
         .refine[F[List[SuperClass[L]]]] { case c: ComposedSchema => c }(
-          extractParents(_, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
+          extractParents(_, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
         )
         .getOrElse(List.empty[SuperClass[L]].pure[F])
       props <- extractProperties(hierarchy.model)
@@ -230,13 +232,14 @@ object ProtocolGenerator {
     )
   }
 
-  def extractParents[L <: LA, F[_]](
+  private def extractParents[L <: LA, F[_]](
       elem: Tracker[ComposedSchema],
       definitions: List[(String, Tracker[Schema[_]])],
       concreteTypes: List[PropMeta[L]],
       dtoPackage: List[String],
       supportPackage: List[String],
-      defaultPropertyRequirement: PropertyRequirement
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
   )(implicit
       F: FrameworkTerms[L, F],
       P: ProtocolTerms[L, F],
@@ -281,7 +284,8 @@ object ProtocolGenerator {
             definitions,
             dtoPackage,
             supportPackage,
-            defaultPropertyRequirement
+            defaultPropertyRequirement,
+            components
           )
           interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).unwrapTracker.map(_.split("/").last))
           tpe <- parseTypeName(clsName)
@@ -314,7 +318,8 @@ object ProtocolGenerator {
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String],
       supportPackage: List[String],
-      defaultPropertyRequirement: PropertyRequirement
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
   )(implicit
       F: FrameworkTerms[L, F],
       P: ProtocolTerms[L, F],
@@ -337,7 +342,8 @@ object ProtocolGenerator {
         definitions,
         dtoPackage,
         supportPackage,
-        defaultPropertyRequirement
+        defaultPropertyRequirement,
+        components
       )
       defn        <- renderDTOClass(clsName.last, supportPackage, params, parents)
       encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
@@ -381,7 +387,8 @@ object ProtocolGenerator {
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String],
       supportPackage: List[String],
-      defaultPropertyRequirement: PropertyRequirement
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
   )(implicit
       F: FrameworkTerms[L, F],
       P: ProtocolTerms[L, F],
@@ -398,11 +405,12 @@ object ProtocolGenerator {
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
         defn <- schema
           .refine[F[Option[Either[String, NestedProtocolElems[L]]]]] { case x: ObjectSchema => x }(_ =>
-            fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage, supportPackage, defaultPropertyRequirement).map(Option(_))
+            fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage, supportPackage, defaultPropertyRequirement, components)
+              .map(Option(_))
           )
           .orRefine { case o: ComposedSchema => o }(o =>
             for {
-              parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement)
+              parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
               maybeClassDefinition <- fromModel(
                 nestedClassName,
                 schema,
@@ -411,13 +419,14 @@ object ProtocolGenerator {
                 definitions,
                 dtoPackage,
                 supportPackage,
-                defaultPropertyRequirement
+                defaultPropertyRequirement,
+                components
               )
             } yield Option(maybeClassDefinition)
           )
           .orRefine { case a: ArraySchema => a }(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
           .orRefine { case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s }(s =>
-            fromEnum(nestedClassName.last, s, dtoPackage).map(Option(_))
+            fromEnum(nestedClassName.last, s, dtoPackage, components).map(Option(_))
           )
           .getOrElse(Option.empty[Either[String, NestedProtocolElems[L]]].pure[F])
       } yield defn
@@ -428,7 +437,7 @@ object ProtocolGenerator {
           typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
           tpe                   <- selectType(typeName)
           maybeNestedDefinition <- processProperty(name, schema)
-          resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema)
+          resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema, components)
           customType            <- SwaggerUtil.customTypeName(schema)
           propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
           defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
@@ -514,7 +523,7 @@ object ProtocolGenerator {
     } yield newParams
   }
 
-  def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Tracker[Schema[_]])(implicit
+  def modelTypeAlias[L <: LA, F[_]](clsName: String, abstractModel: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
@@ -536,7 +545,7 @@ object ProtocolGenerator {
       tpe <- model.fold[F[L#Type]](objectType(None)) { m =>
         for {
           tpeName <- SwaggerUtil.customTypeName[L, F, Tracker[ObjectSchema]](m)
-          res     <- SwaggerUtil.determineTypeName[L, F](m, Tracker.cloneHistory(m, tpeName))
+          res     <- SwaggerUtil.determineTypeName[L, F](m, Tracker.cloneHistory(m, tpeName), components)
         } yield res
       }
       res <- typeAlias[L, F](clsName, tpe)
@@ -660,18 +669,19 @@ object ProtocolGenerator {
     import P._
     import Sc._
 
-    val definitions = swagger.downField("components", _.getComponents()).flatDownField("schemas", _.getSchemas()).indexedCosequence
+    val components  = swagger.downField("components", _.getComponents())
+    val definitions = components.flatDownField("schemas", _.getSchemas()).indexedCosequence
     Sw.log.function("ProtocolGenerator.fromSwagger")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[L, F](definitions.value)
-      polyADTs      <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement))
+      polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
       elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model
           .refine { case m: StringSchema => m }(m =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              enum             <- fromEnum(formattedClsName, m, dtoPackage)
+              enum             <- fromEnum(formattedClsName, m, dtoPackage, components)
               model <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 m,
@@ -680,15 +690,16 @@ object ProtocolGenerator {
                 definitions.value,
                 dtoPackage,
                 supportPackage.toList,
-                defaultPropertyRequirement
+                defaultPropertyRequirement,
+                components
               )
-              alias <- modelTypeAlias(clsName, m)
+              alias <- modelTypeAlias(clsName, m, components)
             } yield enum.orElse(model).getOrElse(alias)
           )
           .orRefine { case c: ComposedSchema => c }(comp =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              parents          <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement)
+              parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components)
               model <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 comp,
@@ -697,9 +708,10 @@ object ProtocolGenerator {
                 definitions.value,
                 dtoPackage,
                 supportPackage.toList,
-                defaultPropertyRequirement
+                defaultPropertyRequirement,
+                components
               )
-              alias <- modelTypeAlias(formattedClsName, comp)
+              alias <- modelTypeAlias(formattedClsName, comp, components)
             } yield model.getOrElse(alias)
           )
           .orRefine { case a: ArraySchema => a }(arr =>
@@ -711,7 +723,7 @@ object ProtocolGenerator {
           .orRefine { case o: ObjectSchema => o }(m =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              enum             <- fromEnum(formattedClsName, m, dtoPackage)
+              enum             <- fromEnum(formattedClsName, m, dtoPackage, components)
               model <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 m,
@@ -720,15 +732,16 @@ object ProtocolGenerator {
                 definitions.value,
                 dtoPackage,
                 supportPackage.toList,
-                defaultPropertyRequirement
+                defaultPropertyRequirement,
+                components
               )
-              alias <- modelTypeAlias(formattedClsName, m)
+              alias <- modelTypeAlias(formattedClsName, m, components)
             } yield enum.orElse(model).getOrElse(alias)
           )
           .orRefine { case x: IntegerSchema => x }(x =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              enum             <- fromEnum(formattedClsName, x, dtoPackage)
+              enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
               model <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
@@ -737,10 +750,11 @@ object ProtocolGenerator {
                 definitions.value,
                 dtoPackage,
                 supportPackage.toList,
-                defaultPropertyRequirement
+                defaultPropertyRequirement,
+                components
               )
               customTypeName <- SwaggerUtil.customTypeName(x)
-              tpe            <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName))
+              tpe            <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName), components)
               alias          <- typeAlias[L, F](formattedClsName, tpe)
             } yield enum.orElse(model).getOrElse(alias)
           )
@@ -748,7 +762,7 @@ object ProtocolGenerator {
             for {
               formattedClsName <- formatTypeName(clsName)
               customTypeName   <- SwaggerUtil.customTypeName(x)
-              tpe              <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName))
+              tpe              <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName), components)
               res              <- typeAlias[L, F](formattedClsName, tpe)
             } yield res
           )
@@ -816,6 +830,5 @@ object ProtocolGenerator {
           .orRefine { case p: StringSchema => p }(p => Default(p).extract[String].fold(empty)(litString(_).map(Some(_))))
           .getOrElse(empty)
     }
-
   }
 }

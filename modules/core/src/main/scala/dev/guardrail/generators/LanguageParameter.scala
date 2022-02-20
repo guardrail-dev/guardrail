@@ -13,7 +13,7 @@ import dev.guardrail.languages.LA
 import dev.guardrail.shims._
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SchemaLiteral, SchemaRef, SwaggerTerms }
 
 case class RawParameterName private[generators] (value: String)
 class LanguageParameters[L <: LA](val parameters: List[LanguageParameter[L]]) {
@@ -78,12 +78,15 @@ object LanguageParameter {
       def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => F[Tracker[String]]): F[(ResolvedType[L], Boolean)] =
         for {
           tpeName <- typeFetcher(param)
-          schema  <- getBodyParameterSchema(param)
+          schema <- getParameterSchema(param, components).map(_.map {
+            case SchemaLiteral(schema)               => schema
+            case SchemaRef(SchemaLiteral(schema), _) => schema
+          })
           fmt = schema.downField("format", _.getFormat)
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
           customSchemaTypeName <- SwaggerUtil.customTypeName(schema.unwrapTracker)
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
-          res <- (SwaggerUtil.determineTypeName[L, F](schema, customTypeName), getDefault(schema))
+          res <- (SwaggerUtil.determineTypeName[L, F](schema, customTypeName, components), getDefault(schema))
             .mapN(core.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
           required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
         } yield (res, required)
@@ -105,7 +108,10 @@ object LanguageParameter {
         )
         .orRefine { case x: Parameter if x.isInBody => x }(param =>
           for {
-            schema   <- getBodyParameterSchema(param)
+            schema <- getParameterSchema(param, components).map(_.map {
+              case SchemaLiteral(schema)               => schema
+              case SchemaRef(SchemaLiteral(schema), _) => schema
+            })
             resolved <- SwaggerUtil.modelMetaType[L, F](schema)
             required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
           } yield (resolved, required)

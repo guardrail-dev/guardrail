@@ -7,7 +7,7 @@ import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.syntax.all._
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.implicits._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SecurityScheme, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SchemaLiteral, SchemaProjection, SchemaRef, SecurityScheme, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.core.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable, VendorExtension }
 import dev.guardrail.core.extract.VendorExtension.VendorExtensible._
@@ -40,7 +40,7 @@ object SwaggerUtil {
   def modelMetaType[L <: LA, F[_]](
       model: Tracker[Schema[_]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
-    propMetaImpl[L, F](model)(Left(_))
+    propMetaImpl[L, F](model, Tracker.cloneHistory(model, None))(Left(_))
 
   def extractConcreteTypes[L <: LA, F[_]](
       definitions: List[(String, Tracker[Schema[_]])]
@@ -85,10 +85,11 @@ object SwaggerUtil {
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
   def determineTypeName[L <: LA, F[_]](
-      schema: Tracker[Schema[_]],
-      customType: Tracker[Option[String]]
+      rawSchema: Tracker[Schema[_]],
+      customType: Tracker[Option[String]],
+      components: Tracker[Option[Components]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[L#Type] =
-    Sw.log.function(s"determineTypeName(${schema.unwrapTracker}, ${customType.unwrapTracker})") {
+    Sw.log.function(s"determineTypeName(${rawSchema.unwrapTracker}, ${customType.unwrapTracker})") {
       import Sc._
       import Cl._
       import Fw._
@@ -96,8 +97,8 @@ object SwaggerUtil {
       def log(fmt: Option[String], t: L#Type): L#Type = {
         fmt.foreach { fmt =>
           println(
-            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${schema.unwrapTracker
-                .getType()}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${schema.showHistory})"
+            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${rawSchema.unwrapTracker
+                .getType()}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${rawSchema.showHistory})"
           )
         }
 
@@ -105,6 +106,12 @@ object SwaggerUtil {
       }
 
       for {
+        schemaProjection <- rawSchema
+          .downField("$ref", _.get$ref())
+          .indexedDistribute
+          .fold[F[Tracker[SchemaProjection]]](rawSchema.map(SchemaLiteral(_): SchemaProjection).pure[F]) { ref =>
+            Sw.dereferenceSchema(ref, components).map(_.map(schema => SchemaRef(SchemaLiteral(schema), ref.unwrapTracker)))
+          }
         customTpe <- customType.indexedDistribute.flatTraverse(x => liftCustomType[L, F](x))
         result <- customTpe.fold {
           def const(value: F[L#Type]): Tracker[Schema[_]] => F[L#Type] = { _ => value }
@@ -112,35 +119,41 @@ object SwaggerUtil {
             val fmt = schema.downField("format", _.getFormat()).unwrapTracker
             func(fmt)
           }
-          schema
-            .refine[F[L#Type]] { case x: StringSchema if x.getFormat() == "uuid" => x }(const(uuidType()))
-            .orRefine { case x: StringSchema if x.getType() == "file" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
-            .orRefine { case x: StringSchema if x.getFormat() == "password" => x }(const(stringType(None)))
-            .orRefine { case x: StringSchema if x.getFormat() == "email" => x }(const(stringType(None)))
-            .orRefine { case x: StringSchema if x.getFormat() == "date" => x }(const(dateType()))
-            .orRefine { case x: StringSchema if x.getFormat() == "date-time" => x }(const(dateTimeType()))
-            .orRefine { case x: StringSchema if x.getFormat() == "byte" => x }(const(bytesType()))
-            .orRefine { case x: StringSchema if x.getFormat() == "binary" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
-            .orRefine { case x: StringSchema => x }(extractFormat(fmt => stringType(None).map(log(fmt, _))))
-            .orRefine { case x: NumberSchema if x.getFormat() == "float" => x }(const(floatType()))
-            .orRefine { case x: NumberSchema if x.getFormat() == "double" => x }(const(doubleType()))
-            .orRefine { case x: NumberSchema => x }(extractFormat(fmt => numberType(fmt).map(log(fmt, _))))
-            .orRefine { case x: IntegerSchema if x.getFormat() == "int32" => x }(const(intType()))
-            .orRefine { case x: IntegerSchema if x.getFormat() == "int64" => x }(const(longType()))
-            .orRefine { case x: IntegerSchema => x }(extractFormat(fmt => integerType(fmt).map(log(fmt, _))))
-            .orRefine { case x: BooleanSchema => x }(extractFormat(fmt => booleanType(fmt).map(log(fmt, _))))
-            .orRefine { case x: ArraySchema => x }(schema =>
+          schemaProjection
+            .refine[F[L#Type]] { case SchemaRef(_, ref) => ref }(ref => fallbackType(ref.unwrapTracker.split("/").lastOption, None))
+            .orRefine { case SchemaLiteral(x: ObjectSchema) if Option(x.getEnum).map(_.asScala).exists(_.nonEmpty) => x }(
+              extractFormat(fmt => stringType(None).map(log(fmt, _)))
+            )
+            .orRefine { case SchemaLiteral(x: UUIDSchema) => x }(const(uuidType()))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getType() == "file" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "password" => x }(const(stringType(None)))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "email" => x }(const(stringType(None)))
+            .orRefine { case SchemaLiteral(x: DateSchema) => x }(const(dateType()))
+            .orRefine { case SchemaLiteral(x: DateTimeSchema) => x }(const(dateTimeType()))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "byte" => x }(const(bytesType()))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "binary" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: StringSchema) => x }(extractFormat(fmt => stringType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: NumberSchema) if x.getFormat() == "float" => x }(const(floatType()))
+            .orRefine { case SchemaLiteral(x: NumberSchema) if x.getFormat() == "double" => x }(const(doubleType()))
+            .orRefine { case SchemaLiteral(x: NumberSchema) => x }(extractFormat(fmt => numberType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: IntegerSchema) if x.getFormat() == "int32" => x }(const(intType()))
+            .orRefine { case SchemaLiteral(x: IntegerSchema) if x.getFormat() == "int64" => x }(const(longType()))
+            .orRefine { case SchemaLiteral(x: IntegerSchema) => x }(extractFormat(fmt => integerType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: BooleanSchema) => x }(extractFormat(fmt => booleanType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: ArraySchema) => x }(schema =>
               schema
                 .downField("items", _.getItems())
-                .cotraverse(determineTypeName(_, Tracker.cloneHistory(schema, None)).flatMap(liftVectorType(_, None)))
+                .cotraverse(determineTypeName(_, Tracker.cloneHistory(schema, None), components).flatMap(liftVectorType(_, None)))
                 .getOrElse(arrayType(None))
             )
-            .orRefine { case x: FileSchema => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
-            .orRefine { case x: BinarySchema => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
-            .orRefine { case x: ObjectSchema => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
-            .orRefineFallback(schema =>
-              fallbackType(schema.downField("type", _.getType()).unwrapTracker, schema.downField("format", _.getFormat()).unwrapTracker)
-            )
+            .orRefine { case SchemaLiteral(x: FileSchema) => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: BinarySchema) => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: MapSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefineFallback { schema =>
+              println(schema)
+              ???
+            }
         }(_.pure[F])
         _ <- Sw.log.debug(s"Returning ${result}")
       } yield result
@@ -159,7 +172,7 @@ object SwaggerUtil {
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): F[core.ResolvedType[L]] = propMetaImpl(property)(Left(_))
+  ): F[core.ResolvedType[L]] = propMetaImpl(property, Tracker.cloneHistory(property, None))(Left(_))
 
   private[this] def liftCustomType[L <: LA, F[_]](s: Tracker[String])(implicit Sc: LanguageTerms[L, F]): F[Option[L#Type]] = {
     import Sc._
@@ -169,13 +182,13 @@ object SwaggerUtil {
     } else Option.empty[L#Type].pure[F]
   }
 
-  def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]])(implicit
+  def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
   ): F[core.ResolvedType[L]] =
-    propMetaImpl(property)(
+    propMetaImpl(property, components)(
       _.refine[core.ResolvedType[L]] { case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
         core.Resolved[L](tpe, None, None, None, None)
       ).orRefine { case c: ComposedSchema => c }(_ => core.Resolved[L](tpe, None, None, None, None))
@@ -186,7 +199,8 @@ object SwaggerUtil {
     )
 
   private def resolveScalarTypes[L <: LA, F[_]](
-      partial: Either[Tracker[Schema[_]], F[core.ResolvedType[L]]]
+      partial: Either[Tracker[Schema[_]], F[core.ResolvedType[L]]],
+      components: Tracker[Option[Components]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] = {
     import Sw._
     def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => F[core.ResolvedType[L]] = { a =>
@@ -195,7 +209,7 @@ object SwaggerUtil {
 
       for {
         customTpeName <- customTypeName(a)
-        tpe           <- determineTypeName[L, F](a, Tracker.cloneHistory(a, customTpeName))
+        tpe           <- determineTypeName[L, F](a, Tracker.cloneHistory(a, customTpeName), components)
       } yield core.Resolved[L](tpe, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker)
     }
 
@@ -236,7 +250,7 @@ object SwaggerUtil {
       .orRefineFallback(_ => resolved.pure[F])
   }
 
-  private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]])(
+  private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]], components: Tracker[Option[Components]])(
       strategy: Tracker[Schema[_]] => Either[Tracker[Schema[_]], F[core.ResolvedType[L]]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
     Sw.log.function("propMeta") {
@@ -245,8 +259,10 @@ object SwaggerUtil {
       import Cl._
       import Sw._
 
-      log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})") >> (
-        strategy(property)
+      for {
+        _ <- log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})")
+
+        res <- strategy(property)
           .orRefine { case o: ObjectSchema => o }(o =>
             for {
               customTpeName <- customTypeName(o)
@@ -257,7 +273,7 @@ object SwaggerUtil {
           .orRefine { case arr: ArraySchema => arr }(arr =>
             for {
               items <- getItems(arr)
-              meta  <- propMetaImpl[L, F](items)(strategy)
+              meta  <- propMetaImpl[L, F](items, components)(strategy)
               rawType   = arr.downField("type", _.getType())
               rawFormat = arr.downField("format", _.getFormat())
               arrayType <- customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
@@ -281,7 +297,7 @@ object SwaggerUtil {
                 .refine[F[core.ResolvedType[L]]] { case b: java.lang.Boolean => b }(_ =>
                   objectType(None).map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
                 )
-                .orRefine { case s: Schema[_] => s }(s => propMetaImpl[L, F](s)(strategy))
+                .orRefine { case s: Schema[_] => s }(s => propMetaImpl[L, F](s, components)(strategy))
                 .orRefineFallback { s =>
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
                     .map(core.Resolved[L](_, None, None, rawType.unwrapTracker, rawFormat.unwrapTracker))
@@ -296,10 +312,10 @@ object SwaggerUtil {
             } yield res
           }
           .orRefine { case ref: Schema[_] if Option(ref.get$ref).isDefined => ref }(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
-        )
-        .pure[F]
-        .flatMap(resolveScalarTypes[L, F])
-        .flatMap(enrichWithDefault[L, F](property))
+          .pure[F]
+        scalarResolved <- resolveScalarTypes[L, F](res, components)
+        withDefaults   <- enrichWithDefault[L, F](property).apply(scalarResolved)
+      } yield withDefaults
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](

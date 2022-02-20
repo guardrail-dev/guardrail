@@ -199,10 +199,18 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
       .raiseErrorIfEmpty("Name not specified")
       .map(_.unwrapTracker)
 
-  override def getBodyParameterSchema(parameter: Tracker[Parameter]) =
-    parameter
-      .downField("schema", _.getSchema())
-      .raiseErrorIfEmpty("Schema not specified")
+  override def getParameterSchema(parameter: Tracker[Parameter], components: Tracker[Option[Components]]) =
+    for {
+      schema <- parameter
+        .downField("schema", _.getSchema())
+        .raiseErrorIfEmpty("Schema not specified")
+      dereferenced <- schema
+        .downField("$ref", _.get$ref())
+        .indexedDistribute
+        .fold[Target[Tracker[SchemaProjection]]](Target.pure(schema.map(SchemaLiteral)))(ref =>
+          dereferenceSchema(ref, components).map(_.map(schema => SchemaRef(SchemaLiteral(schema), ref.unwrapTracker)))
+        )
+    } yield dereferenced
 
   override def getHeaderParameterType(parameter: Tracker[Parameter]) =
     parameterSchemaType(parameter)

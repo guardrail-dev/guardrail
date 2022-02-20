@@ -13,6 +13,10 @@ import dev.guardrail.core.{ Mappish, Tracker }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol._
 
+sealed trait SchemaProjection
+case class SchemaLiteral(schema: Schema[_])              extends SchemaProjection
+case class SchemaRef(schema: SchemaLiteral, ref: String) extends SchemaProjection
+
 abstract class SwaggerLogAdapter[F[_]] {
   def schemaToString(value: Schema[_]): String = "    " + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n    ")
   def function[A](name: String): F[A] => F[A]
@@ -41,7 +45,7 @@ abstract class SwaggerTerms[L <: LA, F[_]] {
   def extractMutualTLSSecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]): F[MutualTLSSecurityScheme[L]]
   def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: Context.TagsBehaviour): F[List[String]]
   def getParameterName(parameter: Tracker[Parameter]): F[String]
-  def getBodyParameterSchema(parameter: Tracker[Parameter]): F[Tracker[Schema[_]]]
+  def getParameterSchema(parameter: Tracker[Parameter], components: Tracker[Option[Components]]): F[Tracker[SchemaProjection]]
   def getHeaderParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
   def getPathParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
   def getQueryParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
