@@ -133,8 +133,7 @@ object JacksonProtocolGenerator {
                   .discriminatorExpression[ScalaLanguage](
                     param.name.value,
                     discriminatorValue(discriminator, className),
-                    param.rawType.tpe,
-                    param.rawType.format
+                    param.rawType
                   )(
                     v => Target.pure[Term](q"""BigInt(${Lit.String(v)})"""),
                     v => Target.pure[Term](q"""BigDecimal(${Lit.String(v)})"""),

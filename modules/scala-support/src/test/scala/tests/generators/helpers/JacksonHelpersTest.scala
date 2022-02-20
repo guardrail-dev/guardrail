@@ -1,5 +1,6 @@
 package tests.generators.helpers
 
+import dev.guardrail.core.LiteralRawType
 import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.jackson.JacksonHelpers
 import dev.guardrail.generators.scala.ScalaLanguage
@@ -22,8 +23,7 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
     JacksonHelpers.discriminatorExpression[ScalaLanguage](
       "discrim",
       value,
-      Some(tpe),
-      fmt
+      LiteralRawType(Some(tpe), fmt)
     )(
       v => Target.pure[Term](q"""BigInt(${Lit.String(v)})"""),
       v => Target.pure[Term](q"""BigDecimal(${Lit.String(v)})"""),

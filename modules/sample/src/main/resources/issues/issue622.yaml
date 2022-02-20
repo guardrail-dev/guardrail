@@ -16,22 +16,22 @@ paths:
           in: query
           required: true
           schema:
-            $ref: "#!/components/schemas/refvec"
+            $ref: "#/components/schemas/refvec"
         - name: reflist
           in: query
           required: true
           schema:
-            $ref: "#!/components/schemas/reflist"
+            $ref: "#/components/schemas/reflist"
         - name: refseq
           in: query
           required: true
           schema:
-            $ref: "#!/components/schemas/refseq"
+            $ref: "#/components/schemas/refseq"
         - name: refidxseq
           in: query
           required: true
           schema:
-            $ref: "#!/components/schemas/refidxseq"
+            $ref: "#/components/schemas/refidxseq"
         - name: vector
           in: query
           required: true
@@ -72,22 +72,22 @@ paths:
           in: query
           required: false
           schema:
-            $ref: "#!/components/schemas/refvec"
+            $ref: "#/components/schemas/refvec"
         - name: optreflist
           in: query
           required: false
           schema:
-            $ref: "#!/components/schemas/reflist"
+            $ref: "#/components/schemas/reflist"
         - name: optrefseq
           in: query
           required: false
           schema:
-            $ref: "#!/components/schemas/refseq"
+            $ref: "#/components/schemas/refseq"
         - name: optrefidxseq
           in: query
           required: false
           schema:
-            $ref: "#!/components/schemas/refidxseq"
+            $ref: "#/components/schemas/refidxseq"
         - name: optvector
           in: query
           required: false

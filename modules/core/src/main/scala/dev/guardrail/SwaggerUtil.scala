@@ -227,6 +227,7 @@ object SwaggerUtil {
     schema
       .refine[F[core.ResolvedType[L]]]({ case b: BooleanSchema => b })(buildResolve(litBoolean))
       .orRefine({ case s: StringSchema => s })(buildResolve(litString))
+      .orRefine({ case s: IntegerSchema => s })(buildResolve(litInt))
       .orRefineFallback(_ => resolved.pure[F])
   }
 

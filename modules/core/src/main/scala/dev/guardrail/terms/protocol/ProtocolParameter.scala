@@ -1,7 +1,7 @@
 package dev.guardrail.terms.protocol
 
-import dev.guardrail.core.{ EmptyToNullBehaviour, RedactionBehaviour }
-import dev.guardrail.generators.{ RawParameterName, RawParameterType }
+import dev.guardrail.core.{ EmptyToNullBehaviour, RedactionBehaviour, ReifiedRawType }
+import dev.guardrail.generators.RawParameterName
 import dev.guardrail.languages.LA
 
 case class ProtocolParameter[L <: LA](
@@ -9,7 +9,7 @@ case class ProtocolParameter[L <: LA](
     baseType: L#Type,
     name: RawParameterName,
     dep: Option[L#TermName],
-    rawType: RawParameterType,
+    rawType: ReifiedRawType,
     readOnlyKey: Option[String],
     emptyToNull: EmptyToNullBehaviour,
     dataRedaction: RedactionBehaviour,

@@ -1,5 +1,6 @@
 package tests.generators.helpers
 
+import dev.guardrail.core.LiteralRawType
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.jackson.JacksonHelpers
 import dev.guardrail.generators.java.JavaLanguage
@@ -28,8 +29,7 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
     JacksonHelpers.discriminatorExpression[JavaLanguage](
       "discrim",
       value,
-      Some(tpe),
-      fmt
+      LiteralRawType(Some(tpe), fmt)
     )(
       v => Target.pure[ast.Node](new expr.ObjectCreationExpr(null, BIG_INTEGER_FQ_TYPE, new ast.NodeList(new expr.StringLiteralExpr(v)))),
       v => Target.pure[ast.Node](new expr.ObjectCreationExpr(null, BIG_DECIMAL_FQ_TYPE, new ast.NodeList(new expr.StringLiteralExpr(v)))),

@@ -6,10 +6,10 @@ import java.nio.file.Path
 
 import dev.guardrail._
 import dev.guardrail.core.Tracker
-import dev.guardrail.generators.RawParameterType
 import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol.StrictProtocolElems
+import dev.guardrail.core.ReifiedRawType
 
 abstract class LanguageTerms[L <: LA, F[_]] { self =>
   def MonadF: Monad[F]
@@ -67,7 +67,7 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
   def widenObjectDefinition(value: L#ObjectDefinition): F[L#Definition]
 
   def findCommonDefaultValue(history: String, a: Option[L#Term], b: Option[L#Term]): F[Option[L#Term]]
-  def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType): F[RawParameterType]
+  def findCommonRawType(history: String, a: ReifiedRawType, b: ReifiedRawType): F[ReifiedRawType]
 
   def renderImplicits(
       pkgPath: Path,
@@ -178,7 +178,7 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
       widenClassDefinition: L#ClassDefinition => F[L#Definition] = self.widenClassDefinition _,
       widenObjectDefinition: L#ObjectDefinition => F[L#Definition] = self.widenObjectDefinition _,
       findCommonDefaultValue: (String, Option[L#Term], Option[L#Term]) => F[Option[L#Term]] = self.findCommonDefaultValue _,
-      findCommonRawType: (String, RawParameterType, RawParameterType) => F[RawParameterType] = self.findCommonRawType _,
+      findCommonRawType: (String, ReifiedRawType, ReifiedRawType) => F[ReifiedRawType] = self.findCommonRawType _,
       renderImplicits: (Path, NonEmptyList[String], List[L#Import], List[L#Import], List[L#Import]) => F[Option[WriteTree]] = self.renderImplicits _,
       renderFrameworkImplicits: (
           Path,
@@ -320,7 +320,7 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
       def widenClassDefinition(value: L#ClassDefinition)                                = newWidenClassDefinition(value)
       def widenObjectDefinition(value: L#ObjectDefinition)                              = newWidenObjectDefinition(value)
       def findCommonDefaultValue(history: String, a: Option[L#Term], b: Option[L#Term]) = newFindCommonDefaultValue(history, a, b)
-      def findCommonRawType(history: String, a: RawParameterType, b: RawParameterType)  = newFindCommonRawType(history, a, b)
+      def findCommonRawType(history: String, a: ReifiedRawType, b: ReifiedRawType)  = newFindCommonRawType(history, a, b)
       def renderImplicits(
           pkgPath: Path,
           pkgName: NonEmptyList[String],
