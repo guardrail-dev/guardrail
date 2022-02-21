@@ -72,7 +72,7 @@ object Common {
 
       paths = swagger.downField("paths", _.getPaths)
       globalSecurityRequirements = NonEmptyList
-        .fromList(swagger.downField("security", _.getSecurity).unwrapTracker)
+        .fromList(swagger.downField("security", _.getSecurity).indexedDistribute)
         .flatMap(SecurityRequirements(_, SecurityRequirements.Global))
       requestBodies    <- extractCommonRequestBodies(swagger.downField("components", _.getComponents))
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)

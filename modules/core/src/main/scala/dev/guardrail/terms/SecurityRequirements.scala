@@ -8,6 +8,7 @@ import scala.jdk.CollectionConverters._
 import scala.collection.immutable.TreeMap
 
 import dev.guardrail.terms.SecurityRequirements.SecurityScopes
+import dev.guardrail.core.Tracker
 
 object SecurityRequirements {
   type SecurityScopes = List[String]
@@ -16,10 +17,10 @@ object SecurityRequirements {
   case object Global extends Location
   case object Local  extends Location
 
-  def apply(requirements: NonEmptyList[SecurityRequirement], location: Location): Option[SecurityRequirements] = {
+  def apply(requirements: NonEmptyList[Tracker[SecurityRequirement]], location: Location): Option[SecurityRequirements] = {
     implicit val strOrder = Order.fromComparable[String]
     val requirementsList  = requirements.toList
-    val optional          = requirementsList.exists(_.isEmpty())
+    val optional          = requirementsList.exists(_.unwrapTracker.isEmpty())
 
     for {
       convertedReqs <- NonEmptyList.fromList(
@@ -27,7 +28,7 @@ object SecurityRequirements {
           .flatMap(
             req =>
               NonEmptyMap.fromMap(
-                TreeMap(req.asScala.view.mapValues(_.asScala.toList).toSeq: _*)
+                TreeMap(req.unwrapTracker.asScala.view.mapValues(_.asScala.toList).toSeq: _*)
               )
           )
       )

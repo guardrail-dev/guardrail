@@ -7,10 +7,9 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
-import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+import io.swagger.v3.oas.models.security.{ SecurityRequirement, SecurityScheme => SwSecurityScheme }
 import java.net.URI
 import scala.util.Try
-import scala.jdk.CollectionConverters._
 
 import dev.guardrail._
 import dev.guardrail.core.extract.{ ClassPrefix, PackageName }
@@ -20,6 +19,7 @@ import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
+import cats.data.NonEmptyList
 
 object SwaggerGenerator {
   def apply[L <: LA](): SwaggerTerms[L, Target] =
@@ -96,11 +96,10 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
             operationRoutes <- operationMap.indexedCosequence.value.toList.traverse({
               case (httpMethod, operation) =>
                 val securityRequirements: Option[SecurityRequirements] =
-                  operation.downField("security", _.getSecurity)(Tracker.Convincer(_.map(_.asScala.toList))).unwrapTracker.map(_.toNel) match {
-                    // the first Option is for the field existance, the second one is for the List emptiness
-                    case Some(Some(requirements)) => SecurityRequirements(requirements, SecurityRequirements.Local)
-                    case Some(None)               => globalSecurityRequirements
-                    case None                     => None
+                  operation.downField[Option[List[SecurityRequirement]]]("security", _.getSecurity()).indexedDistribute.flatMap { srs =>
+                    NonEmptyList
+                      .fromList(srs.indexedDistribute)
+                      .fold(globalSecurityRequirements)(SecurityRequirements(_, SecurityRequirements.Local))
                   }
 
                 // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
