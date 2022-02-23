@@ -69,6 +69,8 @@ object Build {
       "utf8"
     ),
     Test / scalacOptions -= "-Xfatal-warnings",
+    Compile / console / scalacOptions -= "-Xfatal-warnings",
+    Compile / consoleQuick / scalacOptions -= "-Xfatal-warnings",
     scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
     scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
     Test / parallelExecution := true,
