@@ -50,7 +50,7 @@ object JacksonHelpers {
           case None                 => parseLiteral(BigDecimal(_).toString, "BigDecimal").flatMap(litBigDecimal)
         }
       case LiteralRawType(Some(tpe), fmt) => errorUnsupported(tpe, fmt.getOrElse("(none)"))
-      case _      => fallback(discriminatorValue)
+      case _                              => fallback(discriminatorValue)
     }
   }
 }

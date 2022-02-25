@@ -1,0 +1,52 @@
+swagger: '2.0'
+info:
+  version: v1
+  title: petStore
+paths:
+  /animals:
+    get:
+      operationId: getAnimals
+      responses:
+        '200':
+          description: Successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Animal'
+
+  /animals/dogs:
+    get:
+      operationId: getDogs
+      responses:
+        '200':
+          description: Successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Dog'
+definitions:
+  Animal:
+    type: object
+    discriminator: animalType
+    properties:
+      animalType:
+        type: string
+      food:
+        type: string
+    required:
+      - animalType
+      - food
+
+  Dog:
+    allOf:
+    - $ref: '#/definitions/Animal'
+    - type: object
+      properties:
+        colour:
+          type: string
+      required:
+        - colour
+
+  Turtle:
+    allOf:
+    - $ref: '#/definitions/Animal'
