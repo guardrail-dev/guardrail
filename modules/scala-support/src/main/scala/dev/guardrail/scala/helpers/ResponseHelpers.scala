@@ -29,7 +29,7 @@ object ResponseHelpers {
             val fallback =
               bodyParam.rawType match {
                 case LiteralRawType(Some("object"), _) => ApplicationJson
-                case _ => TextPlain
+                case _                                 => TextPlain
               }
             println(s"WARNING: no supported body param type at ${operation.showHistory}; falling back to $fallback")
             fallback

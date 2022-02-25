@@ -320,7 +320,7 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
       def widenClassDefinition(value: L#ClassDefinition)                                = newWidenClassDefinition(value)
       def widenObjectDefinition(value: L#ObjectDefinition)                              = newWidenObjectDefinition(value)
       def findCommonDefaultValue(history: String, a: Option[L#Term], b: Option[L#Term]) = newFindCommonDefaultValue(history, a, b)
-      def findCommonRawType(history: String, a: ReifiedRawType, b: ReifiedRawType)  = newFindCommonRawType(history, a, b)
+      def findCommonRawType(history: String, a: ReifiedRawType, b: ReifiedRawType)      = newFindCommonRawType(history, a, b)
       def renderImplicits(
           pkgPath: Path,
           pkgName: NonEmptyList[String],

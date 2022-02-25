@@ -337,7 +337,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
         }
 
         val pairsWithStatic = pairs ++ discriminatorParams.map(encodeStatic(_, clsName))
-        val simpleCase = q"_root_.scala.Vector(..${pairsWithStatic})"
+        val simpleCase      = q"_root_.scala.Vector(..${pairsWithStatic})"
         val allFields = optional.foldLeft[Term](simpleCase) { (acc, field) =>
           q"$acc ++ $field"
         }
