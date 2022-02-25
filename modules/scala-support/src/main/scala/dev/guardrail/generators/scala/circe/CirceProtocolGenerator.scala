@@ -268,7 +268,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
   ) = {
     val discriminators     = parents.flatMap(_.discriminators)
     val discriminatorNames = discriminators.map(_.propertyName).toSet
-    val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
+    val (discriminatorParams, params) = (parents.reverse.flatMap(_.params) ++ selfParams).partition(
       param => discriminatorNames.contains(param.name.value)
     )
     val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
@@ -309,6 +309,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
           """
         )
       } else */ {
+        def encodeStatic(param: ProtocolParameter[ScalaLanguage], clsName: String) =
+          q"""(${Lit.String(param.name.value)}, Json.fromString(${Lit.String(clsName)}))"""
+
         def encodeRequired(param: ProtocolParameter[ScalaLanguage]) =
           q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)"""
 
@@ -333,7 +336,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
           }
         }
 
-        val simpleCase = q"_root_.scala.Vector(..${pairs})"
+        val pairsWithStatic = pairs ++ discriminatorParams.map(encodeStatic(_, clsName))
+        val simpleCase = q"_root_.scala.Vector(..${pairsWithStatic})"
         val allFields = optional.foldLeft[Term](simpleCase) { (acc, field) =>
           q"$acc ++ $field"
         }
