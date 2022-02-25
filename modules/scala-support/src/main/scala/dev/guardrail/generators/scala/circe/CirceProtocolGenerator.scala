@@ -317,7 +317,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
           q"a.${Term.Name(param.term.name.value)}.fold(ifAbsent = None, ifPresent = value => Some($name -> value.asJson))"
         }
 
-        val allFields: List[Either[Term.Apply, Term.Tuple]] = params.map { param =>
+        val (optional, pairs): (List[Term.Apply], List[Term.Tuple]) = params.partitionEither { param =>
           val name = Lit.String(param.name.value)
           param.propertyRequirement match {
             case PropertyRequirement.Required | PropertyRequirement.RequiredNullable | PropertyRequirement.OptionalLegacy =>
@@ -333,19 +333,14 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
           }
         }
 
-        val pairs: List[Term.Tuple] = allFields.collect {
-          case Right(pair) => pair
-        }
-        val optional = allFields.collect {
-          case Left(field) => field
-        }
         val simpleCase = q"_root_.scala.Vector(..${pairs})"
-        val arg = optional.foldLeft[Term](simpleCase) { (acc, field) =>
+        val allFields = optional.foldLeft[Term](simpleCase) { (acc, field) =>
           q"$acc ++ $field"
         }
+
         Option(
           q"""
-              ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => _root_.io.circe.JsonObject.fromIterable($arg))
+              ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => _root_.io.circe.JsonObject.fromIterable($allFields))
             """
         )
       }
