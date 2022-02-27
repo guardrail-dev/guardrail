@@ -79,15 +79,12 @@ while [ "${#todo[@]}" -gt 0 ]; do
   trigger scala-dropwizard
 
   reverse_deps=( scala-support )
-  trigger scala-endpoints
-
-  reverse_deps=( scala-support )
   trigger scala-http4s
 
   reverse_deps=( core )
   trigger scala-support
 
-  reverse_deps=( core java-dropwizard java-spring-mvc java-support java-async-http scala-akka-http scala-dropwizard scala-endpoints scala-http4s scala-support )
+  reverse_deps=( core java-dropwizard java-spring-mvc java-support java-async-http scala-akka-http scala-dropwizard scala-http4s scala-support )
   trigger guardrail
 
   reverse_deps=( guardrail )

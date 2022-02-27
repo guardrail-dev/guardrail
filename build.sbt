@@ -95,7 +95,7 @@ lazy val root = modules.root.project
   .dependsOn(guardrail)
   .dependsOn(cli)
   .dependsOn(javaAsyncHttp, javaDropwizard, javaSpringMvc)
-  .dependsOn(scalaAkkaHttp, scalaDropwizard, scalaEndpoints, scalaHttp4s)
+  .dependsOn(scalaAkkaHttp, scalaDropwizard, scalaHttp4s)
   .aggregate(allDeps, microsite)
   .aggregate(
     cli,
@@ -109,7 +109,6 @@ lazy val root = modules.root.project
 
     scalaSupport,
     scalaAkkaHttp,
-    scalaEndpoints,
     scalaHttp4s,
     scalaDropwizard,
   )
@@ -127,7 +126,6 @@ lazy val guardrail = modules.guardrail.project
   .providedDependsOn(javaAsyncHttp)
   .providedDependsOn(scalaAkkaHttp)
   .providedDependsOn(scalaDropwizard)
-  .providedDependsOn(scalaEndpoints)
   .providedDependsOn(scalaHttp4s)
 
 lazy val samples = (project in file("modules/samples"))
@@ -139,7 +137,6 @@ lazy val samples = (project in file("modules/samples"))
     scalaAkkaHttpJacksonSample,
     scalaAkkaHttpSample,
     scalaDropwizardSample,
-    scalaEndpointsSample,
     scalaHttp4sSample,
     scalaHttp4sSampleV0_22
   )
@@ -175,10 +172,6 @@ lazy val scalaSupport = modules.scalaSupport.project
 lazy val scalaAkkaHttpSample = modules.scalaAkkaHttp.sample
 lazy val scalaAkkaHttpJacksonSample = modules.scalaAkkaHttp.sampleJackson
 lazy val scalaAkkaHttp = modules.scalaAkkaHttp.project
-  .customDependsOn(scalaSupport)
-
-lazy val scalaEndpointsSample = modules.scalaEndpoints.sample
-lazy val scalaEndpoints = modules.scalaEndpoints.project
   .customDependsOn(scalaSupport)
 
 lazy val scalaHttp4sSampleV0_22 = modules.scalaHttp4s.sampleV0_22

@@ -33,11 +33,6 @@ scala-dropwizard:
 - modules/scala-dropwizard/**/*
 - project/src/main/scala/modules/scalaDropwizard.scala
 
-scala-endpoints:
-- modules/scala-endpoints/*
-- modules/scala-endpoints/**/*
-- project/src/main/scala/modules/scalaEndpoints.scala
-
 scala-http4s:
 - modules/scala-http4s/*
 - modules/scala-http4s/**/*
