@@ -85,7 +85,8 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       (modelGeneratorType, protocol) <- popModule(
         "json",
         ("circe-java8", catchClassNotFound((CirceModelGenerator.V011, circeJava8(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
-        ("circe-0.11", catchClassNotFound((CirceModelGenerator.V011, circe(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
+        ("circe-v0.11", catchClassNotFound((CirceModelGenerator.V011, circe(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
+        ("circe-v0.12", catchClassNotFound((CirceModelGenerator.V012, circe(CirceModelGenerator.V012)), MissingDependency("guardrail-scala-support"))),
         ("circe", catchClassNotFound((CirceModelGenerator.V012, circe(CirceModelGenerator.V012)), MissingDependency("guardrail-scala-support"))),
         ("jackson", catchClassNotFound((JacksonModelGenerator, jackson), MissingDependency("guardrail-scala-support")))
       )
@@ -108,6 +109,17 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]               = SwaggerGenerator[ScalaLanguage]()
       def LanguageInterp: LanguageTerms[ScalaLanguage, Target]             = ScalaGenerator()
       def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = collections
-    }).runA(modules.toList.toSet)
+    }).runA(
+      modules
+        .map {
+          case oldv @ "circe-0.11" =>
+            val newv = "circe-v0.11"
+            println(s"Deprecation: ${oldv} has been renamed to ${newv} for consistency")
+            newv
+          case other => other
+        }
+        .toList
+        .toSet
+    )
   }
 }
