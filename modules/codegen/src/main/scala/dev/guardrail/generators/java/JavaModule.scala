@@ -1,17 +1,19 @@
 package dev.guardrail.generators.java
 
 import cats.data.NonEmptyList
+import cats.implicits._
 
 import dev.guardrail._
-import dev.guardrail.generators.java.asyncHttpClient.AsyncHttpClientClientGenerator
 import dev.guardrail.generators.{ AbstractModule, Framework, SwaggerGenerator }
-import dev.guardrail.generators.java.jackson.JacksonGenerator
-import dev.guardrail.generators.java.dropwizard.{ DropwizardGenerator, DropwizardServerGenerator }
-import dev.guardrail.generators.java.springMvc.{ SpringMvcGenerator, SpringMvcServerGenerator }
-import dev.guardrail.generators.collections.{ JavaCollectionsGenerator, JavaVavrCollectionsGenerator }
+import dev.guardrail.generators.spi.{
+  ClientGeneratorLoader,
+  CollectionsGeneratorLoader,
+  FrameworkGeneratorLoader,
+  ProtocolGeneratorLoader,
+  ServerGeneratorLoader
+}
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.server.ServerTerms
-import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, ProtocolTerms, SwaggerTerms }
 
@@ -24,44 +26,71 @@ object JavaModule extends AbstractModule[JavaLanguage] {
         Target.raiseError(error)
     }
 
-  def stdlib: (CollectionsLibTerms[JavaLanguage, Target], CollectionsAbstraction[JavaLanguage]) =
-    (JavaCollectionsGenerator(), JavaStdLibCollections)
-  def vavr: (CollectionsLibTerms[JavaLanguage, Target], CollectionsAbstraction[JavaLanguage]) =
-    (JavaVavrCollectionsGenerator(), JavaVavrCollections)
+  def stdlib: Target[(String, CollectionsLibTerms[JavaLanguage, Target])] = {
+    val params = Set("java-stdlib")
+    CollectionsGeneratorLoader
+      .load[JavaLanguage](params, MissingDependency("guardrail-java-support"))
+      .map(("java-stdlib", _))
+  }
+  def vavr: Target[(String, CollectionsLibTerms[JavaLanguage, Target])] = {
+    val params = Set("java-vavr")
+    CollectionsGeneratorLoader
+      .load[JavaLanguage](params, MissingDependency("guardrail-java-support"))
+      .map(("java-vavr", _))
+  }
 
-  def jackson(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ProtocolTerms[JavaLanguage, Target] =
-    JacksonGenerator()
-  def dropwizard(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): (
-      ServerTerms[JavaLanguage, Target],
-      FrameworkTerms[JavaLanguage, Target]
-  ) = (DropwizardServerGenerator(), DropwizardGenerator())
-  def spring(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): (
-      ServerTerms[JavaLanguage, Target],
-      FrameworkTerms[JavaLanguage, Target]
-  ) = (SpringMvcServerGenerator(), SpringMvcGenerator())
-  def asyncHttpClient(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ClientTerms[JavaLanguage, Target] =
-    AsyncHttpClientClientGenerator()
+  def jackson(collections: String): Target[ProtocolTerms[JavaLanguage, Target]] = {
+    val params = Set("jackson", collections)
+    ProtocolGeneratorLoader.load[JavaLanguage](params, MissingDependency("guardrail-java-support"))
+  }
+  def dropwizard(collections: String): Target[
+    (
+        ServerTerms[JavaLanguage, Target],
+        FrameworkTerms[JavaLanguage, Target]
+    )
+  ] = {
+    val params = Set("dropwizard", collections)
+    (
+      ServerGeneratorLoader.load[JavaLanguage](params, MissingDependency("guardrail-java-dropwizard")),
+      FrameworkGeneratorLoader.load[JavaLanguage](params, MissingDependency("guardrail-java-dropwizard"))
+    ).mapN(Tuple2.apply)
+  }
+  def spring(collections: String): Target[
+    (
+        ServerTerms[JavaLanguage, Target],
+        FrameworkTerms[JavaLanguage, Target]
+    )
+  ] = {
+    val params = Set("spring-mvc", collections)
+    (
+      ServerGeneratorLoader.load[JavaLanguage](params, MissingDependency("guardrail-java-spring-mvc")),
+      FrameworkGeneratorLoader.load[JavaLanguage](params, MissingDependency("guardrail-java-spring-mvc"))
+    ).mapN(Tuple2.apply)
+  }
+  def asyncHttpClient(collections: String): Target[ClientTerms[JavaLanguage, Target]] = {
+    val params = Set("async-http-client", collections)
+    ClientGeneratorLoader.load[JavaLanguage](params, MissingDependency("guardrail-java-async-http"))
+  }
 
-  def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] = {
-    implicit val col = JavaStdLibCollections
+  def extract(modules: NonEmptyList[String]): Target[Framework[JavaLanguage, Target]] =
     (for {
-      (collections, col) <- popModule(
+      (collections, collectionsImpl) <- popModule(
         "collections",
-        ("java-stdlib", catchClassNotFound(stdlib, MissingDependency("guardrail-java-support"))),
-        ("java-vavr", catchClassNotFound(vavr, MissingDependency("guardrail-java-support")))
+        ("java-stdlib", stdlib),
+        ("java-vavr", vavr)
       )
       protocol <- popModule(
         "json",
-        ("jackson", catchClassNotFound(jackson(collections, col), MissingDependency("guardrail-java-support")))
+        ("jackson", jackson(collections))
       )
       client <- popModule(
         "client",
-        ("async-http-client", catchClassNotFound(asyncHttpClient(collections, col), MissingDependency("guardrail-java-async-http")))
+        ("async-http-client", asyncHttpClient(collections))
       )
       (server, framework) <- popModule(
         "server",
-        ("dropwizard", catchClassNotFound(dropwizard(collections, col), MissingDependency("guardrail-java-dropwizard"))),
-        ("spring-mvc", catchClassNotFound(spring(collections, col), MissingDependency("guardrail-java-spring-mvc")))
+        ("dropwizard", dropwizard(collections)),
+        ("spring-mvc", spring(collections))
       )
     } yield new Framework[JavaLanguage, Target] {
       def ClientInterp: ClientTerms[JavaLanguage, Target]                 = client
@@ -70,7 +99,6 @@ object JavaModule extends AbstractModule[JavaLanguage] {
       def ServerInterp: ServerTerms[JavaLanguage, Target]                 = server
       def SwaggerInterp: SwaggerTerms[JavaLanguage, Target]               = SwaggerGenerator[JavaLanguage]()
       def LanguageInterp: LanguageTerms[JavaLanguage, Target]             = JavaGenerator()
-      def CollectionsLibInterp: CollectionsLibTerms[JavaLanguage, Target] = collections
+      def CollectionsLibInterp: CollectionsLibTerms[JavaLanguage, Target] = collectionsImpl
     }).runA(modules.toList.toSet)
-  }
 }

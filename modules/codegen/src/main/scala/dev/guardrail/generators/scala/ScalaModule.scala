@@ -1,103 +1,107 @@
 package dev.guardrail.generators.scala
 
 import cats.data.NonEmptyList
+import cats.implicits._
 
 import dev.guardrail._
 import dev.guardrail.generators._
-import dev.guardrail.generators.scala.akkaHttp.{ AkkaHttpClientGenerator, AkkaHttpGenerator, AkkaHttpServerGenerator, AkkaHttpVersion }
-import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
-import dev.guardrail.generators.scala.dropwizard.{ DropwizardClientGenerator, DropwizardGenerator, DropwizardServerGenerator }
-import dev.guardrail.generators.scala.http4s.{ Http4sClientGenerator, Http4sGenerator, Http4sServerGenerator, Http4sVersion }
-import dev.guardrail.generators.scala.jackson.JacksonProtocolGenerator
+import dev.guardrail.generators.spi.{ ClientGeneratorLoader, FrameworkGeneratorLoader, ProtocolGeneratorLoader, ServerGeneratorLoader }
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.server.ServerTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, ProtocolTerms, SwaggerTerms }
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
-  private def catchClassNotFound[A](value: => A, error: => MissingDependency): Target[A] =
-    try
-      Target.pure(value)
-    catch {
-      case _: _root_.java.lang.NoClassDefFoundError =>
-        Target.raiseError(error)
-    }
-
-  def circe(circeModelGenerator: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
-    CirceProtocolGenerator(circeModelGenerator)
-
-  def circeJava8(circeModelGenerator: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] = {
-    val stockProtocolSupportInterp = CirceProtocolGenerator(circeModelGenerator)
-    stockProtocolSupportInterp.copy(
-      packageObjectImports = () =>
-        stockProtocolSupportInterp.packageObjectImports().map { values =>
-          import _root_.scala.meta._
-          values :+ q"import io.circe.java8.time._"
-        }
-    )
+  def circe(circeModelGenerator: String): Target[(String, ProtocolTerms[ScalaLanguage, Target])] = {
+    val params = Set(circeModelGenerator)
+    ProtocolGeneratorLoader
+      .load[ScalaLanguage](params, MissingDependency("guardrail-scala-support"))
+      .map((circeModelGenerator, _))
   }
 
-  def jackson(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] = JacksonProtocolGenerator.apply
+  def circeJava8(circeModelGenerator: String): Target[(String, ProtocolTerms[ScalaLanguage, Target])] =
+    for {
+      (circeVersion, stockProtocolSupportInterp) <- circe(circeModelGenerator)
+      newInterp = stockProtocolSupportInterp.copy(
+        packageObjectImports = () =>
+          stockProtocolSupportInterp.packageObjectImports().map { values =>
+            import _root_.scala.meta._
+            values :+ q"import io.circe.java8.time._"
+          }
+      )
+    } yield (circeVersion, newInterp)
 
-  def akkaHttp(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
-      ClientTerms[ScalaLanguage, Target],
-      ServerTerms[ScalaLanguage, Target],
-      FrameworkTerms[ScalaLanguage, Target]
-  ) = (
-    AkkaHttpClientGenerator(modelGeneratorType),
-    AkkaHttpServerGenerator(AkkaHttpVersion.V10_2, modelGeneratorType),
-    AkkaHttpGenerator(AkkaHttpVersion.V10_2, modelGeneratorType)
-  )
+  def jackson: Target[(String, ProtocolTerms[ScalaLanguage, Target])] = {
+    val params = Set("jackson")
+    ProtocolGeneratorLoader
+      .load[ScalaLanguage](params, MissingDependency("guardrail-scala-support"))
+      .map(("jackson", _))
+  }
 
-  def akkaHttpV10_1(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
-      ClientTerms[ScalaLanguage, Target],
-      ServerTerms[ScalaLanguage, Target],
-      FrameworkTerms[ScalaLanguage, Target]
-  ) = (
-    AkkaHttpClientGenerator(modelGeneratorType),
-    AkkaHttpServerGenerator(AkkaHttpVersion.V10_1, modelGeneratorType),
-    AkkaHttpGenerator(AkkaHttpVersion.V10_1, modelGeneratorType)
-  )
+  def akkaHttp(akkaHttpVersion: String, modelGeneratorType: String): Target[
+    (
+        ClientTerms[ScalaLanguage, Target],
+        ServerTerms[ScalaLanguage, Target],
+        FrameworkTerms[ScalaLanguage, Target]
+    )
+  ] = {
+    val params = Set(akkaHttpVersion, modelGeneratorType)
+    (
+      ClientGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-akka-http")),
+      ServerGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-akka-http")),
+      FrameworkGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-akka-http"))
+    ).mapN(Tuple3.apply)
+  }
 
-  def http4s(http4sVersion: Http4sVersion)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
-      ClientTerms[ScalaLanguage, Target],
-      ServerTerms[ScalaLanguage, Target],
-      FrameworkTerms[ScalaLanguage, Target]
-  ) = (
-    Http4sClientGenerator(),
-    Http4sServerGenerator(http4sVersion),
-    Http4sGenerator()
-  )
+  def http4s(http4sVersion: String): Target[
+    (
+        ClientTerms[ScalaLanguage, Target],
+        ServerTerms[ScalaLanguage, Target],
+        FrameworkTerms[ScalaLanguage, Target]
+    )
+  ] = {
+    val params = Set(http4sVersion)
+    (
+      ClientGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-http4s")),
+      ServerGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-http4s")),
+      FrameworkGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-http4s"))
+    ).mapN(Tuple3.apply)
+  }
 
-  def dropwizard(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
-      ClientTerms[ScalaLanguage, Target],
-      ServerTerms[ScalaLanguage, Target],
-      FrameworkTerms[ScalaLanguage, Target]
-  ) = (
-    DropwizardClientGenerator(),
-    DropwizardServerGenerator(),
-    DropwizardGenerator()
-  )
+  def dropwizard: Target[
+    (
+        ClientTerms[ScalaLanguage, Target],
+        ServerTerms[ScalaLanguage, Target],
+        FrameworkTerms[ScalaLanguage, Target]
+    )
+  ] = {
+    val params = Set("dropwizard")
+    (
+      ClientGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-dropwizard")),
+      ServerGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-dropwizard")),
+      FrameworkGeneratorLoader.load[ScalaLanguage](params, MissingDependency("guardrail-scala-dropwizard"))
+    ).mapN(Tuple3.apply)
+  }
 
-  def extract(modules: NonEmptyList[String]): Target[Framework[ScalaLanguage, Target]] = {
-    implicit val collections = ScalaCollectionsGenerator()
+  def extract(modules: NonEmptyList[String]): Target[Framework[ScalaLanguage, Target]] =
     (for {
       (modelGeneratorType, protocol) <- popModule(
         "json",
-        ("circe-java8", catchClassNotFound((CirceModelGenerator.V011, circeJava8(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
-        ("circe-v0.11", catchClassNotFound((CirceModelGenerator.V011, circe(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
-        ("circe-v0.12", catchClassNotFound((CirceModelGenerator.V012, circe(CirceModelGenerator.V012)), MissingDependency("guardrail-scala-support"))),
-        ("circe", catchClassNotFound((CirceModelGenerator.V012, circe(CirceModelGenerator.V012)), MissingDependency("guardrail-scala-support"))),
-        ("jackson", catchClassNotFound((JacksonModelGenerator, jackson), MissingDependency("guardrail-scala-support")))
+        ("circe-java8", circeJava8("circe-v0.11")),
+        ("circe-v0.11", circe("circe-v0.11")),
+        ("circe-v0.12", circe("circe-v0.12")),
+        ("circe", circe("circe-v0.12")),
+        ("jackson", jackson)
       )
       (client, server, framework) <- popModule(
         "framework",
-        ("akka-http", catchClassNotFound(akkaHttp(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
-        ("akka-http-v10.1", catchClassNotFound(akkaHttpV10_1(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
-        ("http4s", catchClassNotFound(http4s(Http4sVersion.V0_23), MissingDependency("guardrail-scala-http4s"))),
-        ("http4s-v0.23", catchClassNotFound(http4s(Http4sVersion.V0_23), MissingDependency("guardrail-scala-http4s"))),
-        ("http4s-v0.22", catchClassNotFound(http4s(Http4sVersion.V0_22), MissingDependency("guardrail-scala-http4s"))),
-        ("dropwizard", catchClassNotFound(dropwizard, MissingDependency("guardrail-scala-dropwizard")))
+        ("akka-http", akkaHttp("akka-http-v10.2", modelGeneratorType)),
+        ("akka-http-v10.1", akkaHttp("akka-http-v10.1", modelGeneratorType)),
+        ("akka-http-v10.2", akkaHttp("akka-http-v10.2", modelGeneratorType)),
+        ("http4s", http4s("http4s-v0.23")),
+        ("http4s-v0.22", http4s("http4s-v0.22")),
+        ("http4s-v0.23", http4s("http4s-v0.23")),
+        ("dropwizard", dropwizard)
       )
       // parser             =  or interpFramework
       // codegenApplication = ScalaGenerator or parser
@@ -108,7 +112,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def ServerInterp: ServerTerms[ScalaLanguage, Target]                 = server
       def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]               = SwaggerGenerator[ScalaLanguage]()
       def LanguageInterp: LanguageTerms[ScalaLanguage, Target]             = ScalaGenerator()
-      def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = collections
+      def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = ScalaCollectionsGenerator()
     }).runA(
       modules
         .map {
@@ -121,5 +125,4 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
         .toList
         .toSet
     )
-  }
 }
