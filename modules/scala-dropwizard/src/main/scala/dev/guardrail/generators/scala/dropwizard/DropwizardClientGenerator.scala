@@ -4,15 +4,28 @@ import cats.Monad
 import cats.data.NonEmptyList
 import java.net.URI
 import scala.meta.{ Defn, Import, Term }
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core.SupportDefinition
 import dev.guardrail.generators.{ LanguageParameters, RenderedClientOperation }
-import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.{ ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import dev.guardrail.{ RuntimeFailure, Target }
+
+class DropwizardClientGeneratorLoader extends ClientGeneratorLoader {
+  type L = ScalaLanguage
+  def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      _ <- parameters.collectFirst { case DropwizardVersion(version) => version }
+    } yield DropwizardClientGenerator()
+}
 
 object DropwizardClientGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =

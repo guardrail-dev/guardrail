@@ -2,12 +2,25 @@ package dev.guardrail.generators.scala.dropwizard
 
 import cats.Monad
 import dev.guardrail.{ Target, UserError }
-import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.{ ScalaCollectionsGenerator, ScalaLanguage }
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.generators.spi.FrameworkGeneratorLoader
 
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 import scala.util.Try
+
+class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
+  type L = ScalaLanguage
+  def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      dropwizardVersion <- parameters.collectFirst { case DropwizardVersion(version) => version }
+    } yield DropwizardGenerator()
+}
 
 object DropwizardGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =

@@ -5,12 +5,14 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import io.swagger.v3.oas.models.Operation
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.AuthImplementation
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
-import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.{ ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.spi.ServerGeneratorLoader
 import dev.guardrail.scalaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.protocol.StrictProtocolElems
@@ -29,6 +31,19 @@ import dev.guardrail.terms.{
   TextContent,
   TextPlain,
   UrlencodedFormData
+}
+
+class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
+  type L = ScalaLanguage
+  override def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      _ <- parameters.collectFirst { case DropwizardVersion(version) =>
+        version
+      }
+    } yield DropwizardServerGenerator()
 }
 
 object DropwizardServerGenerator {
