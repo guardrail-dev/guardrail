@@ -142,6 +142,9 @@ lazy val samples = (project in file("modules/samples"))
   )
 
 lazy val core = modules.core.project
+  .settings(
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
+  )
 
 lazy val cli = modules.cli.project
   .customDependsOn(guardrail)
