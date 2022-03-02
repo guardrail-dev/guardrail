@@ -2,7 +2,7 @@ package dev.guardrail.generators.scala.akkaHttp
 
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import dev.guardrail.Target
+import dev.guardrail.{ RuntimeFailure, Target }
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType }
 import dev.guardrail.terms.{ ApplicationJson, ContentType, TextPlain }
@@ -26,35 +26,48 @@ object AkkaHttpHelper {
         case x :: Nil => Target.pure(x)
         case xs       => Target.pure(q"Unmarshaller.firstOf(..${xs})")
       }
+      decode <- Target.fromOption(
+        modelGeneratorType match {
+          case _: CirceModelGenerator => Some(q"""io.circe.Decoder[${baseType}].decodeJson(json).fold(FastFuture.failed, FastFuture.successful)""")
+          case _: JacksonModelGenerator =>
+            Some(q"""FastFuture(implicitly[GuardrailDecoder[$baseType]].decode(json))""")
+          case _ => None
+        },
+        RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}")
+      )
     } yield {
-      val decode = modelGeneratorType match {
-        case _: CirceModelGenerator => q"""io.circe.Decoder[${baseType}].decodeJson(json).fold(FastFuture.failed, FastFuture.successful)"""
-        case JacksonModelGenerator =>
-          q"""FastFuture(implicitly[GuardrailDecoder[$baseType]].decode(json))"""
-      }
       val decoder = q"""{ ${unmarshaller}.flatMap(_ => _ => json => $decode) }"""
       (decoder, baseType)
     }
   }
 
-  def fromStringConverter(tpe: Type, modelGeneratorType: ModelGeneratorType): Term = modelGeneratorType match {
-    case _: CirceModelGenerator => q"io.circe.Json.fromString(str).as[$tpe].toOption"
-    case JacksonModelGenerator  => q"scala.util.Try(mapper.convertValue(str, new com.fasterxml.jackson.core.`type`.TypeReference[$tpe] {})).toOption"
+  def fromStringConverter(tpe: Type, modelGeneratorType: ModelGeneratorType): Either[String, Term] = modelGeneratorType match {
+    case _: CirceModelGenerator   => Right(q"io.circe.Json.fromString(str).as[$tpe].toOption")
+    case _: JacksonModelGenerator => Right(q"scala.util.Try(mapper.convertValue(str, new com.fasterxml.jackson.core.`type`.TypeReference[$tpe] {})).toOption")
+    case _                        => Left(s"Unknown modelGeneratorType: ${modelGeneratorType}")
   }
 
-  def protocolImplicits(modelGeneratorType: ModelGeneratorType): List[Term.Param] = modelGeneratorType match {
-    case _: CirceModelGenerator => List.empty
-    case JacksonModelGenerator =>
-      List(param"implicit mapper: com.fasterxml.jackson.databind.ObjectMapper", param"implicit validator: javax.validation.Validator")
+  def protocolImplicits(modelGeneratorType: ModelGeneratorType): Target[List[Term.Param]] = modelGeneratorType match {
+    case _: CirceModelGenerator => Target.pure(List.empty)
+    case _: JacksonModelGenerator =>
+      Target.pure(
+        List(
+          param"implicit mapper: com.fasterxml.jackson.databind.ObjectMapper",
+          param"implicit validator: javax.validation.Validator"
+        )
+      )
+    case _ => Target.raiseError(RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}"))
   }
 
-  def unmarshalFieldTypeParam(modelGeneratorType: ModelGeneratorType): Type.Param = modelGeneratorType match {
-    case _: CirceModelGenerator => tparam"A: io.circe.Decoder"
-    case JacksonModelGenerator  => tparam"A: GuardrailDecoder: GuardrailValidator: scala.reflect.ClassTag"
+  def unmarshalFieldTypeParam(modelGeneratorType: ModelGeneratorType): Target[Type.Param] = modelGeneratorType match {
+    case _: CirceModelGenerator   => Target.pure(tparam"A: io.circe.Decoder")
+    case _: JacksonModelGenerator => Target.pure(tparam"A: GuardrailDecoder: GuardrailValidator: scala.reflect.ClassTag")
+    case _                        => Target.raiseError(RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}"))
   }
 
-  def unmarshalFieldUnmarshallerType(modelGeneratorType: ModelGeneratorType): Type = modelGeneratorType match {
-    case _: CirceModelGenerator => t"io.circe.Json"
-    case JacksonModelGenerator  => t"com.fasterxml.jackson.databind.JsonNode"
+  def unmarshalFieldUnmarshallerType(modelGeneratorType: ModelGeneratorType): Target[Type] = modelGeneratorType match {
+    case _: CirceModelGenerator   => Target.pure(t"io.circe.Json")
+    case _: JacksonModelGenerator => Target.pure(t"com.fasterxml.jackson.databind.JsonNode")
+    case _                        => Target.raiseError(RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}"))
   }
 }

@@ -1,6 +1,6 @@
 package dev.guardrail.generators.scala.akkaHttp
 
-import dev.guardrail.Target
+import dev.guardrail.{ RuntimeFailure, Target }
 import dev.guardrail.generators.scala.{ AkkaHttpVersion, CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
@@ -19,13 +19,20 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
   override implicit def MonadF                  = Target.targetInstances
   override def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
   override def objectType(format: Option[String]) =
-    Target.pure(modelGeneratorType match {
-      case _: CirceModelGenerator => t"io.circe.Json"
-      case JacksonModelGenerator  => t"com.fasterxml.jackson.databind.JsonNode"
-    })
+    modelGeneratorType match {
+      case _: CirceModelGenerator   => Target.pure(t"io.circe.Json")
+      case _: JacksonModelGenerator => Target.pure(t"com.fasterxml.jackson.databind.JsonNode")
+      case _                        => Target.raiseError(RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}"))
+    }
 
   override def getFrameworkImports(tracing: Boolean) =
-    Target.pure(
+    for {
+      protocolImports <- modelGeneratorType match {
+        case _: CirceModelGenerator   => Target.pure(List(q"import io.circe.Decoder"))
+        case _: JacksonModelGenerator => Target.pure(List())
+        case _                        => Target.raiseError(RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}"))
+      }
+    } yield (
       List(
         q"import akka.http.scaladsl.model._",
         q"import akka.http.scaladsl.model.headers.RawHeader",
@@ -47,18 +54,17 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
         q"import java.security.MessageDigest",
         q"import java.util.concurrent.atomic.AtomicReference",
         q"import scala.util.{Failure, Success}"
-      ) ++ (modelGeneratorType match {
-        case _: CirceModelGenerator => List(q"import io.circe.Decoder")
-        case JacksonModelGenerator  => List()
-      })
+      ) ++ protocolImports
     )
 
-  override def getFrameworkImplicits() = {
-    val protocolImplicits = modelGeneratorType match {
-      case circe: CirceModelGenerator => circeImplicits(circe)
-      case JacksonModelGenerator      => jacksonImplicits
-    }
-    val defn = q"""
+  override def getFrameworkImplicits() =
+    for {
+      protocolImplicits <- modelGeneratorType match {
+        case circe: CirceModelGenerator => Target.pure(circeImplicits(circe))
+        case _: JacksonModelGenerator   => Target.pure(jacksonImplicits)
+        case _                          => Target.raiseError(RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}"))
+      }
+      defn = q"""
         object AkkaHttpImplicits {
           private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
           implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
@@ -132,8 +138,7 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
           ..$protocolImplicits
         }
       """
-    Target.pure(Some((q"AkkaHttpImplicits", defn)))
-  }
+    } yield Some((q"AkkaHttpImplicits", defn))
 
   private def circeImplicits(circeVersion: CirceModelGenerator): List[Defn] = {
     val jsonEncoderTypeclass: Type = t"io.circe.Encoder"

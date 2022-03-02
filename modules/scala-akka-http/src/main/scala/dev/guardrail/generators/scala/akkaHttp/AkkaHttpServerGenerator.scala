@@ -149,14 +149,15 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         .map { case (tpe, name) =>
           q"implicit def ${Term.Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)"
         }
-      toResponseImplicits = List(param"implicit ec: scala.concurrent.ExecutionContext") ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+      protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+      toResponseImplicits = List(param"implicit ec: scala.concurrent.ExecutionContext") ++ protocolImplicits
       companion = q"""
           object ${responseSuperTerm} {
           ${Defn.Def(
           List(mod"implicit"),
           Term.Name(s"${responseClsName.uncapitalized}TRM"),
           tparams = List.empty,
-          NonEmptyList.fromList(AkkaHttpHelper.protocolImplicits(modelGeneratorType)).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
+          NonEmptyList.fromList(protocolImplicits).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
           Some(t"ToResponseMarshaller[${responseSuperType}]"),
           q"""Marshaller { implicit ec => resp => ${Term.Name(s"${responseClsName.uncapitalized}TR")}(resp) }"""
         )}
@@ -292,7 +293,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       authImplementation: AuthImplementation
   ): Target[List[Defn]] =
     for {
-      _ <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
+      _                 <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
+      protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
     } yield {
       val handlerType = {
         val baseHandlerType = Type.Name(handlerName)
@@ -304,7 +306,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       }
       val typeParams     = if (customExtraction) List(tparam"$customExtractionTypeName") else List()
       val routesParams   = List(param"handler: $handlerType") ++ extraRouteParams
-      val routeImplicits = List(param"implicit mat: akka.stream.Materializer") ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+      val routeImplicits = List(param"implicit mat: akka.stream.Materializer") ++ protocolImplicits
       List(q"""
         object ${Term.Name(resourceName)} {
           ..${supportDefinitions};
@@ -756,10 +758,11 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                   Target.pure((fru, NonEmptyList.one(unmarshallerTerm)))
 
                 case Tracker(_, UrlencodedFormData) =>
-                  val unmarshallerTerm               = q"FormDataUnmarshaller"
-                  val unmarshalFieldTypeParam        = AkkaHttpHelper.unmarshalFieldTypeParam(modelGeneratorType)
-                  val unmarshalFieldUnmarshallerType = AkkaHttpHelper.unmarshalFieldUnmarshallerType(modelGeneratorType)
-                  val fru = q"""
+                  for {
+                    unmarshalFieldTypeParam        <- AkkaHttpHelper.unmarshalFieldTypeParam(modelGeneratorType)
+                    unmarshalFieldUnmarshallerType <- AkkaHttpHelper.unmarshalFieldUnmarshallerType(modelGeneratorType)
+                    unmarshallerTerm = q"FormDataUnmarshaller"
+                    fru = q"""
                 implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
                   implicitly[FromRequestUnmarshaller[FormData]].flatMap { implicit executionContext => implicit mat => formData =>
                     def unmarshalField[${unmarshalFieldTypeParam}](name: String, value: String, unmarshaller: Unmarshaller[String, ${unmarshalFieldUnmarshallerType}]): Future[A] =
@@ -769,31 +772,31 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                       })
 
                     ${params
-                      .map(param =>
-                        if (param.isFile) {
-                          q"Future.successful(Option.empty[(File, Option[String], ContentType)])"
-                        } else {
-                          val (realType, getFunc, transformResponse): (Type, Term.Name, (Term => Term)) = param.argType match {
-                            case t"Iterable[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
-                            case t"Option[Iterable[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
-                            case t"Option[$x]"           => (x, q"get", (x: Term) => x)
-                            case x                       => (x, q"get", (x: Term) => x)
+                        .map(param =>
+                          if (param.isFile) {
+                            q"Future.successful(Option.empty[(File, Option[String], ContentType)])"
+                          } else {
+                            val (realType, getFunc, transformResponse): (Type, Term.Name, (Term => Term)) = param.argType match {
+                              case t"Iterable[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
+                              case t"Option[Iterable[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
+                              case t"Option[$x]"           => (x, q"get", (x: Term) => x)
+                              case x                       => (x, q"get", (x: Term) => x)
+                            }
+                            val unmarshaller = findInnerTpe(param.rawType) match {
+                              case LiteralRawType(Some("string"), _) => q"jsonStringyUnmarshaller"
+                              case _                                 => q"jsonParsingUnmarshaller"
+                            }
+                            transformResponse(
+                              q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _, ${unmarshaller}))"""
+                            )
                           }
-                          val unmarshaller = findInnerTpe(param.rawType) match {
-                            case LiteralRawType(Some("string"), _) => q"jsonStringyUnmarshaller"
-                            case _                                 => q"jsonParsingUnmarshaller"
-                          }
-                          transformResponse(
-                            q"""formData.fields.${getFunc}(${param.argName.toLit}).traverse(unmarshalField[${realType}](${param.argName.toLit}, _, ${unmarshaller}))"""
-                          )
-                        }
-                      ) match {
-                      case NonEmptyList(term, Nil)   => q"${term}.map(v1 => Right(Tuple1(v1)))"
-                      case NonEmptyList(term, terms) => q"(..${term +: terms}).mapN(${Term.Name(s"Tuple${terms.length + 1}")}.apply).map(Right.apply)"
-                    }}
+                        ) match {
+                        case NonEmptyList(term, Nil)   => q"${term}.map(v1 => Right(Tuple1(v1)))"
+                        case NonEmptyList(term, terms) => q"(..${term +: terms}).mapN(${Term.Name(s"Tuple${terms.length + 1}")}.apply).map(Right.apply)"
+                      }}
                   }
               """
-                  Target.pure((List(fru), NonEmptyList.one(unmarshallerTerm)))
+                  } yield (List(fru), NonEmptyList.one(unmarshallerTerm))
 
                 case Tracker(hist, ApplicationJson) =>
                   Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${hist})")
@@ -995,20 +998,18 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     bodyArgs.toList.traverse { case LanguageParameter(_, _, _, _, argType) =>
       for {
         (decoder, baseType) <- AkkaHttpHelper.generateDecoder(argType, consumes, modelGeneratorType)
-      } yield {
-        val decoderImplicits = AkkaHttpHelper.protocolImplicits(modelGeneratorType)
-        Defn.Def(
-          mods = List.empty,
-          Term.Name(s"${methodName}Decoder"),
-          tparams = List.empty,
-          NonEmptyList.fromList(decoderImplicits).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
-          Some(t"FromRequestUnmarshaller[$baseType]"),
-          q"""
+        decoderImplicits    <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+      } yield Defn.Def(
+        mods = List.empty,
+        Term.Name(s"${methodName}Decoder"),
+        tparams = List.empty,
+        NonEmptyList.fromList(decoderImplicits).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
+        Some(t"FromRequestUnmarshaller[$baseType]"),
+        q"""
               val extractEntity = implicitly[Unmarshaller[HttpMessage, HttpEntity]]
               val unmarshalEntity = ${decoder}
               extractEntity.andThen(unmarshalEntity)
             """
-        )
-      }
+      )
     }
 }

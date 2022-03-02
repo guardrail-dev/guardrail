@@ -23,7 +23,8 @@ object CirceModelGenerator {
   }
 }
 
-case object JacksonModelGenerator extends ModelGeneratorType
+sealed abstract class JacksonModelGenerator extends ModelGeneratorType
+case object JacksonModelGenerator           extends JacksonModelGenerator
 
 sealed trait AkkaHttpVersion
 object AkkaHttpVersion {

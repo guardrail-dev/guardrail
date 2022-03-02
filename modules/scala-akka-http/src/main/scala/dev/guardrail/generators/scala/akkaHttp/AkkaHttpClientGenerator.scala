@@ -410,13 +410,15 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
       param"implicit httpClient: HttpRequest => Future[HttpResponse]",
       param"implicit ec: ExecutionContext",
       param"implicit mat: Materializer"
-    ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
-    Target.pure(
+    )
+    for {
+      protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+    } yield (
       List(
         List(formatHost(serverUrls)) ++ (if (tracing)
                                            Some(formatClientName(tracingName))
                                          else None),
-        implicits
+        implicits ++ protocolImplicits
       )
     )
   }
@@ -444,21 +446,27 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
         tpe: Type.Name,
         ctorCall: Term.New,
         tracing: Boolean
-    ): List[Defn] = {
+    ): Target[List[Defn]] = {
       val implicits = List(
         param"implicit ec: ExecutionContext",
         param"implicit mat: Materializer"
-      ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+      )
       val tracingParams: List[Term.Param] = if (tracing) {
         List(formatClientName(tracingName))
       } else {
         List.empty
       }
 
-      List(
-        q"""
-            def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(serverUrls)}, ..$tracingParams)(..$implicits): $tpe = $ctorCall
-          """
+      for {
+        protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+      } yield (
+        List(
+          q"""
+              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(
+              serverUrls
+            )}, ..$tracingParams)(..${implicits ++ protocolImplicits}): $tpe = $ctorCall
+            """
+        )
       )
     }
 
@@ -474,10 +482,10 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
           new ${Type.Name(clientName)}(...${paramsToArgs(ctorArgs)})
         """
 
-    val decls: List[Defn] =
-      q"""def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall""" +:
-        extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
-    Target.pure(
+    for {
+      extraDecls <- extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
+      decls = q"""def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall""" +: extraDecls
+    } yield (
       StaticDefns[ScalaLanguage](
         className = clientName,
         extraImports = List.empty,

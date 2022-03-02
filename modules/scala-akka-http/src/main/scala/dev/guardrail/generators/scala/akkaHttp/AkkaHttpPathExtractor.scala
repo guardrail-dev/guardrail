@@ -19,7 +19,9 @@ object AkkaHttpPathExtractor
             case t"Long"   => Right(q"LongNumber")
             case t"BigInt" => Right(q"Segment.map(BigInt.apply _)")
             case tpe =>
-              Right(q"Segment.flatMap(str => ${AkkaHttpHelper.fromStringConverter(tpe, modelGeneratorType)})")
+              AkkaHttpHelper
+                .fromStringConverter(tpe, modelGeneratorType)
+                .map(tpe => q"Segment.flatMap(str => ${tpe})")
           }
         } { segment =>
           argType match {
@@ -28,7 +30,9 @@ object AkkaHttpPathExtractor
               Right(q"${segment}.map(BigDecimal.apply _)")
             case t"BigInt" => Right(q"${segment}.map(BigInt.apply _)")
             case tpe =>
-              Right(q"${segment}.flatMap(str => ${AkkaHttpHelper.fromStringConverter(tpe, modelGeneratorType)})")
+              AkkaHttpHelper
+                .fromStringConverter(tpe, modelGeneratorType)
+                .map(tpe => q"${segment}.flatMap(str => ${tpe})")
           }
         }
       },
