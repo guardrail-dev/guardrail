@@ -711,7 +711,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
             (handlers, unmarshallerTerms) <- consumes
               .map(_.distinct)
               .indexedDistribute
-              .traverse[(List[Stat], *), Target[NonEmptyList[Term.Name]]] {
+              .traverse[Target, (List[Stat], NonEmptyList[Term.Name])] {
                 case Tracker(_, MultipartFormData) =>
                   val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
                   val fru = q"""
@@ -753,7 +753,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                     collectedPartsF
                   }
                 """.stats
-                  (fru, Target.pure(NonEmptyList.one(unmarshallerTerm)))
+                  Target.pure((fru, NonEmptyList.one(unmarshallerTerm)))
 
                 case Tracker(_, UrlencodedFormData) =>
                   val unmarshallerTerm               = q"FormDataUnmarshaller"
@@ -793,18 +793,18 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                     }}
                   }
               """
-                  (List(fru), Target.pure(NonEmptyList.one(unmarshallerTerm)))
+                  Target.pure((List(fru), NonEmptyList.one(unmarshallerTerm)))
 
                 case Tracker(hist, ApplicationJson) =>
-                  (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${hist})"))
+                  Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${hist})")
 
-                case Tracker(hist, BinaryContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})"))
+                case Tracker(hist, BinaryContent(name)) => Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})")
 
-                case Tracker(hist, TextContent(name)) => (Nil, Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})"))
+                case Tracker(hist, TextContent(name)) => Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})")
 
-                case Tracker(hist, ct) => (Nil, Target.raiseException(s"Unexpected ContentType ${ct} (${hist})"))
+                case Tracker(hist, ct) => Target.raiseException(s"Unexpected ContentType ${ct} (${hist})")
               }
-              .traverse(_.flatSequence)
+              .map(_.flatSequence)
 
             directive =
               q"""
