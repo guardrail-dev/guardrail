@@ -87,7 +87,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
               "akka-http",
               ScalaModule.extract,
               { case "akka-http" =>
-                NonEmptyList.of("akka-http", "circe")
+                NonEmptyList.of("scala-stdlib", "akka-http", "circe")
               },
               _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
             )
@@ -151,7 +151,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
               "akka-http",
               ScalaModule.extract,
               { case "akka-http" =>
-                NonEmptyList.of("akka-http", "circe")
+                NonEmptyList.of("scala-stdlib", "akka-http", "circe")
               },
               _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
             )
