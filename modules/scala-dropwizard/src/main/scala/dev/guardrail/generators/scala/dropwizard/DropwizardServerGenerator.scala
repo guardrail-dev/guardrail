@@ -11,7 +11,7 @@ import dev.guardrail.AuthImplementation
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
-import dev.guardrail.generators.scala.{ ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.spi.ServerGeneratorLoader
 import dev.guardrail.scalaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
@@ -21,7 +21,6 @@ import dev.guardrail.terms.{
   AnyContentType,
   ApplicationJson,
   BinaryContent,
-  CollectionsLibTerms,
   ContentType,
   MultipartFormData,
   OctetStream,
@@ -37,7 +36,6 @@ class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
 
-  implicit val Cl = ScalaCollectionsGenerator()
   def apply(parameters: Set[String]) =
     for {
       _ <- parameters.collectFirst { case DropwizardVersion(version) =>
@@ -47,11 +45,11 @@ class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
 }
 
 object DropwizardServerGenerator {
-  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+  def apply(): ServerTerms[ScalaLanguage, Target] =
     new DropwizardServerGenerator
 }
 
-class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
+class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Target] {
   override def MonadF: Monad[Target] = Target.targetInstances
 
   private val buildTermSelect: NonEmptyList[String] => Term.Ref = { case NonEmptyList(head, tail) =>

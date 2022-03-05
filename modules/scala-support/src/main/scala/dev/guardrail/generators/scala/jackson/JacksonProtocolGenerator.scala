@@ -6,19 +6,18 @@ import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core.{ EmptyIsNull, SupportDefinition }
-import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ScalaCollectionsGenerator, ScalaGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
 import dev.guardrail.generators.spi.ProtocolGeneratorLoader
 import dev.guardrail.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.protocol.{ Discriminator, PropertyRequirement }
-import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms }
+import dev.guardrail.terms.ProtocolTerms
 import dev.guardrail.{ RuntimeFailure, Target }
 
 class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
-  def reified     = typeTag[Target[ScalaLanguage]]
-  implicit val Cl = ScalaCollectionsGenerator()
+  def reified = typeTag[Target[ScalaLanguage]]
   def apply(parameters: Set[String]): Option[ProtocolTerms[ScalaLanguage, Target]] =
     for {
       // We do not support different versions of Jackson at this time, so if
@@ -127,7 +126,7 @@ object JacksonProtocolGenerator {
 
   private val jsonIgnoreProperties = mod"""@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)"""
 
-  def apply(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] = {
+  def apply: ProtocolTerms[ScalaLanguage, Target] = {
     val baseInterp = CirceProtocolGenerator(CirceModelGenerator.V012)
     import Target.targetInstances
 

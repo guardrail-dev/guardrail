@@ -11,11 +11,11 @@ import dev.guardrail.terms.collections.JavaStdLibCollections
 object SpringMvc extends Framework[JavaLanguage, Target] {
   private implicit val col = JavaStdLibCollections
 
-  implicit def CollectionsLibInterp = JavaCollectionsGenerator()
-  implicit def ProtocolInterp       = JacksonGenerator()
-  implicit def ClientInterp         = SpringMvcClientGenerator()
-  implicit def FrameworkInterp      = SpringMvcGenerator()
-  implicit def ServerInterp         = SpringMvcServerGenerator()
-  implicit def SwaggerInterp        = SwaggerGenerator[JavaLanguage]()
-  implicit def LanguageInterp       = JavaGenerator()
+  override implicit def CollectionsLibInterp = JavaCollectionsGenerator()
+  implicit def ProtocolInterp                = JacksonGenerator()
+  implicit def ClientInterp                  = SpringMvcClientGenerator()
+  implicit def FrameworkInterp               = SpringMvcGenerator()
+  implicit def ServerInterp                  = SpringMvcServerGenerator()
+  implicit def SwaggerInterp                 = SwaggerGenerator[JavaLanguage]()
+  implicit def LanguageInterp                = JavaGenerator()
 }

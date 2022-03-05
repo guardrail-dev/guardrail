@@ -16,12 +16,12 @@ import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.scala.{ CirceModelGenerator, ModelGeneratorType, ResponseADTHelper }
-import dev.guardrail.generators.scala.{ ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.spi.ServerGeneratorLoader
 import dev.guardrail.terms.{ ContentType, Header, Response, Responses }
 import dev.guardrail.terms.server._
 import dev.guardrail.shims._
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+import dev.guardrail.terms.{ RouteMeta, SecurityScheme }
 
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
@@ -35,7 +35,6 @@ class Http4sServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
 
-  implicit val Cl = ScalaCollectionsGenerator()
   def apply(parameters: Set[String]) =
     for {
       http4sVersion <- parameters.collectFirst { case Http4sVersion(version) => version }
@@ -43,11 +42,7 @@ class Http4sServerGeneratorLoader extends ServerGeneratorLoader {
 }
 
 object Http4sServerGenerator {
-  @deprecated("0.69.0", "Explicitly set Http4sVersion")
-  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
-    apply(Http4sVersion.V0_23)(Cl)
-
-  def apply(version: Http4sVersion)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ServerTerms[ScalaLanguage, Target] =
+  def apply(version: Http4sVersion): ServerTerms[ScalaLanguage, Target] =
     new Http4sServerGenerator(version)
 
   def generateUrlPathExtractors(
@@ -68,10 +63,7 @@ object Http4sServerGenerator {
     } yield (trailingSlashed, queryParams)
 }
 
-class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
-    extends ServerTerms[ScalaLanguage, Target] {
-
-  private def this(Cl: CollectionsLibTerms[ScalaLanguage, Target]) = this(Http4sVersion.V0_23)(Cl)
+class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms[ScalaLanguage, Target] {
 
   val customExtractionTypeName: Type.Name = Type.Name("E")
   val authContextTypeName: Type.Name      = Type.Name("AuthContext")

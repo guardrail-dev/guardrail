@@ -12,17 +12,16 @@ import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
 import dev.guardrail.generators.spi.ProtocolGeneratorLoader
-import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaCollectionsGenerator, ScalaGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
+import dev.guardrail.terms.{ ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import dev.guardrail.{ SwaggerUtil, Target, UserError }
 
 class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
-  def reified     = typeTag[Target[ScalaLanguage]]
-  implicit val Cl = ScalaCollectionsGenerator()
+  def reified = typeTag[Target[ScalaLanguage]]
   def apply(parameters: Set[String]): Option[ProtocolTerms[ScalaLanguage, Target]] =
     for {
       circeVersion <- parameters.collectFirst { case CirceModelGenerator(version) => version }
@@ -30,12 +29,11 @@ class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
 }
 
 object CirceProtocolGenerator {
-  def apply(circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
+  def apply(circeVersion: CirceModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
     new CirceProtocolGenerator(circeVersion)
 }
 
-class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
-    extends ProtocolTerms[ScalaLanguage, Target] {
+class CirceProtocolGenerator private (circeVersion: CirceModelGenerator) extends ProtocolTerms[ScalaLanguage, Target] {
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def suffixClsName(prefix: String, clsName: String): Pat.Var = Pat.Var(Term.Name(s"${prefix}${clsName}"))

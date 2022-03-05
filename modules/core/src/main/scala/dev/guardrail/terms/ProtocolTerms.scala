@@ -8,7 +8,7 @@ import dev.guardrail.core.{ ResolvedType, SupportDefinition, Tracker }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol.{ Discriminator, PropMeta, PropertyRequirement, ProtocolParameter, StaticDefns, SuperClass }
 
-abstract class ProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) { self =>
+abstract class ProtocolTerms[L <: LA, F[_]] { self =>
   def MonadF: Monad[F]
 
   // ProtocolTerms

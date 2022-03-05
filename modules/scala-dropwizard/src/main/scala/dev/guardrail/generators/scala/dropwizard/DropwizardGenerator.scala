@@ -2,8 +2,7 @@ package dev.guardrail.generators.scala.dropwizard
 
 import cats.Monad
 import dev.guardrail.{ Target, UserError }
-import dev.guardrail.generators.scala.{ ScalaCollectionsGenerator, ScalaLanguage }
-import dev.guardrail.terms.CollectionsLibTerms
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.generators.spi.FrameworkGeneratorLoader
 
@@ -15,7 +14,6 @@ class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
 
-  implicit val Cl = ScalaCollectionsGenerator()
   def apply(parameters: Set[String]) =
     for {
       dropwizardVersion <- parameters.collectFirst { case DropwizardVersion(version) => version }
@@ -23,11 +21,11 @@ class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
 }
 
 object DropwizardGenerator {
-  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] =
+  def apply(): FrameworkTerms[ScalaLanguage, Target] =
     new DropwizardGenerator
 }
 
-class DropwizardGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
+class DropwizardGenerator private extends FrameworkTerms[ScalaLanguage, Target] {
   override def MonadF: Monad[Target] = Target.targetInstances
 
   override def objectType(format: Option[String]): Target[Type] = Target.pure(t"com.fasterxml.jackson.databind.JsonNode")

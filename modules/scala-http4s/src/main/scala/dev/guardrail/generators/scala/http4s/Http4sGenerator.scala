@@ -6,14 +6,12 @@ import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.Target
 import dev.guardrail.generators.scala._
 import dev.guardrail.generators.spi.FrameworkGeneratorLoader
-import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
 
 class Http4sGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
 
-  implicit val Cl = ScalaCollectionsGenerator()
   def apply(parameters: Set[String]) =
     for {
       http4sVersion <- parameters.collectFirst { case Http4sVersion(version) => version }
@@ -21,10 +19,10 @@ class Http4sGeneratorLoader extends FrameworkGeneratorLoader {
 }
 
 object Http4sGenerator {
-  def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] = new Http4sGenerator
+  def apply(): FrameworkTerms[ScalaLanguage, Target] = new Http4sGenerator
 }
 
-class Http4sGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends FrameworkTerms[ScalaLanguage, Target] {
+class Http4sGenerator private extends FrameworkTerms[ScalaLanguage, Target] {
   implicit def MonadF = Target.targetInstances
   def fileType(format: Option[String]) =
     Target.pure(format.fold[Type](t"fs2.Stream[F,Byte]")(Type.Name(_)))

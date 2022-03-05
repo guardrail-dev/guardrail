@@ -10,7 +10,7 @@ import dev.guardrail.generators.{ CustomExtractionField, LanguageParameters, Ren
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+import dev.guardrail.terms.{ RouteMeta, SecurityScheme }
 
 case class GenerateRouteMeta[L <: LA](
     operationId: String,
@@ -30,7 +30,7 @@ object SecurityExposure {
   case object Optional  extends SecurityExposure
 }
 
-abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) { self =>
+abstract class ServerTerms[L <: LA, F[_]] { self =>
   def MonadF: Monad[F]
   def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean): F[Option[CustomExtractionField[L]]]
   def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): F[Option[TracingField[L]]]
