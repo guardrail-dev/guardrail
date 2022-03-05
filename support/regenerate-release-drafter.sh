@@ -158,7 +158,6 @@ write java-spring-mvc   guardrail-java-spring-mvc   modules/java-spring-mvc/src/
 write java-support      guardrail-java-support      modules/java-support/src/main/      project/src/main/scala/Build.scala  project/src/main/scala/modules/javaSupport.scala
 write scala-akka-http   guardrail-scala-akka-http   modules/scala-akka-http/src/main/   project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaAkkaHttp.scala
 write scala-dropwizard  guardrail-scala-dropwizard  modules/scala-dropwizard/src/main/  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaDropwizard.scala
-write scala-endpoints   guardrail-scala-endpoints   modules/scala-endpoints/src/main/   project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaEndpoints.scala
 write scala-http4s      guardrail-scala-http4s      modules/scala-http4s/src/main/      project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaHttp4s.scala
 write scala-support     guardrail-scala-support     modules/scala-support/src/main/     project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaSupport.scala
 write guardrail         guardrail                   modules/codegen/src/main/           project/src/main/scala/Build.scala  project/src/main/scala/modules/guardrail.scala

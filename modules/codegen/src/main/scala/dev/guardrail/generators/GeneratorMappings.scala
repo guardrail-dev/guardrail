@@ -33,9 +33,6 @@ object GeneratorMappings {
   private def indirectAkkaHttp = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
     val instance = scala.akkaHttp.AkkaHttp
   }
-  private def indirectEndpoints = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
-    val instance = scala.endpoints.Endpoints
-  }
   private def indirectHttp4s = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
     val instance = new scala.http4s.Http4s(scala.http4s.Http4sVersion.V0_23)
   }
@@ -53,7 +50,6 @@ object GeneratorMappings {
     "akka-http",
     xs => scalaModule.flatMap(_.extract(xs)), {
       case "akka-http"         => scalaModule *> catchClassNotFound(indirectAkkaHttp, MissingDependency("guardrail-scala-akka-http"))
-      case "endpoints"         => scalaModule *> catchClassNotFound(indirectEndpoints, MissingDependency("guardrail-scala-endpoints"))
       case "http4s"            => scalaModule *> catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
       case "http4s-v0.23"      => scalaModule *> catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
       case "http4s-v0.22"      => scalaModule *> catchClassNotFound(indirectHttp4sV0_22, MissingDependency("guardrail-scala-http4s"))

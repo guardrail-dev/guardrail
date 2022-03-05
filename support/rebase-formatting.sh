@@ -62,7 +62,6 @@ projects=(
   java-spring-boot
   scala-support
   scala-akka-http
-  scala-endpoints
   scala-http4s
   scala-dropwizard
 )

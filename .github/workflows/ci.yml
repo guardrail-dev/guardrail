@@ -96,7 +96,6 @@ jobs:
         scala: ${{ fromJson(needs.core.outputs.scala_versions) }}
         framework: [
             { framework: 'akka-http',         project: 'sample-akkaHttp'        },
-            #{ framework: 'endpoints',         project: 'sample-endpoints'       },
             { framework: 'http4s',            project: 'sample-http4s'          },
             { framework: 'http4s-v0.22',      project: 'sample-http4s-v0_22'     },
             { framework: 'akka-http-jackson', project: 'sample-akkaHttpJackson' },
@@ -107,7 +106,7 @@ jobs:
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
       if: ${{ matrix.java == '1.15' && matrix.scala.bincompat == '2.12' }}
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
-      if: matrix.scala.bincompat == '2.13' && ( matrix.framework.framework == 'endpoints' || matrix.framework.framework == 'dropwizard' )
+      if: matrix.scala.bincompat == '2.13' && matrix.framework.framework == 'dropwizard'
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0

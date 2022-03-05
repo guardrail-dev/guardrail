@@ -7,7 +7,6 @@ import dev.guardrail.generators._
 import dev.guardrail.generators.scala.akkaHttp.{ AkkaHttpClientGenerator, AkkaHttpGenerator, AkkaHttpServerGenerator }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
 import dev.guardrail.generators.scala.dropwizard.{ DropwizardClientGenerator, DropwizardGenerator, DropwizardServerGenerator }
-import dev.guardrail.generators.scala.endpoints.{ EndpointsClientGenerator, EndpointsGenerator, EndpointsServerGenerator }
 import dev.guardrail.generators.scala.http4s.{ Http4sClientGenerator, Http4sGenerator, Http4sServerGenerator, Http4sVersion }
 import dev.guardrail.generators.scala.jackson.JacksonProtocolGenerator
 import dev.guardrail.terms.client.ClientTerms
@@ -60,16 +59,6 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     AkkaHttpGenerator(AkkaHttpVersion.V10_1, modelGeneratorType)
   )
 
-  def endpoints(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
-      ClientTerms[ScalaLanguage, Target],
-      ServerTerms[ScalaLanguage, Target],
-      FrameworkTerms[ScalaLanguage, Target]
-  ) = (
-    EndpointsClientGenerator(),
-    EndpointsServerGenerator(),
-    EndpointsGenerator()
-  )
-
   def http4sV0_22(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
@@ -117,7 +106,6 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
         ("http4s", catchClassNotFound(http4s, MissingDependency("guardrail-scala-http4s"))),
         ("http4s-v0.23", catchClassNotFound(http4s, MissingDependency("guardrail-scala-http4s"))),
         ("http4s-v0.22", catchClassNotFound(http4sV0_22, MissingDependency("guardrail-scala-http4s"))),
-        ("endpoints", catchClassNotFound(endpoints(modelGeneratorType), MissingDependency("guardrail-scala-endpoints"))),
         ("dropwizard", catchClassNotFound(dropwizard, MissingDependency("guardrail-scala-dropwizard")))
       )
       // parser             =  or interpFramework

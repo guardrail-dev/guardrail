@@ -14,7 +14,6 @@ object allDeps {
       libraryDependencies ++= scalaAkkaHttp.dependencies,
       libraryDependencies ++= scalaAkkaHttp.dependenciesJackson,
       libraryDependencies ++= scalaHttp4s.dependencies,
-      libraryDependencies ++= scalaEndpoints.dependencies,
       libraryDependencies ++= javaSpringMvc.dependencies,
       libraryDependencies ++= javaDropwizard.dependencies,
       libraryDependencies ++= javaDropwizard.dependenciesVavr,

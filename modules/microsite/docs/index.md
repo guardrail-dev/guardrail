@@ -15,8 +15,6 @@ Getting started:
   - [akka-http-jackson](scala/akka-http-jackson)
   - [http4s](scala/http4s)
   - [dropwizard](scala/dropwizard)
-- ScalaJS
-  - [endpoints](scalajs/endpoints)
 - Java
   - [dropwizard](java/dropwizard)
   - [spring-mvc](java/spring-mvc)

@@ -6,7 +6,6 @@ object RegressionTests {
   val exampleFrameworkSuites = Map(
     "scala" -> List(
       ExampleFramework("akka-http", "akkaHttp"),
-      ExampleFramework("endpoints", "endpoints", List()),
       ExampleFramework("http4s-v0.22", "http4s-v0_22"),
       ExampleFramework("http4s", "http4s"),
       ExampleFramework("akka-http-jackson", "akkaHttpJackson"),
@@ -94,7 +93,7 @@ object RegressionTests {
     ExampleCase(sampleResource("redaction.yaml"), "redaction"),
     ExampleCase(sampleResource("server1.yaml"), "tracer").args("--tracing"),
     ExampleCase(sampleResource("server2.yaml"), "tracer").args("--tracing"),
-    ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological").frameworks("java" -> javaFrameworks.map(_.name).toSet, "scala" -> (scalaFrameworks.map(_.name).toSet - "endpoints")), // Blocked by https://github.com/endpoints4s/endpoints4s/issues/713
+    ExampleCase(sampleResource("pathological-parameters.yaml"), "pathological").frameworks("java" -> javaFrameworks.map(_.name).toSet, "scala" -> (scalaFrameworks.map(_.name).toSet)),
     ExampleCase(sampleResource("response-headers.yaml"), "responseHeaders"),
     ExampleCase(sampleResource("random-content-types.yaml"), "randomContentTypes").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "http4s-v0.22", "dropwizard")),
     ExampleCase(sampleResource("binary.yaml"), "binary").frameworks("java" -> Set("dropwizard", "dropwizard-vavr"), "scala" -> Set("http4s", "http4s-v0.22")),

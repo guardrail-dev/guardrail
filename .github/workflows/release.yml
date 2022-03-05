@@ -98,16 +98,6 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [scala-endpoints]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-endpoints' }}
-        run: sbt 'show version' "project guardrail-scala-endpoints" clean compile versionCheck test ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [scala-http4s]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-http4s' }}
         run: sbt 'show version' "project guardrail-scala-http4s" clean compile versionCheck test ci-release

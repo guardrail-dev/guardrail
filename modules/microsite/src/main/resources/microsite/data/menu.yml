@@ -22,9 +22,3 @@ options:
 
       - title: http4s
         url: scala/http4s
-
-  - title: ScalaJS
-    url: scalajs/
-    nested_options:
-      - title: endpoints (client only)
-        url: scalajs/endpoints
