@@ -16,7 +16,7 @@ The following is an example from the [http4s](https://github.com/http4s/http4s) 
 import dev.guardrail.generators.scala.http4s.Http4s
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.docs._
-DocsHelpers.renderScalaSnippet(new Http4s(Http4sVersion.V0_23), GeneratingClients)(
+DocsHelpers.renderScalaSnippet("http4s", GeneratingClients)(
   """|// Two constructors are provided, one accepting the `httpClient` and `Async`
      |// implicitly, the other accepting an explicit `httpClient`, but still
      |// accepting the `Async` implicitly

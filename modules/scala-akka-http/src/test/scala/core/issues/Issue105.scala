@@ -8,7 +8,7 @@ import support.SwaggerSpecRunner
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.ClassDefinition
 
@@ -40,7 +40,7 @@ class Issue105 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""

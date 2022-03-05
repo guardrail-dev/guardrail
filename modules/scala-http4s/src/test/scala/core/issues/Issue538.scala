@@ -8,7 +8,7 @@ import support.SwaggerSpecRunner
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.terms.protocol.{ ClassDefinition, StaticDefns }
 
@@ -49,7 +49,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       val companion = companionForStaticDefns(foo.staticDefns)
       cmp(foo.cls, q"case class Foo(id: Option[String] = None)")
@@ -88,7 +88,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       cmp(foo.cls, q"case class Foo(id: String)")
     }
@@ -127,7 +127,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       cmp(foo.cls, q"""case class Foo(id: String) { override def toString: String = "Foo(" + "[redacted]" + ")" }""")
     }
@@ -166,7 +166,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       val companion = companionForStaticDefns(foo.staticDefns)
       val expected =

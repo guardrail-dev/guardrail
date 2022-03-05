@@ -14,7 +14,7 @@ The following is an example from the [http4s](https://github.com/http4s/http4s) 
 import dev.guardrail.generators.scala.http4s.Http4s
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.docs._
-DocsHelpers.renderScalaSnippet(new Http4s(Http4sVersion.V0_23), GeneratingAServer)("""
+DocsHelpers.renderScalaSnippet("http4s", GeneratingAServer)("""
     |// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some
     |// structural alterations (`F[_]` instead of `Future[_]` as the return type) the same handlers can be used with
     |// different `Resource` implementations from different framework generators. This permits greater compatibility between

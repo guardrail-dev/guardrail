@@ -2,7 +2,7 @@ package tests.core
 
 import dev.guardrail.core.{ Tracker, TrackerTestExtensions }
 import dev.guardrail.core.implicits._
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.{ CodegenTarget, Context, UserError }
 import org.scalacheck.{ Arbitrary, Gen }
@@ -142,7 +142,7 @@ Tracker should:
         |          description: Success
         |""".stripMargin
       val (_, UserError("Missing operationId (.paths./foo.operations.GET.operationId)")) =
-        runInvalidSwaggerSpec(swagger)(Context.empty, CodegenTarget.Server, new Http4s(Http4sVersion.V0_23))
+        runInvalidSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, CodegenTarget.Server, Http4sVersion.V0_23.value)
     }
 
     "responses" in {
@@ -155,7 +155,7 @@ Tracker should:
         |      operationId: foo
         |""".stripMargin
       val (_, UserError("No responses defined for foo (.paths./foo.operations.GET.responses)")) =
-        runInvalidSwaggerSpec(swagger)(Context.empty, CodegenTarget.Server, new Http4s(Http4sVersion.V0_23))
+        runInvalidSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, CodegenTarget.Server, Http4sVersion.V0_23.value)
     }
   }
 }

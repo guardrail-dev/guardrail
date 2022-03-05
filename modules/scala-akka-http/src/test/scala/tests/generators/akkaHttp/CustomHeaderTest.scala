@@ -1,6 +1,6 @@
 package tests.generators.akkaHttp
 
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Clients, Server, Servers }
 import support.SwaggerSpecRunner
@@ -42,7 +42,7 @@ class CustomHeaderTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
 
   test("Should produce static parameter constraints") {
     val (_, Clients(client :: Nil, Nil), Servers(Server(_, _, genHandler, genResource :: Nil) :: Nil, Nil)) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+      runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
 
     val handler =
       q"""trait Handler { def getFoo(respond: Resource.GetFooResponse.type)(customHeader: Bar): scala.concurrent.Future[Resource.GetFooResponse] }"""

@@ -1,6 +1,6 @@
 package tests.generators.http4s.client
 
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.Context
@@ -129,7 +129,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
         _,
         Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       tags should equal(Seq("store"))
       val cmp = companionForStaticDefns(staticDefns)

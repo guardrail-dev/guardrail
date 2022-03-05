@@ -8,9 +8,7 @@ import support.SwaggerSpecRunner
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
-import dev.guardrail.generators.scala.http4s.Http4s
-import dev.guardrail.generators.scala.http4s.Http4sVersion
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.ClassDefinition
 
@@ -97,7 +95,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -185,7 +183,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, _, _, _) :: ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""case class Types(composed: Option[Types.Composed] = None)"""
@@ -237,7 +235,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""case class First(second: Option[First.Second] = None)"""
@@ -299,7 +297,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: ClassDefinition(_, _, _, _, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
 
     val cmp = companionForStaticDefns(staticDefns)
 
@@ -360,7 +358,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(Http4sVersion.V0_23))
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "http4s")
 
     val cmp = companionForStaticDefns(staticDefns)
 

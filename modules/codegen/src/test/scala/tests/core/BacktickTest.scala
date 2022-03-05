@@ -7,10 +7,10 @@ import org.scalatest.matchers.should.Matchers
 import support.SwaggerSpecRunner
 
 import dev.guardrail.Context
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.generators.{ Client, Clients, ProtocolDefinitions }
 import dev.guardrail.terms.protocol.{ ClassDefinition, EnumDefinition }
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 
 class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
@@ -74,7 +74,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, imports, staticDefns, cls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("dashy-package"))
@@ -146,7 +146,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -182,7 +182,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: EnumDefinition(_, _, _, _, cls, staticDefns) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""

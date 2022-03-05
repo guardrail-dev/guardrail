@@ -8,7 +8,7 @@ import support.SwaggerSpecRunner
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.generators.{ Client, Clients }
@@ -81,7 +81,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ProtocolDefinitions(RandomType(_, tpe) :: _, _, _, _, _),
         _,
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       tpe.structure should equal(t"io.circe.Json".structure)
     }
@@ -91,7 +91,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
         _,
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
       val cmp = companionForStaticDefns(staticDefns)
 
       val definition = q"""
@@ -117,7 +117,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         _,
         Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
       val cmp = companionForStaticDefns(staticDefns)
 
       val companion = q"""object Client {

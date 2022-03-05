@@ -1,6 +1,6 @@
 package tests.generators.akkaHttp.client
 
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
 import support.SwaggerSpecRunner
@@ -35,7 +35,7 @@ class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSp
       |""".stripMargin
 
     val (_, Clients(Client(_, _, _, _, cls, _) :: _, Nil), _) =
-      runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
+      runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(tracing = true), "akka-http")
 
     val client = q"""
       class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
@@ -91,7 +91,7 @@ class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSp
       _,
       Clients(Client(tags, className, _, _, cls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(tracing = true), "akka-http")
 
     val client = q"""
       class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

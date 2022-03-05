@@ -1,7 +1,7 @@
 package core.issues
 
 import cats.data.NonEmptyList
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
@@ -50,7 +50,7 @@ class Issue313 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, imports, staticDefns, NonEmptyList(Right(cls), _), _) :: _, Nil),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val client = q"""

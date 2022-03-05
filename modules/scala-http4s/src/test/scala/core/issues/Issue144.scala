@@ -1,6 +1,6 @@
 package core.issues
 
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
@@ -34,7 +34,7 @@ class Issue144 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Ensure mapRoute is generated") {
-      val (_, _, Servers(Server(_, _, _, genResource :: _) :: Nil, _)) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      val (_, _, Servers(Server(_, _, _, genResource :: _) :: Nil, _)) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       val resource =
         q"""

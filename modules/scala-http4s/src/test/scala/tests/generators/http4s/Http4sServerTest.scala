@@ -1,6 +1,6 @@
 package tests.generators.http4s
 
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
@@ -134,7 +134,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       val handler =
         q"""
@@ -220,7 +220,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-      ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(tracing = true), version.value)
 
       val handler =
         q"""
@@ -311,7 +311,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-      ) = runSwaggerSpec(swagger)(Context.empty.copy(customExtraction = true), new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(customExtraction = true), version.value)
       val handler =
         q"""
       trait StoreHandler[F[_], -E] {

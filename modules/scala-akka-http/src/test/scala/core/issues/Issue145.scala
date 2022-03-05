@@ -8,7 +8,7 @@ import support.SwaggerSpecRunner
 
 import dev.guardrail._
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.ClassDefinition
 
@@ -49,7 +49,7 @@ class Issue145 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
 
     it("should generate right companion object") {
       val cmp = companionForStaticDefns(staticDefnsPet)

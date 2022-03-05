@@ -1,6 +1,6 @@
 package tests.generators.akkaHttp
 
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
 import support.SwaggerSpecRunner
@@ -130,7 +130,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
 
     val handler = q"""
       trait StoreHandler {
@@ -267,7 +267,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(tracing = true), "akka-http")
 
     val handler = q"""
       trait StoreHandler {
@@ -404,7 +404,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(customExtraction = true), AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(customExtraction = true), "akka-http")
 
     val handler = q"""
       trait StoreHandler[-E] {

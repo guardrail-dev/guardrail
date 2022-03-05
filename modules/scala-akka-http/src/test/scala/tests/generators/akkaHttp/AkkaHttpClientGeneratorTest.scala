@@ -1,6 +1,6 @@
 package tests.generators.akkaHttp
 
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
@@ -116,7 +116,7 @@ class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with Swagger
       _,
       Clients(Client(tags, className, _, staticDefns, cls, _) :: Nil, Nil),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))
@@ -186,7 +186,7 @@ class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with Swagger
       _,
       Clients(List(Client(tags, className, _, staticDefns, cls, _)), Nil),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty.copy(framework = Some("akka-http"), tracing = true), AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(framework = Some("akka-http"), tracing = true), "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))

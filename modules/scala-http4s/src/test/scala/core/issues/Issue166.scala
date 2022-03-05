@@ -13,7 +13,7 @@ import dev.guardrail._
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.terms.protocol.ClassDefinition
 
@@ -50,7 +50,7 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val opts = new ParseOptions()
       opts.setResolve(true)
 
-      val http4sFramework = new Http4s(version)
+      val http4sFramework = Target.unsafeExtract(scalaInterpreter.extractGenerator(Context.empty.copy(framework = Some("http4s")), None))
       import http4sFramework._
 
       val (proto, codegen) = Target.unsafeExtract(

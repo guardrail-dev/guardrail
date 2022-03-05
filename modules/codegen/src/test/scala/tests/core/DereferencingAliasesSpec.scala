@@ -8,7 +8,7 @@ import support.SwaggerSpecRunner
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.generators.{ Client, Clients }
 import dev.guardrail.terms.protocol.ClassDefinition
@@ -142,7 +142,7 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
       ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       Clients(Client(_, clientName, _, clientStaticDefns, clientCls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp       = companionForStaticDefns(staticDefns)
     val clientCmp = companionForStaticDefns(clientStaticDefns)
 
@@ -209,7 +209,7 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
       ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       Clients(Client(_, clientName, _, clientStaticDefns, clientCls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(openAPI)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(openAPI)(Context.empty, "akka-http")
     val cmp       = companionForStaticDefns(staticDefns)
     val clientCmp = companionForStaticDefns(clientStaticDefns)
 

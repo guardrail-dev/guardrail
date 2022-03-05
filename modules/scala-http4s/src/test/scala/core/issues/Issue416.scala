@@ -5,7 +5,7 @@ import org.scalatest.matchers.should.Matchers
 
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import support.SwaggerSpecRunner
 
@@ -42,7 +42,7 @@ class Issue416 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Ensure mapRoute is generated") {
-      val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, _)) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, _)) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       val resource = q"""
       class Resource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
