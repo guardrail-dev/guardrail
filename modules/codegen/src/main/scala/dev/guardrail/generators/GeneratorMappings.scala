@@ -7,6 +7,7 @@ import _root_.scala.meta._
 import _root_.scala.util.{ Failure, Success, Try }
 
 import dev.guardrail.core.CoreTermInterp
+import dev.guardrail.generators.spi.{ FrameworkLoader, ModuleMapperLoader }
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.{ Args, Common, MissingDependency, ReadSwagger, Target, UnparseableArgument, WriteTree }
@@ -24,23 +25,10 @@ object GeneratorMappings {
         Target.raiseError(error)
     }
 
-  private def indirectScalaModule = new LoaderIndirection[AbstractModule[ScalaLanguage]] {
-    val instance = scala.ScalaModule
-  }
-
-  val scalaModule = catchClassNotFound(indirectScalaModule, MissingDependency("guardrail-scala-support"))
-
   implicit def scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
-    xs => scalaModule.flatMap(_.extract(xs)),
-    {
-      case "akka-http"         => NonEmptyList.of("scala-stdlib", "akka-http", "circe")
-      case "http4s"            => NonEmptyList.of("scala-stdlib", "circe", "http4s")
-      case "http4s-v0.23"      => NonEmptyList.of("scala-stdlib", "circe", "http4s-v0.23")
-      case "http4s-v0.22"      => NonEmptyList.of("scala-stdlib", "circe", "http4s-v0.22")
-      case "akka-http-jackson" => NonEmptyList.of("scala-stdlib", "akka-http", "jackson")
-      case "dropwizard"        => NonEmptyList.of("scala-stdlib", "dropwizard", "jackson")
-    },
+    xs => FrameworkLoader.load[ScalaLanguage](xs, MissingDependency(xs.mkString(", "))),
+    { case frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName, MissingDependency(frameworkName)) },
     _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
   )
 
@@ -52,11 +40,8 @@ object GeneratorMappings {
 
   implicit def javaInterpreter = new CoreTermInterp[JavaLanguage](
     "dropwizard",
-    xs => javaModule.flatMap(_.extract(xs)),
-    {
-      case "dropwizard" => NonEmptyList.of("dropwizard", "jackson", "java-stdlib", "async-http-client")
-      case "spring-mvc" => NonEmptyList.of("spring-mvc", "jackson", "java-stdlib", "async-http-client")
-    },
+    xs => FrameworkLoader.load[JavaLanguage](xs, MissingDependency(xs.mkString(", "))),
+    { case frameworkName => ModuleMapperLoader.load[JavaLanguage](frameworkName, MissingDependency(frameworkName)) },
     { str =>
       Try(StaticJavaParser.parseImport(s"import ${str};")) match {
         case Success(value) => Right(value)

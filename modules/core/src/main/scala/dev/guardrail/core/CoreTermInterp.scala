@@ -28,16 +28,16 @@ import dev.guardrail.{
 
 class CoreTermInterp[L <: LA](
     val defaultFramework: String,
-    val handleModules: NonEmptyList[String] => Target[Framework[L, Target]],
-    val frameworkMapping: PartialFunction[String, NonEmptyList[String]],
+    val handleModules: Set[String] => Target[Framework[L, Target]],
+    val frameworkMapping: PartialFunction[String, Target[Set[String]]],
     val handleImport: String => Either[Error, L#Import]
 ) extends CoreTerms[L, Target] { self =>
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
   def extendWith(
       defaultFramework: String = self.defaultFramework,
-      handleModules: NonEmptyList[String] => Target[Framework[L, Target]] = self.handleModules,
-      additionalFrameworkMappings: PartialFunction[String, NonEmptyList[String]] = PartialFunction.empty,
+      handleModules: Set[String] => Target[Framework[L, Target]] = self.handleModules,
+      additionalFrameworkMappings: PartialFunction[String, Target[Set[String]]] = PartialFunction.empty,
       handleImport: String => Either[Error, L#Import] = self.handleImport
   ): CoreTermInterp[L] =
     new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.orElse(self.frameworkMapping), handleImport)
@@ -59,10 +59,11 @@ class CoreTermInterp[L <: LA](
               for {
                 frameworkName <- Target.fromOption(ctxFramework.orElse(vendorDefaultFramework), NoFramework)
                 modules       <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
-                framework     <- handleModules(modules)
+                modules_      <- modules
+                framework     <- handleModules(modules_)
                 _             <- Target.log.debug(s"Found: $framework")
               } yield framework,
-            handleModules
+            modules => handleModules(modules.toList.toSet)
           )
       } yield framework.merge
     }
