@@ -75,9 +75,10 @@ trait CLICommon extends GuardrailRunner {
   def parseAuthImplementation(arg: String, value: String): Target[AuthImplementation] =
     value match {
       case "disable" => Target.pure(AuthImplementation.Disable)
+      case "native"  => Target.pure(AuthImplementation.Native)
       case "simple"  => Target.pure(AuthImplementation.Simple)
       case "custom"  => Target.pure(AuthImplementation.Custom)
-      case _         => Target.raiseError(UnparseableArgument(arg, "Expected one of 'disable', 'simple' or 'custom'"))
+      case _         => Target.raiseError(UnparseableArgument(arg, "Expected one of 'disable', 'native', 'simple' or 'custom'"))
     }
 
   def parseArgs(args: Array[String]): Target[List[Args]] = {

@@ -79,20 +79,21 @@ object ServerGenerator {
               securitySchemes,
               context.authImplementation
             )
-            authImplementation = if (renderedRoutes.securitySchemesDefinitions.isEmpty) AuthImplementation.Disable else context.authImplementation
             handlerSrc <- renderHandler(
               handlerName,
               renderedRoutes.methodSigs,
               renderedRoutes.handlerDefinitions,
               responseDefinitions.flatten,
               context.customExtraction,
-              authImplementation
+              context.authImplementation,
+              renderedRoutes.securitySchemesDefinitions.nonEmpty
             )
             extraRouteParams <- getExtraRouteParams(
               resourceName,
               context.customExtraction,
               context.tracing,
-              authImplementation
+              context.authImplementation,
+              renderedRoutes.securitySchemesDefinitions.nonEmpty
             )
             classSrc <- renderClass(
               resourceName,

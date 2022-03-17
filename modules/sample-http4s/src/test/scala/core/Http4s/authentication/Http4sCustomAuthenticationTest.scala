@@ -34,7 +34,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
     val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) => IO.pure(Right(42))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
-      override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
+      override def doBar(respond: DoBarResponse.type)(p1: String, body: String): IO[DoBarResponse] = ???
 
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
 
@@ -65,7 +65,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
     val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) => IO.pure(Left("custom-failure"))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
-      override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
+      override def doBar(respond: DoBarResponse.type)(p1: String, body: String): IO[DoBarResponse] = ???
 
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
 
@@ -108,7 +108,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       }
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
-      override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
+      override def doBar(respond: DoBarResponse.type)(p1: String, body: String): IO[DoBarResponse] = ???
 
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
 
@@ -144,7 +144,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       )
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
-      override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???
+      override def doBar(respond: DoBarResponse.type)(p1: String, body: String): IO[DoBarResponse] = ???
 
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] =
         authContext.fold(_ => IO(DoBazResponse.Ok("non optional")), ctx => IO(DoBazResponse.Ok("optional")))

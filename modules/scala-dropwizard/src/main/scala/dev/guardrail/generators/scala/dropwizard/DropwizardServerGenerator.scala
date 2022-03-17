@@ -440,7 +440,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       resourceName: String,
       customExtraction: Boolean,
       tracing: Boolean,
-      authImplementation: AuthImplementation
+      authImplementation: AuthImplementation,
+      securitySchemesDefined: Boolean
   ): Target[List[Term.Param]] =
     for {
       customExtraction <- if (customExtraction) {
@@ -489,7 +490,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       handlerDefinitions: List[Stat],
       responseDefinitions: List[Defn],
       customExtraction: Boolean,
-      authImplementation: AuthImplementation
+      authImplementation: AuthImplementation,
+      securitySchemesDefined: Boolean
   ): Target[Defn] =
     Target.pure(
       q"""

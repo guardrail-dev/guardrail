@@ -707,7 +707,13 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty, List.empty)
     }
 
-  override def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authImplementation: AuthImplementation) =
+  override def getExtraRouteParams(
+      resourceName: String,
+      customExtraction: Boolean,
+      tracing: Boolean,
+      authImplementation: AuthImplementation,
+      securitySchemesDefined: Boolean
+  ) =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -766,7 +772,8 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       handlerDefinitions: List[com.github.javaparser.ast.Node],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       customExtraction: Boolean,
-      authImplementation: AuthImplementation
+      authImplementation: AuthImplementation,
+      securitySchemesDefined: Boolean
   ) = {
     val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
     sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

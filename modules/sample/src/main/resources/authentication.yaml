@@ -33,6 +33,12 @@ paths:
     post:
       x-jvm-package: auth
       operationId: doBar
+      parameters:
+        - name: p1
+          in: query
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:

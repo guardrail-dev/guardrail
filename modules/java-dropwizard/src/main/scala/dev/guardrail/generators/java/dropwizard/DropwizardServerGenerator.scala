@@ -644,7 +644,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       resourceName: String,
       customExtraction: Boolean,
       tracing: Boolean,
-      authImplementation: AuthImplementation
+      authImplementation: AuthImplementation,
+      securitySchemesDefined: Boolean
   ): Target[List[Parameter]] =
     for {
       customExtraction <- if (customExtraction) {
@@ -731,7 +732,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       handlerDefinitions: List[com.github.javaparser.ast.Node],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       customExtraction: Boolean,
-      authImplementation: AuthImplementation
+      authImplementation: AuthImplementation,
+      securitySchemesDefined: Boolean
   ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
     val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
     sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

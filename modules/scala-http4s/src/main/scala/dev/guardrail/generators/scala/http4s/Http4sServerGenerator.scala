@@ -24,6 +24,7 @@ import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 import dev.guardrail.terms.SecurityRequirements
 import dev.guardrail.AuthImplementation.Disable
+import dev.guardrail.AuthImplementation.Native
 import dev.guardrail.AuthImplementation.Simple
 import dev.guardrail.AuthImplementation.Custom
 
@@ -157,7 +158,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       routeTerms = renderedRoutes.map(_.route)
       combinedRouteTerms <- combineRouteTerms(routeTerms)
       methodSigs = renderedRoutes.map(_.methodSig)
-      securitySchemesDefinitions <- if (authImplementation == AuthImplementation.Disable) Target.pure(List.empty)
+      securitySchemesDefinitions <- if (authImplementation == AuthImplementation.Disable || authImplementation == AuthImplementation.Native)
+        Target.pure(List.empty)
       else generateSecuritySchemes(securitySchemes, routes.map(_.routeMeta.securityRequirements).flatten, authImplementation)
     } yield {
       RenderedRoutes[ScalaLanguage](
@@ -259,23 +261,41 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       handlerDefinitions: List[scala.meta.Stat],
       responseDefinitions: List[scala.meta.Defn],
       customExtraction: Boolean,
-      authImplementation: AuthImplementation
+      authImplementation: AuthImplementation,
+      securitySchemesDefined: Boolean
   ) =
     Target.log.function("renderHandler")(for {
       _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
       extractType = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
-      authType    = List(tparam"$authContextTypeName").filter(_ => authImplementation != AuthImplementation.Disable)
-      tParams     = List(tparam"F[_]") ++ extractType ++ authType
+      authType = List(tparam"$authContextTypeName").filter(
+        _ =>
+          authImplementation match {
+            case Disable => false
+            case Native  => true
+            case _       => securitySchemesDefined
+          }
+      )
+      tParams = List(tparam"F[_]") ++ extractType ++ authType
     } yield q"""
     trait ${Type.Name(handlerName)}[..$tParams] {
       ..${methodSigs ++ handlerDefinitions}
     }
   """)
 
-  def getExtraRouteParams(resourceName: String, customExtraction: Boolean, tracing: Boolean, authImplementation: AuthImplementation) =
+  def getExtraRouteParams(
+      resourceName: String,
+      customExtraction: Boolean,
+      tracing: Boolean,
+      authImplementation: AuthImplementation,
+      securitySchemesDefined: Boolean
+  ) =
     Target.log.function("getExtraRouteParams")(for {
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing}, ${authImplementation})")
-      mapRoute = param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+      mapRoute = authImplementation match {
+        case Native =>
+          param"""mapRoute: (String, AuthedRequest[F, $authContextTypeName], F[Response[F]]) => F[Response[F]] = (_: String, _: AuthedRequest[F, $authContextTypeName], r: F[Response[F]]) => r"""
+        case _ => param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+      }
       customExtraction_ = if (customExtraction) {
         Option(param"""customExtract: String => Request[F] => $customExtractionTypeName""")
       } else Option.empty
@@ -283,18 +303,18 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
       } else Option.empty
       authentication_ = authImplementation match {
-        case Disable => Option.empty
-        case Simple =>
+        case Simple if securitySchemesDefined =>
           val authType = Type.Select(Term.Name(resourceName), authSchemesTypeName)
           Option(
             param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Either[${Term
               .Name(resourceName)}.$authErrorTypeName, $authContextTypeName]]"""
           )
-        case Custom =>
+        case Custom if securitySchemesDefined =>
           Option(
             param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
               .Name(resourceName)}.$authSchemesTypeName, Set[String]]], Boolean, Request[F]) => F[$authContextTypeName]"""
           )
+        case _ => Option.empty
       }
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
 
@@ -320,21 +340,31 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       for {
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
         extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
-        authType        = List(tparam"$authContextTypeName").filter(_ => securitySchemesDefinitions.nonEmpty)
+        authType        = List(tparam"$authContextTypeName").filter(_ => securitySchemesDefinitions.nonEmpty || authImplementation == AuthImplementation.Native)
         resourceTParams = List(tparam"F[_]") ++ extractType ++ authType
         handlerTParams = List(Type.Name("F")) ++
             List(customExtractionTypeName).filter(_ => customExtraction) ++
-            List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty)
+            List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty || authImplementation == AuthImplementation.Native)
         routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
+        routesDefinition = authImplementation match {
+          case Native => q"""
+            def routes(..${routesParams}): AuthedRoutes[$authContextTypeName, F] = AuthedRoutes.of {
+                ..${combinedRouteTerms}
+              }
+          """
+          case _      => q"""
+            def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
+                ..${combinedRouteTerms}
+              }
+          """
+        }
       } yield List(
         q"""
           class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
             import ${Term.Name(resourceName)}._
 
             ..${supportDefinitions};
-            def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
-              ..${combinedRouteTerms}
-            }
+            $routesDefinition
           }
         """,
         q"""object ${Term.Name(resourceName)} {
@@ -737,24 +767,24 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val responseType = ServerRawResponse(operation)
         .filter(_ == true)
         .fold[Type](t"${Term.Name(resourceName)}.$responseCompanionType")(Function.const(t"Response[F]"))
-      val authContextAndSecurityRequirement =
-        authImplementation match {
-          case AuthImplementation.Disable => None
-          case AuthImplementation.Simple =>
-            securityRequirements.map({ sr =>
-              val errorTermName = Term.Name(authErrorTypeName.value)
-              val inner = if (sr.optional) {
-                t"Either[${Type.Singleton(Term.Select(Term.Select(Term.Name(resourceName), errorTermName), q"Forbidden"))}, Option[$authContextTypeName]]"
-              } else {
-                t"Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"
-              }
-              (LanguageParameter.fromParam(param"authContext: $inner"), sr)
-            })
-          case AuthImplementation.Custom =>
-            securityRequirements.map((LanguageParameter.fromParam(param"authContext: $authContextTypeName"), _))
-        }
+      val authContext = authImplementation match {
+        case Disable => None
+        case Native  => Some(LanguageParameter.fromParam(param"authContext: $authContextTypeName"))
+        case Custom  => securityRequirements.map(_ => LanguageParameter.fromParam(param"authContext: $authContextTypeName"))
+        case Simple =>
+          securityRequirements.map({ sr =>
+            val errorTermName = Term.Name(authErrorTypeName.value)
+            val inner = if (sr.optional) {
+              t"Either[${Type.Singleton(Term.Select(Term.Select(Term.Name(resourceName), errorTermName), q"Forbidden"))}, Option[$authContextTypeName]]"
+            } else {
+              t"Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"
+            }
+            LanguageParameter.fromParam(param"authContext: $inner")
+          })
+      }
+
       val orderedParameters: List[List[LanguageParameter[ScalaLanguage]]] = List(
-          (authContextAndSecurityRequirement.map(_._1).toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
+          (authContext.toList ++ pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList
         ) ++
             tracingFields
               .map(_.param)
@@ -766,18 +796,25 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       val entityProcessor = http4sBody
         .orElse(Some((content: Term) => q"req.decode[UrlForm] { urlForm => $content }").filter(_ => formArgs.nonEmpty && formArgs.forall(!_.isFile)))
         .orElse(Some((content: Term) => q"req.decode[Multipart[F]] { multipart => $content }").filter(_ => formArgs.nonEmpty))
-      val fullRouteMatcher =
-        NonEmptyList.fromList(List(additionalQs, http4sQs).flatten).fold(p"$http4sMethod -> $http4sPath") { qs =>
+      val fullRouteMatcher = {
+        val base = NonEmptyList.fromList(List(additionalQs, http4sQs).flatten).fold(p"$http4sMethod -> $http4sPath") { qs =>
           p"$http4sMethod -> $http4sPath :? ${qs.reduceLeft((a, n) => p"$a :& $n")}"
         }
-      val fullRouteWithTracingMatcher = tracingFields
-        .map(_ => p"$fullRouteMatcher ${Term.Name(s"usingFor${methodName.capitalize}")}(traceBuilder)")
-        .getOrElse(fullRouteMatcher)
-      val fullRouteWithTracingAndExtraction = customExtractionFields
-        .map(_ => p"$fullRouteWithTracingMatcher ${Term.Name(s"extractorFor${methodName.capitalize}")}(extracted)")
-        .getOrElse(fullRouteWithTracingMatcher)
+        val fullRouteWithTracingMatcher = tracingFields
+          .map(_ => p"$base ${Term.Name(s"usingFor${methodName.capitalize}")}(traceBuilder)")
+          .getOrElse(base)
+        val fullRouteWithTracingAndExtraction = customExtractionFields
+          .map(_ => p"$fullRouteWithTracingMatcher ${Term.Name(s"extractorFor${methodName.capitalize}")}(extracted)")
+          .getOrElse(fullRouteWithTracingMatcher)
+        val fullRouteWithTracingAndExtractionAndAuth = authImplementation match {
+          case Native => p"$fullRouteWithTracingAndExtraction ${Term.Name(s"as")}(authContext)"
+          case _      => fullRouteWithTracingAndExtraction
+        }
+
+        fullRouteWithTracingAndExtractionAndAuth
+      }
       val handlerCallArgs: List[List[Term]] = List(List(responseCompanionTerm)) ++ List(
-              (authContextAndSecurityRequirement.map(_._1).toList ++ pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName).toList ++ (http4sForm ++ http4sHeaders)
+              (authContext.toList ++ pathArgs ++ qsArgs ++ bodyArgs).map(_.paramName).toList ++ (http4sForm ++ http4sHeaders)
                     .map(_.handlerCallArg)
             ) ++
             tracingFields.map(_.param.paramName).map(List(_)) ++
@@ -853,48 +890,65 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       }
       val routeBody = entityProcessor.fold[Term](responseInMatchInFor)(_.apply(responseInMatchInFor))
 
-      val includeAuthContext: Term => Term = authContextAndSecurityRequirement.fold[Term => Term](identity _) {
-        case (arg, sr) =>
+      val includeAuthContext: Term => Term = authContext.fold[Term => Term](identity _) {
+        arg =>
           authImplementation match {
             case Disable => identity _
-            case Simple =>
-              val securityRequirements = renderCustomSecurityRequirements(sr)
-              val authContextParam     = param"${arg.paramName}"
-              inner =>
-                if (sr.optional)
-                  q"""
-                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
-                      authContextEither =>
-                        val ${Pat.Var(Term.Name(authContextParam.name.value))} = authContextEither match {
-                          case Right(success) => Right(Option(success))
-                          case Left(${Term.Name(authErrorTypeName.value)}.Unauthorized) => Right(Option.empty)
-                          case Left(x: ${Type.Singleton(Term.Select(Term.Name(authErrorTypeName.value), q"Forbidden"))}) => Left(x)
-                        }
-                        $inner
-                    }
-                  """
-                else
-                  q"""
-                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
-                      $authContextParam =>
-                        $inner
-                    }
-                  """
-            case Custom =>
-              val securityRequirements = renderCustomSecurityRequirements(sr)
-              val authContextParam     = param"${arg.paramName}"
+            case Native =>
               inner => q"""
+                val req = authedReq.req
+                $inner
+              """
+            case Simple =>
+              securityRequirements.fold[Term => Term](identity _) {
+                sr =>
+                  val securityRequirements = renderCustomSecurityRequirements(sr)
+                  val authContextParam     = param"${arg.paramName}"
+                  inner =>
+                    if (sr.optional)
+                      q"""
+                  authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
+                    authContextEither =>
+                      val ${Pat.Var(Term.Name(authContextParam.name.value))} = authContextEither match {
+                        case Right(success) => Right(Option(success))
+                        case Left(${Term.Name(authErrorTypeName.value)}.Unauthorized) => Right(Option.empty)
+                        case Left(x: ${Type.Singleton(Term.Select(Term.Name(authErrorTypeName.value), q"Forbidden"))}) => Left(x)
+                      }
+                      $inner
+                    }
+                    """
+                    else
+                      q"""
+                      authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
+                        $authContextParam =>
+                          $inner
+                        }
+                        """
+              }
+            case Custom =>
+              securityRequirements.fold[Term => Term](identity _) { sr =>
+                val securityRequirements = renderCustomSecurityRequirements(sr)
+                val authContextParam     = param"${arg.paramName}"
+                inner => q"""
                 authenticationMiddleware($securityRequirements, ${sr.optional}, req).flatMap { $authContextParam =>
                   $inner
                 }
               """
+              }
           }
       }
 
       val fullRoute: Case =
-        p"""case req @ $fullRouteWithTracingAndExtraction =>
-            ${includeAuthContext(q"mapRoute($methodName, req, { $routeBody })")}
-          """
+        authImplementation match {
+          case Native =>
+            p"""case authedReq @ $fullRouteMatcher =>
+                ${includeAuthContext(q"mapRoute($methodName, authedReq, { $routeBody })")}
+              """
+          case _ =>
+            p"""case req @ $fullRouteMatcher =>
+                ${includeAuthContext(q"mapRoute($methodName, req, { $routeBody })")}
+              """
+        }
 
       val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.$responseCompanionTerm.type"))
 

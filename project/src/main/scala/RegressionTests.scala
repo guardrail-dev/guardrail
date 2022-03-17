@@ -105,6 +105,7 @@ object RegressionTests {
     ExampleCase(sampleResource("debug-body.yaml"), "debugBody").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("authentication.yaml"), "authentication-custom").args("--auth-implementation", "custom").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("authentication.yaml"), "authentication-simple").args("--auth-implementation", "simple").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("authentication.yaml"), "authentication-native").args("--auth-implementation", "native").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("authentication-override.yaml"), "authentication-override-custom").args("--auth-implementation", "custom").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("authentication-override.yaml"), "authentication-override-simple").args("--auth-implementation", "simple").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
   )
