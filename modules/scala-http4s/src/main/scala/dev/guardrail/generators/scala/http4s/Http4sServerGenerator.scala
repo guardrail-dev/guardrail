@@ -986,18 +986,6 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       )
     })
 
-  private def renderSecurityRequirements(sr: SecurityRequirements): Term = {
-    val orElements = sr.requirements.toList.map { r =>
-      val andElements = r.toSortedMap.toList.map {
-        case (key, scopes) =>
-          val renderedScopes = scopes.map(Lit.String(_))
-          q"""(${Term.Name(authSchemesTypeName.value)}.${securitySchemeNameToClassName(key)} -> List(..$renderedScopes))"""
-      }
-      q"""NonEmptyMap.of(..$andElements)"""
-    }
-    q"""NonEmptyList.of(..$orElements)"""
-  }
-
   private def renderCustomSecurityRequirements(sr: SecurityRequirements): Term = {
     val orElements = sr.requirements.toList.map { r =>
       val andElements = r.toSortedMap.toList.map {
