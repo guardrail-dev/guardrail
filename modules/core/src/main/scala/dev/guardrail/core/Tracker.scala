@@ -138,6 +138,9 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
 
     @deprecated("Tracker.get will be removed once the migration has been completed. Please use the fold/traverse combinators to get values out.", "0.0.0")
     def history: Vector[String] = tracker.history
+
+    def forceConvince[C](implicit ev: Tracker.Convincer[Option[A], C]): Tracker[C] =
+      tracker.map(x => ev(Option(x)))
   }
 }
 
