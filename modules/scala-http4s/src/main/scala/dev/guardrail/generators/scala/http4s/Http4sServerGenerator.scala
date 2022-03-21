@@ -290,10 +290,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   ) =
     Target.log.function("getExtraRouteParams")(for {
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing}, ${authImplementation})")
-      mapRoute = authImplementation match {
-        case Native =>
-          param"""mapRoute: (String, AuthedRequest[F, $authContextTypeName], F[Response[F]]) => F[Response[F]] = (_: String, _: AuthedRequest[F, $authContextTypeName], r: F[Response[F]]) => r"""
-        case _ => param"""mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r"""
+      mapRoute = {
+        val requestType = authImplementation match {
+          case Native => t"AuthedRequest[F, $authContextTypeName]"
+          case _      => t"Request[F]"
+        }
+        param"""mapRoute: (String, $requestType, F[Response[F]]) => F[Response[F]] = (_: String, _: $requestType, r: F[Response[F]]) => r"""
       }
       customExtraction_ = if (customExtraction) {
         Option(param"""customExtract: String => Request[F] => $customExtractionTypeName""")
