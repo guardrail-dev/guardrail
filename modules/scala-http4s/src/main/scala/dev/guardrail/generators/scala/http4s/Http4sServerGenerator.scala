@@ -270,15 +270,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   ) =
     Target.log.function("renderHandler")(for {
       _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
-      extractType = List(tparam"-$customExtractionTypeName").filter(_ => customExtraction)
-      authType = List(tparam"$authContextTypeName").filter(
-        _ =>
-          authImplementation match {
-            case Disable => false
-            case Native  => true
-            case _       => securitySchemesDefined
-          }
-      )
+      extractType = if (customExtraction) List(tparam"-$customExtractionTypeName") else List.empty
+      authType = if (authImplementation == Native || (authImplementation != Disable && securitySchemesDefined)) {
+        List(tparam"$authContextTypeName")
+      } else List.empty
       tParams = List(tparam"F[_]") ++ extractType ++ authType
     } yield q"""
     trait ${Type.Name(handlerName)}[..$tParams] {
@@ -306,17 +301,16 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       tracing_ = if (tracing) {
         Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
       } else Option.empty
+      resourceTerm = Term.Name(resourceName)
       authentication_ = authImplementation match {
         case Simple if securitySchemesDefined =>
-          val authType = Type.Select(Term.Name(resourceName), authSchemesTypeName)
+          val authType = Type.Select(resourceTerm, authSchemesTypeName)
           Option(
-            param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Either[${Term
-              .Name(resourceName)}.$authErrorTypeName, $authContextTypeName]]"""
+            param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Either[${resourceTerm}.$authErrorTypeName, $authContextTypeName]]"""
           )
         case Custom if securitySchemesDefined =>
           Option(
-            param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${Term
-              .Name(resourceName)}.$authSchemesTypeName, Set[String]]], Boolean, Request[F]) => F[$authContextTypeName]"""
+            param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], Boolean, Request[F]) => F[$authContextTypeName]"""
           )
         case _ => Option.empty
       }

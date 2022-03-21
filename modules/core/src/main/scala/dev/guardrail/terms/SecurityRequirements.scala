@@ -20,15 +20,15 @@ object SecurityRequirements {
 
   def apply(requirements: NonEmptyList[Tracker[SecurityRequirement]], location: Location): Option[SecurityRequirements] = {
     implicit val strOrder = Order.fromComparable[String]
-    val requirementsList  = requirements.toList
-    val optional          = requirementsList.exists(_.unwrapTracker.isEmpty())
+    val optional          = requirements.exists(_.unwrapTracker.isEmpty())
 
     for {
       convertedReqs <- NonEmptyList.fromList(
-        requirementsList
-          .flatMap(
-            req => req.forceConvince.map(reqs => NonEmptyMap.fromMap(TreeMap(reqs.map(_.asScala.toList).value: _*))).indexedDistribute
-          )
+        requirements.toList
+          .flatMap({ requirement =>
+            val nameAndScopes: Tracker[List[(String, List[String])]] = requirement.forceConvince.map(_.map(_.asScala.toList).value)
+            nameAndScopes.map(reqs => NonEmptyMap.fromMap(TreeMap(reqs: _*))).indexedDistribute
+          })
       )
     } yield SecurityRequirements(convertedReqs, optional, location)
   }
