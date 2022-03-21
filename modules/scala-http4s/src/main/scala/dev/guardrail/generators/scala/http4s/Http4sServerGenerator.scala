@@ -200,9 +200,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       )
 
       val authenticator = List(q"""
-      def authenticate[F[_]: Monad, ${tparam"$authContextTypeName"}](
+      def authenticate[F[_]: _root_.cats.Monad, ${tparam"$authContextTypeName"}](
         middleware: ($authSchemesTypeName, Set[String], Request[F]) => F[Either[$authErrorTypeName, $authContextTypeName]],
-        schemes: NonEmptyList[NonEmptyMap[$authSchemesTypeName, Set[String]]], 
+        schemes: _root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[$authSchemesTypeName, Set[String]]],
         req: Request[F]
       ): F[Either[$authErrorTypeName, $authContextTypeName]] = {
         schemes.foldM[F, Either[$authErrorTypeName, $authContextTypeName]](Left($errorTermName.Unauthorized)){ case (result, el) =>
@@ -215,10 +215,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
               nel.tail.foldLeft(headResult)({ case (acc , (scheme, scopes)) =>
                 acc.flatMap {
                   case Right(_) => middleware(scheme, scopes, req)
-                  case l: Left[$authErrorTypeName, $authContextTypeName] => Applicative[F].pure(l)
+                  case l: Left[$authErrorTypeName, $authContextTypeName] => _root_.cats.Applicative[F].pure(l)
                 }
               })
-            case r: Right[$authErrorTypeName, $authContextTypeName] => Applicative[F].pure(r)
+            case r: Right[$authErrorTypeName, $authContextTypeName] => _root_.cats.Applicative[F].pure(r)
           }
         }
       }
@@ -246,7 +246,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
               def name: String
             }""",
             q"""object ${Term.Name(authSchemesTypeName.value)} {
-              implicit val order: Order[$authSchemesTypeName] = Order.by(_.name)
+              implicit val order: _root_.cats.kernel.Order[$authSchemesTypeName] = _root_.cats.kernel.Order.by(_.name)
 
               ..$list
             }
@@ -312,7 +312,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           )
         case Custom if securitySchemesDefined =>
           Option(
-            param"""authenticationMiddleware: (NonEmptyList[NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], Boolean, Request[F]) => F[$authContextTypeName]"""
+            param"""authenticationMiddleware: (_root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], Boolean, Request[F]) => F[$authContextTypeName]"""
           )
         case _ => Option.empty
       }
@@ -382,12 +382,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       } yield List(
         q"import org.http4s.circe.CirceInstances",
         q"import org.http4s.dsl.Http4sDsl",
-        q"import fs2.text._",
-        q"import cats.data.NonEmptyList",
-        q"import cats.data.NonEmptyMap",
-        q"import cats.Monad",
-        q"import cats.Applicative",
-        q"import cats.kernel.Order"
+        q"import fs2.text._"
       )
     )
 
@@ -993,9 +988,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           val renderedScopes = scopes.map(Lit.String(_))
           q"""(${Term.Name(authSchemesTypeName.value)}.${securitySchemeNameToClassName(key)} -> Set(..$renderedScopes))"""
       }
-      q"""NonEmptyMap.of(..$andElements)"""
+      q"""_root_.cats.data.NonEmptyMap.of(..$andElements)"""
     }
-    q"""NonEmptyList.of(..$orElements)"""
+    q"""_root_.cats.data.NonEmptyList.of(..$orElements)"""
   }
 
   def createHttp4sHeaders(headers: List[Header[ScalaLanguage]]): (Term.Name, List[Defn.Val]) = {
