@@ -182,8 +182,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       securityRequirements: List[SecurityRequirements],
       authImplementation: AuthImplementation
   ): Target[List[scala.meta.Defn]] = {
-    val schemesNames                    = securitySchemes.keySet
-    val uniqueRequiremens: List[String] = securityRequirements.flatMap(_.requirements.flatMap(_.keys.toNonEmptyList).toList).distinct
+    val schemesNames = securitySchemes.keySet
+    val uniqueRequiremens: List[Tracker[String]] =
+      securityRequirements.flatMap(_.requirements.flatMap(_.map(_.keys.toNonEmptyList).indexedDistribute).toList).distinctBy(_.unwrapTracker)
 
     val errorTermName = Term.Name(authErrorTypeName.value)
     val (simpleAuthErrors, simpleAuthenticator) = if (authImplementation == AuthImplementation.Simple) {
@@ -229,11 +230,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
     uniqueRequiremens
       .traverse { reqName =>
         val existanceCheck =
-          if (schemesNames.contains(reqName)) Target.pure(()) else Target.log.warning(s"Security requirement '$reqName' is missing in security schemes")
+          if (schemesNames.contains(reqName.unwrapTracker)) Target.pure(())
+          else Target.log.warning(s"Security requirement '${reqName.unwrapTracker}' is missing in security schemes (${reqName.showHistory})")
 
         existanceCheck *> Target.pure(q"""
-          case object ${securitySchemeNameToClassName(reqName)} extends ${Init(authSchemesTypeName, Name(""), List.empty)} {
-            override val name: String = $reqName
+          case object ${securitySchemeNameToClassName(reqName.unwrapTracker)} extends ${Init(authSchemesTypeName, Name(""), List.empty)} {
+            override val name: String = ${Lit.String(reqName.unwrapTracker)}
           }
         """)
       }
@@ -990,7 +992,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
 
   private def renderCustomSecurityRequirements(sr: SecurityRequirements): Term = {
     val orElements = sr.requirements.toList.map { r =>
-      val andElements = r.toSortedMap.toList.map {
+      val andElements = r.unwrapTracker.toSortedMap.toList.map {
         case (key, scopes) =>
           val renderedScopes = scopes.map(Lit.String(_))
           q"""(${Term.Name(authSchemesTypeName.value)}.${securitySchemeNameToClassName(key)} -> Set(..$renderedScopes))"""

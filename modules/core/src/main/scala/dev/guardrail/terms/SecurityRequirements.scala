@@ -9,6 +9,7 @@ import scala.collection.immutable.TreeMap
 
 import dev.guardrail.terms.SecurityRequirements.SecurityScopes
 import dev.guardrail.core.Tracker
+import dev.guardrail.core.implicits._
 
 object SecurityRequirements {
   type SecurityScopes = List[String]
@@ -26,17 +27,14 @@ object SecurityRequirements {
       convertedReqs <- NonEmptyList.fromList(
         requirementsList
           .flatMap(
-            req =>
-              NonEmptyMap.fromMap(
-                TreeMap(req.unwrapTracker.asScala.view.mapValues(_.asScala.toList).toSeq: _*)
-              )
+            req => req.forceConvince.map(reqs => NonEmptyMap.fromMap(TreeMap(reqs.map(_.asScala.toList).value: _*))).indexedDistribute
           )
       )
     } yield SecurityRequirements(convertedReqs, optional, location)
   }
 }
 case class SecurityRequirements(
-    requirements: NonEmptyList[NonEmptyMap[String, SecurityScopes]],
+    requirements: NonEmptyList[Tracker[NonEmptyMap[String, SecurityScopes]]],
     optional: Boolean,
     location: SecurityRequirements.Location
 )
