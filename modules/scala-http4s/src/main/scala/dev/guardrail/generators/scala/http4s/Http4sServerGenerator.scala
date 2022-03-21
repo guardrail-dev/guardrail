@@ -257,7 +257,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   }
 
   private def securitySchemeNameToClassName(name: String): Term.Name =
-    Term.Name(name.toCamelCase.capitalize)
+    Term.Name(name.toPascalCase)
 
   def renderHandler(
       handlerName: String,
