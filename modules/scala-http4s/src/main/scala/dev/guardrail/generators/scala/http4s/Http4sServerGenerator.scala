@@ -160,7 +160,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       methodSigs = renderedRoutes.map(_.methodSig)
       securitySchemesDefinitions <- if (authImplementation == AuthImplementation.Disable || authImplementation == AuthImplementation.Native)
         Target.pure(List.empty)
-      else generateSecuritySchemes(securitySchemes, routes.map(_.routeMeta.securityRequirements).flatten, authImplementation)
+      else generateSecuritySchemes(securitySchemes, routes.flatMap(_.routeMeta.securityRequirements), authImplementation)
     } yield {
       RenderedRoutes[ScalaLanguage](
         List(combinedRouteTerms),
