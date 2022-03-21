@@ -186,9 +186,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
     val uniqueRequiremens: List[String] = securityRequirements.flatMap(_.requirements.flatMap(_.keys.toNonEmptyList).toList).distinct
 
     val errorTermName = Term.Name(authErrorTypeName.value)
-    val simpleAuthErrors = {
+    val (simpleAuthErrors, simpleAuthenticator) = if (authImplementation == AuthImplementation.Simple) {
       val errorInit = Init(authErrorTypeName, Name(""), List.empty)
-      List(
+      val authErrors = List(
         q"""sealed trait $authErrorTypeName""",
         q"""
           object $errorTermName {
@@ -196,10 +196,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
             final case object Forbidden extends $errorInit
           }
         """
-      ).filter(_ => authImplementation == AuthImplementation.Simple)
-    }
+      )
 
-    val simpleAuthenticator = List(q"""
+      val authenticator = List(q"""
       def authenticate[F[_]: Monad, ${tparam"$authContextTypeName"}](
         middleware: ($authSchemesTypeName, Set[String], Request[F]) => F[Either[$authErrorTypeName, $authContextTypeName]],
         schemes: NonEmptyList[NonEmptyMap[$authSchemesTypeName, Set[String]]], 
@@ -222,7 +221,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           }
         }
       }
-    """).filter(_ => authImplementation == AuthImplementation.Simple)
+    """)
+
+      (authErrors, authenticator)
+    } else (List.empty, List.empty)
 
     uniqueRequiremens
       .traverse { reqName =>
