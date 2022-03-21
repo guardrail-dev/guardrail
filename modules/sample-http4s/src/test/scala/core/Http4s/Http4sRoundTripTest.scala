@@ -5,14 +5,11 @@ import _root_.examples.client.{ http4s => cdefs }
 import _root_.examples.server.http4s.pet.PetResource._
 import _root_.examples.server.http4s.pet._
 import _root_.examples.server.{ http4s => sdefs }
-import cats.data._
 import cats.effect.IO
 import cats.effect.IO._
 import cats.effect.unsafe.implicits.global
 import examples.support.PositiveLong
 import fs2.Stream
-import org.http4s.Request
-import org.http4s.Response
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.scalatest.EitherValues

@@ -7,11 +7,7 @@ import _root_.department.client.http4sV022.{ definitions => cdefs }
 import _root_.department.server.http4sV022.department.DepartmentResource._
 import _root_.department.server.http4sV022.department._
 import _root_.department.server.http4sV022.{ definitions => sdefs }
-import cats.data._
 import cats.effect.IO
-import cats.effect.IO._
-import org.http4s.Request
-import org.http4s.Response
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.scalatest.funsuite.AnyFunSuite
@@ -19,10 +15,9 @@ import org.scalatest.matchers.should.Matchers
 
 class Issue1229Suite extends AnyFunSuite with Matchers {
   test("round-trip: definition query, unit response") {
-    val httpService = new DepartmentResource().routes(new DepartmentHandler[IO] {
-      val fooDept = sdefs.Department("123", "foo", "bar")
-      def getDepartment(respond: GetDepartmentResponse.type)(id: String): cats.effect.IO[GetDepartmentResponse] =
-        IO.pure(respond.Ok(fooDept))
+    val httpService = new DepartmentResource[IO]().routes(new DepartmentHandler[IO] {
+      val fooDept                                                                                               = sdefs.Department("123", "foo", "bar")
+      def getDepartment(respond: GetDepartmentResponse.type)(id: String): cats.effect.IO[GetDepartmentResponse] = IO.pure(respond.Ok(fooDept))
       def searchDepartments(
           respond: SearchDepartmentsResponse.type
       )(query: Option[String], page: Int, pageSize: Int, sort: Option[Iterable[String]]): cats.effect.IO[SearchDepartmentsResponse] =
