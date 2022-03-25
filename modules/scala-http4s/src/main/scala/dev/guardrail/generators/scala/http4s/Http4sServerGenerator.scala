@@ -183,7 +183,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       authImplementation: AuthImplementation
   ): Target[List[scala.meta.Defn]] = {
     val schemesNames = securitySchemes.keySet
-    val uniqueRequiremens: List[Tracker[String]] =
+    val uniqueRequirements: List[Tracker[String]] =
       securityRequirements.flatMap(_.requirements.flatMap(_.map(_.keys.toNonEmptyList).indexedDistribute).toList).distinctBy(_.unwrapTracker)
 
     val errorTermName = Term.Name(authErrorTypeName.value)
@@ -227,7 +227,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       (authErrors, authenticator)
     } else (List.empty, List.empty)
 
-    uniqueRequiremens
+    uniqueRequirements
       .traverse { reqName =>
         val existanceCheck =
           if (schemesNames.contains(reqName.unwrapTracker)) Target.pure(())
