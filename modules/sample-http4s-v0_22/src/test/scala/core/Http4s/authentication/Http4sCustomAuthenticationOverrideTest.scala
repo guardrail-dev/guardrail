@@ -13,7 +13,7 @@ class Http4sCustomAuthenticationOverrideTest extends AnyFunSuite {
   type AuthContext = String
 
   def createServer(
-      authMiddleware: (NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], Boolean, Request[IO]) => IO[AuthContext]
+      authMiddleware: (NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], Request[IO]) => IO[AuthContext]
   ): HttpRoutes[IO] =
     new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(body: String): IO[DoBarResponse] = ???

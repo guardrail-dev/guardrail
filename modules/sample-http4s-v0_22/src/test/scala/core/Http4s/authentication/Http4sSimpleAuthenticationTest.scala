@@ -112,9 +112,11 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
     val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (authScheme, scopes, req) =>
       invoked += authScheme
       authScheme match {
-        case AuthSchemes.Basic  => IO.pure(Right("success"))
-        case AuthSchemes.Jwt    => IO.pure(Right("success"))
-        case AuthSchemes.OAuth2 => IO.pure(Left(AuthResource.AuthError.Unauthorized))
+        case AuthSchemes.Basic        => IO.pure(Right("success"))
+        case AuthSchemes.Jwt          => IO.pure(Right("success"))
+        case AuthSchemes.OAuth2       => IO.pure(Left(AuthResource.AuthError.Unauthorized))
+        case AuthSchemes.ApiKey       => IO.pure(Left(AuthResource.AuthError.Unauthorized))
+        case AuthSchemes.SecretHeader => IO.pure(Left(AuthResource.AuthError.Unauthorized))
       }
     }
     val server = createServer(authMiddleware)
@@ -131,15 +133,17 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
     val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (authScheme, scopes, req) =>
       invoked += authScheme
       authScheme match {
-        case AuthSchemes.Basic  => IO.pure(Left(AuthResource.AuthError.Unauthorized))
-        case AuthSchemes.Jwt    => IO.pure(Left(AuthResource.AuthError.Unauthorized))
-        case AuthSchemes.OAuth2 => IO.pure(Left(AuthResource.AuthError.Forbidden))
+        case AuthSchemes.Basic        => IO.pure(Left(AuthResource.AuthError.Unauthorized))
+        case AuthSchemes.Jwt          => IO.pure(Left(AuthResource.AuthError.Unauthorized))
+        case AuthSchemes.OAuth2       => IO.pure(Left(AuthResource.AuthError.Forbidden))
+        case AuthSchemes.ApiKey       => IO.pure(Left(AuthResource.AuthError.Unauthorized))
+        case AuthSchemes.SecretHeader => IO.pure(Left(AuthResource.AuthError.Unauthorized))
       }
     }
     val server = createServer(authMiddleware)
     val result = requestFoo(server).unsafeRunSync()
 
-    invoked should contain theSameElementsInOrderAs Seq(AuthSchemes.Basic, AuthSchemes.OAuth2)
+    invoked should contain theSameElementsInOrderAs Seq(AuthSchemes.Basic, AuthSchemes.ApiKey, AuthSchemes.OAuth2)
     result shouldEqual s""""authentication failed: forbidden""""
   }
 

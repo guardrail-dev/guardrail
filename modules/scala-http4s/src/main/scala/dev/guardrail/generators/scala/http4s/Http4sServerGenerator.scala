@@ -131,7 +131,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   ): Target[RenderedRoutes[ScalaLanguage]] =
     for {
       renderedRoutes <- routes
-        .traverse(generateRoute(resourceName, basePath, authImplementation))
+        .traverse(generateRoute(resourceName, basePath, securityExposure, authImplementation))
         .map(_.flatten)
       routeTerms = renderedRoutes.map(_.route)
       combinedRouteTerms <- combineRouteTerms(routeTerms)
@@ -226,6 +226,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
             q"""object ${Term.Name(authSchemesTypeName.value)} {
               implicit val order: _root_.cats.kernel.Order[$authSchemesTypeName] = _root_.cats.kernel.Order.by(_.name)
 
+              sealed trait AuthRequirement
+              object AuthRequirement {
+                case object Required extends AuthRequirement
+                case object Optional extends AuthRequirement
+              }
+
               ..$list
             }
             """
@@ -288,9 +294,14 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
           Option(
             param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Either[${resourceTerm}.$authErrorTypeName, $authContextTypeName]]"""
           )
-        case Custom if securityExposure != SecurityExposure.Undefined =>
+        case Custom if securityExposure == SecurityExposure.Required =>
           Option(
-            param"""authenticationMiddleware: (_root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], Boolean, Request[F]) => F[$authContextTypeName]"""
+            param"""authenticationMiddleware: (_root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], Request[F]) => F[$authContextTypeName]"""
+          )
+        case Custom if securityExposure == SecurityExposure.Optional =>
+          Option(
+            param"""authenticationMiddleware: (_root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], ${Type
+              .Select(Term.Select(resourceTerm, Term.Name(authSchemesTypeName.value)), t"AuthRequirement")}, Request[F]) => F[$authContextTypeName]"""
           )
         case _ => Option.empty
       }
@@ -705,6 +716,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   private def generateRoute(
       resourceName: String,
       basePath: Option[String],
+      securityExposure: SecurityExposure,
       authImplementation: AuthImplementation
   ): GenerateRouteMeta[ScalaLanguage] => Target[Option[RenderedRoute]] = {
     case GenerateRouteMeta(
@@ -738,25 +750,34 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         http4sHeaders      <- headersToHttp4s(headerArgs)
         supportDefinitions <- generateSupportDefinitions(route, parameters)
       } yield {
+        val resourceTerm = Term.Name(resourceName)
         val (responseCompanionTerm, responseCompanionType) =
           (Term.Name(responseClsName), Type.Name(responseClsName))
         val responseType = ServerRawResponse(operation)
           .filter(_ == true)
-          .fold[Type](t"${Term.Name(resourceName)}.$responseCompanionType")(Function.const(t"Response[F]"))
+          .fold[Type](t"${resourceTerm}.$responseCompanionType")(Function.const(t"Response[F]"))
         val authContext: Option[(LanguageParameter[ScalaLanguage], Term => Term)] = authImplementation match {
           case Disable => None
           case Native  => Some((LanguageParameter.fromParam(param"authContext: $authContextTypeName"), identity _))
           case Custom =>
-            securityRequirements.map({ sr =>
-              val arg                           = LanguageParameter.fromParam(param"authContext: $authContextTypeName")
-              val securityRequirements          = renderCustomSecurityRequirements(sr)
-              val authContextParam              = param"${arg.paramName}"
-              val authTransformer: Term => Term = inner => q"""
-                  authenticationMiddleware($securityRequirements, ${sr.optional}, req).flatMap { $authContextParam =>
-                    $inner
-                  }
-                """
-              (arg, authTransformer)
+            securityRequirements.map({
+              sr =>
+                val arg                  = LanguageParameter.fromParam(param"authContext: $authContextTypeName")
+                val securityRequirements = renderCustomSecurityRequirements(sr)
+                val authContextParam     = param"${arg.paramName}"
+
+                val middlewareArgs = List(securityRequirements) ++ (securityExposure match {
+                        case SecurityExposure.Optional =>
+                          val isRequired = if (sr.optional) q"Optional" else q"Required"
+                          Some(Term.Select(Term.Select(Term.Select(resourceTerm, Term.Name(authSchemesTypeName.value)), q"AuthRequirement"), isRequired))
+                        case _ => None
+                      }) ++ List(q"req")
+                val authTransformer: Term => Term = inner => q"""
+                authenticationMiddleware(..${middlewareArgs}).flatMap { $authContextParam =>
+                  $inner
+                }
+              """
+                (arg, authTransformer)
             })
           case Simple =>
             securityRequirements.map({
@@ -774,23 +795,23 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
                 val authTransformer: Term => Term = inner =>
                   if (sr.optional)
                     q"""
-                    authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
-                      authContextEither =>
-                        val ${Pat.Var(Term.Name(authContextParam.name.value))} = authContextEither match {
-                          case Right(success) => Right(Option(success))
-                          case Left(${Term.Name(authErrorTypeName.value)}.Unauthorized) => Right(Option.empty)
-                          case Left(x: ${Type.Singleton(Term.Select(Term.Name(authErrorTypeName.value), q"Forbidden"))}) => Left(x)
-                        }
-                        $inner
+                  authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
+                    authContextEither =>
+                      val ${Pat.Var(Term.Name(authContextParam.name.value))} = authContextEither match {
+                        case Right(success) => Right(Option(success))
+                        case Left(${Term.Name(authErrorTypeName.value)}.Unauthorized) => Right(Option.empty)
+                        case Left(x: ${Type.Singleton(Term.Select(Term.Name(authErrorTypeName.value), q"Forbidden"))}) => Left(x)
                       }
-                      """
+                      $inner
+                    }
+                    """
                   else
                     q"""
-                        authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
-                          $authContextParam =>
-                            $inner
-                          }
-                          """
+                      authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
+                        $authContextParam =>
+                          $inner
+                        }
+                        """
 
                 (arg, authTransformer)
             })

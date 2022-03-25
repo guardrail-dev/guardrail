@@ -31,7 +31,8 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
   test("provide context to handler") {
     type AuthContext = Either[Unit, Int]
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) => IO.pure(Right(42))
+    val authMiddleware =
+      (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: AuthResource.AuthSchemes.AuthRequirement, _: Request[IO]) => IO.pure(Right(42))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(p1: String, body: String): IO[DoBarResponse] = ???
@@ -62,7 +63,8 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
   test("process authentication error") {
     type AuthContext = Either[String, Int]
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) => IO.pure(Left("custom-failure"))
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: AuthResource.AuthSchemes.AuthRequirement, _: Request[IO]) =>
+      IO.pure(Left("custom-failure"))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(p1: String, body: String): IO[DoBarResponse] = ???
@@ -94,7 +96,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
     type AuthContext = Either[Unit, Int]
     import AuthResource.AuthSchemes
 
-    val authMiddleware = (config: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) =>
+    val authMiddleware = (config: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], _: AuthResource.AuthSchemes.AuthRequirement, _: Request[IO]) =>
       IO.pure {
         val c = config.toList.map(_.toSortedMap.toMap)
         val expected = List(
@@ -147,9 +149,9 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
     type AuthContext = Either[Unit, Unit]
     import AuthResource.AuthSchemes
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], optional: Boolean, _: Request[IO]) =>
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], requirement: AuthResource.AuthSchemes.AuthRequirement, _: Request[IO]) =>
       IO.pure(
-        if (optional) Right(())
+        if (requirement == AuthResource.AuthSchemes.AuthRequirement.Optional) Right(())
         else Left(())
       )
 
@@ -181,10 +183,12 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
     request("/baz") shouldEqual "\"optional\""
   }
 
-  test("Validate ") {
+  test("Validate required auth") {
     type AuthContext = Either[Unit, Int]
 
-    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) => IO.pure(Right(42))
+    val authMiddleware =
+      (config: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: AuthResource.AuthSchemes.AuthRequirement, request: Request[IO]) =>
+        IO.pure(Right(42))
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
       override def doBar(respond: DoBarResponse.type)(p1: String, body: String): IO[DoBarResponse] = ???
