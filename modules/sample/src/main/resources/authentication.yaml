@@ -26,6 +26,10 @@ paths:
           - "bar:write"
           basic:
           - "bar:basic"
+        - secretHeader:
+          - "bar:admin"
+          apiKey:
+          - "bar:api"
         - OAuth2:
           - "oauth:scope"
 
@@ -84,6 +88,14 @@ components:
     basic:
       type: http
       scheme: basic
+    apiKey:
+      type: apiKey
+      name: api_key
+      in: header
+    secretHeader:
+      type: apiKey
+      name: needle
+      in: header
     OAuth2:
       type: oauth2
       flows:

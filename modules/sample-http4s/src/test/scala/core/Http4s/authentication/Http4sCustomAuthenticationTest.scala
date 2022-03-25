@@ -97,14 +97,24 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
     val authMiddleware = (config: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) =>
       IO.pure {
         val c = config.toList.map(_.toSortedMap.toMap)
+        val expected = List(
+          Map(AuthSchemes.Basic  -> Set("bar:basic"), AuthSchemes.Jwt -> Set("foo:read", "bar:write")),
+          Map(AuthSchemes.ApiKey -> Set("bar:api"), AuthSchemes.SecretHeader -> Set("bar:admin")),
+          Map(AuthSchemes.OAuth2 -> Set("oauth:scope"))
+        )
 
-        if (c == List(
-              Map(AuthSchemes.Jwt    -> Set("foo:read", "bar:write"), AuthSchemes.Basic -> Set("bar:basic")),
-              Map(AuthSchemes.OAuth2 -> Set("oauth:scope"))
-            ))
+        val (correct, unexpected) = c.partition(expected.contains)
+        val missing               = expected.filterNot(correct.contains)
+
+        if (missing.isEmpty)
           Right(1)
-        else
+        else {
+          println(s"Error: Auth not satisfied")
+          println(s"     Correct: ${correct}")
+          println(s"  Unexpected: ${unexpected.mkString(", ")}")
+          println(s"     Missing: ${missing.mkString(", ")}")
           Left(())
+        }
       }
 
     val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
@@ -169,5 +179,36 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
 
     request("/foo") shouldEqual "\"non optional\""
     request("/baz") shouldEqual "\"optional\""
+  }
+
+  test("Validate ") {
+    type AuthContext = Either[Unit, Int]
+
+    val authMiddleware = (_: NonEmptyList[NonEmptyMap[AuthResource.AuthSchemes, Set[String]]], _: Boolean, _: Request[IO]) => IO.pure(Right(42))
+
+    val server: HttpRoutes[IO] = new AuthResource[IO, AuthContext](authMiddleware).routes(new AuthHandler[IO, AuthContext] {
+      override def doBar(respond: DoBarResponse.type)(p1: String, body: String): IO[DoBarResponse] = ???
+
+      override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
+
+      override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
+        authContext.fold(_ => IO(DoFooResponse.Ok("authentication failed")), ctx => IO(DoFooResponse.Ok(ctx.toString() + body)))
+    })
+
+    val client = Client.fromHttpApp(server.orNotFound)
+
+    val retrieved =
+      client
+        .run(
+          Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
+            .withBodyStream(fs2.Stream.apply("\"-97-\"".getBytes(): _*))
+            .withContentType(`Content-Type`(MediaType.application.json))
+        )
+        .use(_.bodyText.compile.string)
+        .attempt
+        .unsafeRunSync()
+        .value
+
+    retrieved shouldEqual "\"42-97-\""
   }
 }
