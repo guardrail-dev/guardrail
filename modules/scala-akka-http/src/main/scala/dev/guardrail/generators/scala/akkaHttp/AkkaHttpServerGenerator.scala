@@ -15,7 +15,7 @@ import dev.guardrail.generators.scala.{ AkkaHttpVersion, ModelGeneratorType }
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.syntax._
-import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, LanguageParameters, RawParameterName, RenderedRoutes, TracingField }
+import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
 import dev.guardrail.shims._
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.server._
@@ -228,21 +228,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       authImplementation: AuthImplementation
   ) =
     for {
-      renderedRoutes <- routes.traverse {
-        case GenerateRouteMeta(
-            operationId,
-            methodName,
-            responseClsName,
-            customExtractionFields,
-            tracingFields,
-            sr @ RouteMeta(path, method, operation, securityRequirements),
-            parameters,
-            responses
-            ) =>
-          for {
-            rendered <- generateRoute(resourceName, basePath, methodName, responseClsName, sr, customExtractionFields, tracingFields, parameters, responses)
-          } yield rendered
-      }
+      renderedRoutes <- routes.traverse(generateRoute(resourceName, basePath))
       routeTerms = renderedRoutes.map(_.route)
       combinedRouteTerms <- combineRouteTerms(routeTerms)
       methodSigs = renderedRoutes.map(_.methodSig)
@@ -863,130 +849,125 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
 
   case class RenderedRoute(route: Term, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
 
-  def generateRoute(
+  private def generateRoute(
       resourceName: String,
-      basePath: Option[String],
-      methodName: String,
-      responseClsName: String,
-      route: RouteMeta,
-      customExtractionFields: Option[CustomExtractionField[ScalaLanguage]],
-      tracingFields: Option[TracingField[ScalaLanguage]],
-      parameters: LanguageParameters[ScalaLanguage],
-      responses: Responses[ScalaLanguage]
-  ): Target[RenderedRoute] =
-    // Generate the pair of the Handler method and the actual call to `complete(...)`
-    for {
-      _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${customExtractionFields}, ${tracingFields})")
-      RouteMeta(path, method, operation, securityRequirements) = route
-      consumes = operation
-        .downField("consumes", _.consumes)
-        .map(
-          xs =>
-            NonEmptyList
-              .fromList(xs.flatMap(ContentType.unapply(_)))
-              .getOrElse(NonEmptyList.one(ApplicationJson))
-        )
-
-      // special-case file upload stuff
-      formArgs = parameters.formParams.map({ x =>
-        x.withType(
-          if (x.isFile) {
-            val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ x.hashAlgorithm.map(Function.const(t"String"))
-            if (x.required) {
-              t"(..${fileParams})"
-            } else {
-              t"Option[(..${fileParams})]"
-            }
-          } else {
-            x.argType
-          }
-        )
-      })
-      headerArgs = parameters.headerParams
-      pathArgs   = parameters.pathParams
-      qsArgs     = parameters.queryStringParams
-      bodyArgs   = parameters.bodyParams
-
-      akkaPath                       <- pathStrToAkka(basePath, path, pathArgs)
-      akkaMethod                     <- httpMethodToAkka(method)
-      akkaQs                         <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.toList))
-      akkaBody                       <- bodyToAkka(methodName, bodyArgs)
-      (akkaForm, handlerDefinitions) <- formToAkka(consumes, methodName)(formArgs)
-      akkaHeaders                    <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.toList))
-      // We aren't capitalizing the response names in order to keep back compat
-      (responseCompanionTerm, responseCompanionType) = (Term.Name(responseClsName), Type.Name(responseClsName))
-      responseType = if (ServerRawResponse(operation).getOrElse(false)) {
-        t"HttpResponse"
-      } else {
-        t"${Term.Name(resourceName)}.${responseCompanionType}"
-      }
-      extractionTracingParameters = (tracingFields.map(_.param).toList ::: customExtractionFields.map(_.param).toList) match {
-        case Nil => None
-        case l   => Some(l)
-      }
-      orderedParameters = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ extractionTracingParameters
-
-      entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
-      fullRouteMatcher = {
-        def bindParams(pairs: List[(Term, List[Term.Name])]): Term => Term =
-          NonEmptyList
-            .fromList(pairs)
-            .fold[Term => Term](identity)(_.foldLeft[Term => Term](identity)({
-              case (acc, (directive, params)) =>
-                params match {
-                  case List() =>
-                    next => acc(Term.Apply(directive, List(next)))
-                  case xs =>
-                    next =>
-                      acc(
-                        Term.Apply(Term.Select(directive, Term.Name("apply")), List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next)))
-                      )
-                }
-            }))
-        val pathMatcher             = bindParams(akkaPath.toList)
-        val methodMatcher           = bindParams(List((akkaMethod, List.empty)))
-        val customExtractionMatcher = bindParams(customExtractionFields.map(t => (t.term, List(t.param.paramName))).toList)
-        val qsMatcher               = bindParams(akkaQs)
-        val headerMatcher           = bindParams(akkaHeaders)
-        val tracingMatcher          = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
-        val bodyMatcher             = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
-
-        pathMatcher compose methodMatcher compose customExtractionMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
-      }
-      handlerCallArgs = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
-      fullRoute       = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(methodName)}(...${handlerCallArgs}))")))
-
-      respond = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
-
-      params = respond ++ orderedParameters.map(
-            _.map(
-              scalaParam =>
-                scalaParam.param.copy(
-                  decltpe =
-                    (
-                      if (scalaParam.isFile) {
-                        val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ scalaParam.hashAlgorithm.map(Function.const(t"String"))
-                        if (scalaParam.required) {
-                          Some(t"(..${fileParams})")
-                        } else {
-                          Some(t"Option[(..${fileParams})]")
-                        }
-                      } else {
-                        scalaParam.param.decltpe
-                      }
-                    )
-                )
-            )
+      basePath: Option[String]
+  ): GenerateRouteMeta[ScalaLanguage] => Target[RenderedRoute] = {
+    case GenerateRouteMeta(_, methodName, responseClsName, customExtractionFields, tracingFields, route, parameters, responses) =>
+      // Generate the pair of the Handler method and the actual call to `complete(...)`
+      for {
+        _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${customExtractionFields}, ${tracingFields})")
+        RouteMeta(path, method, operation, securityRequirements) = route
+        consumes = operation
+          .downField("consumes", _.consumes)
+          .map(
+            xs =>
+              NonEmptyList
+                .fromList(xs.flatMap(ContentType.unapply(_)))
+                .getOrElse(NonEmptyList.one(ApplicationJson))
           )
-      codecs <- generateCodecs(methodName, bodyArgs, responses, consumes)
-    } yield {
-      RenderedRoute(
-        fullRoute,
-        q"""def ${Term.Name(methodName)}(...${params}): scala.concurrent.Future[${responseType}]""",
-        codecs,
-        handlerDefinitions
-      )
-    }
+
+        // special-case file upload stuff
+        formArgs = parameters.formParams.map({ x =>
+          x.withType(
+            if (x.isFile) {
+              val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ x.hashAlgorithm.map(Function.const(t"String"))
+              if (x.required) {
+                t"(..${fileParams})"
+              } else {
+                t"Option[(..${fileParams})]"
+              }
+            } else {
+              x.argType
+            }
+          )
+        })
+        headerArgs = parameters.headerParams
+        pathArgs   = parameters.pathParams
+        qsArgs     = parameters.queryStringParams
+        bodyArgs   = parameters.bodyParams
+
+        akkaPath                       <- pathStrToAkka(basePath, path, pathArgs)
+        akkaMethod                     <- httpMethodToAkka(method)
+        akkaQs                         <- qsArgs.grouped(22).toList.flatTraverse(args => qsToAkka(args).map(_.toList))
+        akkaBody                       <- bodyToAkka(methodName, bodyArgs)
+        (akkaForm, handlerDefinitions) <- formToAkka(consumes, methodName)(formArgs)
+        akkaHeaders                    <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.toList))
+        // We aren't capitalizing the response names in order to keep back compat
+        (responseCompanionTerm, responseCompanionType) = (Term.Name(responseClsName), Type.Name(responseClsName))
+        responseType = if (ServerRawResponse(operation).getOrElse(false)) {
+          t"HttpResponse"
+        } else {
+          t"${Term.Name(resourceName)}.${responseCompanionType}"
+        }
+        extractionTracingParameters = (tracingFields.map(_.param).toList ::: customExtractionFields.map(_.param).toList) match {
+          case Nil => None
+          case l   => Some(l)
+        }
+        orderedParameters = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ extractionTracingParameters
+
+        entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
+        fullRouteMatcher = {
+          def bindParams(pairs: List[(Term, List[Term.Name])]): Term => Term =
+            NonEmptyList
+              .fromList(pairs)
+              .fold[Term => Term](identity)(_.foldLeft[Term => Term](identity)({
+                case (acc, (directive, params)) =>
+                  params match {
+                    case List() =>
+                      next => acc(Term.Apply(directive, List(next)))
+                    case xs =>
+                      next =>
+                        acc(
+                          Term.Apply(Term.Select(directive, Term.Name("apply")), List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next)))
+                        )
+                  }
+              }))
+          val pathMatcher             = bindParams(akkaPath.toList)
+          val methodMatcher           = bindParams(List((akkaMethod, List.empty)))
+          val customExtractionMatcher = bindParams(customExtractionFields.map(t => (t.term, List(t.param.paramName))).toList)
+          val qsMatcher               = bindParams(akkaQs)
+          val headerMatcher           = bindParams(akkaHeaders)
+          val tracingMatcher          = bindParams(tracingFields.map(t => (t.term, List(t.param.paramName))).toList)
+          val bodyMatcher             = bindParams(List((entityProcessor, (bodyArgs.toList ++ formArgs).map(_.paramName))))
+
+          pathMatcher compose methodMatcher compose customExtractionMatcher compose qsMatcher compose headerMatcher compose tracingMatcher compose bodyMatcher
+        }
+        handlerCallArgs = List(List(responseCompanionTerm)) ++ orderedParameters.map(_.map(_.paramName))
+        fullRoute       = Term.Block(List(fullRouteMatcher(q"complete(handler.${Term.Name(methodName)}(...${handlerCallArgs}))")))
+
+        respond = List(List(param"respond: ${Term.Name(resourceName)}.${responseCompanionTerm}.type"))
+
+        params = respond ++ orderedParameters.map(
+              _.map(
+                scalaParam =>
+                  scalaParam.param.copy(
+                    decltpe =
+                      (
+                        if (scalaParam.isFile) {
+                          val fileParams = List(t"File", t"Option[String]", t"ContentType") ++ scalaParam.hashAlgorithm.map(Function.const(t"String"))
+                          if (scalaParam.required) {
+                            Some(t"(..${fileParams})")
+                          } else {
+                            Some(t"Option[(..${fileParams})]")
+                          }
+                        } else {
+                          scalaParam.param.decltpe
+                        }
+                      )
+                  )
+              )
+            )
+        codecs <- generateCodecs(methodName, bodyArgs, responses, consumes)
+      } yield {
+        RenderedRoute(
+          fullRoute,
+          q"""def ${Term.Name(methodName)}(...${params}): scala.concurrent.Future[${responseType}]""",
+          codecs,
+          handlerDefinitions
+        )
+      }
+  }
 
   def generateHeaderParams(headers: List[Header[ScalaLanguage]], prefix: Term.Name): Term = {
     def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
