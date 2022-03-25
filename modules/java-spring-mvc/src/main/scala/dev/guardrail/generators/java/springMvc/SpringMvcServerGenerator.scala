@@ -333,6 +333,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       routes: List[GenerateRouteMeta[JavaLanguage]],
       protocolElems: List[StrictProtocolElems[JavaLanguage]],
       securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+      securityExposure: SecurityExposure,
       authImplementation: AuthImplementation
   ) =
     for {
@@ -712,7 +713,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       customExtraction: Boolean,
       tracing: Boolean,
       authImplementation: AuthImplementation,
-      securitySchemesDefined: Boolean
+      securityExposure: SecurityExposure
   ) =
     for {
       customExtraction <- if (customExtraction) {
@@ -773,7 +774,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       customExtraction: Boolean,
       authImplementation: AuthImplementation,
-      securitySchemesDefined: Boolean
+      securityExposure: SecurityExposure
   ) = {
     val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
     sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

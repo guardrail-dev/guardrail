@@ -9,7 +9,7 @@ import dev.guardrail.languages.LA
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.terms.server.{ GenerateRouteMeta, ServerTerms }
+import dev.guardrail.terms.server.{ GenerateRouteMeta, SecurityExposure, ServerTerms }
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, RouteMeta, SecurityScheme, SwaggerTerms }
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
@@ -69,6 +69,10 @@ object ServerGenerator {
                 )
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
+            securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+              case Nil => SecurityExposure.Undefined
+              case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
+            }
             renderedRoutes <- generateRoutes(
               context.tracing,
               resourceName,
@@ -77,6 +81,7 @@ object ServerGenerator {
               serverOperations,
               protocolElems,
               securitySchemes,
+              securityExposure,
               context.authImplementation
             )
             handlerSrc <- renderHandler(
@@ -86,14 +91,14 @@ object ServerGenerator {
               responseDefinitions.flatten,
               context.customExtraction,
               context.authImplementation,
-              renderedRoutes.securitySchemesDefinitions.nonEmpty
+              securityExposure
             )
             extraRouteParams <- getExtraRouteParams(
               resourceName,
               context.customExtraction,
               context.tracing,
               context.authImplementation,
-              renderedRoutes.securitySchemesDefinitions.nonEmpty
+              securityExposure
             )
             classSrc <- renderClass(
               resourceName,

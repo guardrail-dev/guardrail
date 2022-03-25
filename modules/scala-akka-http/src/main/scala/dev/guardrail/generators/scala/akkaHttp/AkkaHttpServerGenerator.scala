@@ -225,6 +225,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       routes: List[GenerateRouteMeta[ScalaLanguage]],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      securityExposure: SecurityExposure,
       authImplementation: AuthImplementation
   ) =
     for {
@@ -249,7 +250,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       responseDefinitions: List[scala.meta.Defn],
       customExtraction: Boolean,
       authImplementation: AuthImplementation,
-      securitySchemesDefined: Boolean
+      securityExposure: SecurityExposure
   ) =
     for {
       _ <- Target.log.debug(s"renderHandler(${handlerName}, ${methodSigs}")
@@ -266,7 +267,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       customExtraction: Boolean,
       tracing: Boolean,
       authImplementation: AuthImplementation,
-      securitySchemesDefined: Boolean
+      securityExposure: SecurityExposure
   ) =
     for {
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")

@@ -14,7 +14,7 @@ import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawP
 import dev.guardrail.scalaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.terms.server.{ GenerateRouteMeta, ServerTerms }
+import dev.guardrail.terms.server.{ GenerateRouteMeta, SecurityExposure, ServerTerms }
 import dev.guardrail.terms.{
   AnyContentType,
   ApplicationJson,
@@ -307,6 +307,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       routes: List[GenerateRouteMeta[ScalaLanguage]],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      securityExposure: SecurityExposure,
       authImplementation: AuthImplementation
   ): Target[RenderedRoutes[ScalaLanguage]] = {
     val basePathComponents = basePath.toList.flatMap(ResponseHelpers.splitPathComponents)
@@ -441,7 +442,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       customExtraction: Boolean,
       tracing: Boolean,
       authImplementation: AuthImplementation,
-      securitySchemesDefined: Boolean
+      securityExposure: SecurityExposure
   ): Target[List[Term.Param]] =
     for {
       customExtraction <- if (customExtraction) {
@@ -491,7 +492,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       responseDefinitions: List[Defn],
       customExtraction: Boolean,
       authImplementation: AuthImplementation,
-      securitySchemesDefined: Boolean
+      securityExposure: SecurityExposure
   ): Target[Defn] =
     Target.pure(
       q"""

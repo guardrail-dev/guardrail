@@ -126,6 +126,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       routes: List[GenerateRouteMeta[ScalaLanguage]],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      securityExposure: SecurityExposure,
       authImplementation: AuthImplementation
   ): Target[RenderedRoutes[ScalaLanguage]] =
     for {
@@ -243,12 +244,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       responseDefinitions: List[scala.meta.Defn],
       customExtraction: Boolean,
       authImplementation: AuthImplementation,
-      securitySchemesDefined: Boolean
+      securityExposure: SecurityExposure
   ) =
     Target.log.function("renderHandler")(for {
       _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
       extractType = if (customExtraction) List(tparam"-$customExtractionTypeName") else List.empty
-      authType = if (authImplementation == Native || (authImplementation != Disable && securitySchemesDefined)) {
+      authType = if (authImplementation == Native || (authImplementation != Disable && securityExposure != SecurityExposure.Undefined)) {
         List(tparam"$authContextTypeName")
       } else List.empty
       tParams = List(tparam"F[_]") ++ extractType ++ authType
@@ -263,7 +264,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       customExtraction: Boolean,
       tracing: Boolean,
       authImplementation: AuthImplementation,
-      securitySchemesDefined: Boolean
+      securityExposure: SecurityExposure
   ) =
     Target.log.function("getExtraRouteParams")(for {
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing}, ${authImplementation})")
@@ -282,12 +283,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
       } else Option.empty
       resourceTerm = Term.Name(resourceName)
       authentication_ = authImplementation match {
-        case Simple if securitySchemesDefined =>
+        case Simple if securityExposure != SecurityExposure.Undefined =>
           val authType = Type.Select(resourceTerm, authSchemesTypeName)
           Option(
             param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Either[${resourceTerm}.$authErrorTypeName, $authContextTypeName]]"""
           )
-        case Custom if securitySchemesDefined =>
+        case Custom if securityExposure != SecurityExposure.Undefined =>
           Option(
             param"""authenticationMiddleware: (_root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], Boolean, Request[F]) => F[$authContextTypeName]"""
           )
