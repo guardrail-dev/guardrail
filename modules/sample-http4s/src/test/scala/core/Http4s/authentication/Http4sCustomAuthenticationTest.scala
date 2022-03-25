@@ -123,7 +123,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
 
       override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
-        authContext.fold(_ => IO(DoFooResponse.Ok("test failed")), ctx => IO(DoFooResponse.Ok("test succeed")))
+        authContext.fold(_ => IO(DoFooResponse.Ok("test failed")), _ => IO(DoFooResponse.Ok("test succeed")))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
