@@ -41,15 +41,15 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
       override def doBaz(
           respond: DoBazResponse.type
       )(authContext: Either[AuthResource.AuthError.Forbidden.type, Option[AuthContext]], body: String): IO[DoBazResponse] =
-        authContext.fold(_ => IO(DoBazResponse.Ok("Forbidden")), _.fold(IO(DoBazResponse.Ok("None")))(_ => IO(DoBazResponse.Ok("Some"))))
+        authContext.fold(_ => IO(respond.Ok("Forbidden")), _.fold(IO(respond.Ok("None")))(_ => IO(respond.Ok("Some"))))
 
       override def doFoo(respond: DoFooResponse.type)(authContext: Either[AuthResource.AuthError, AuthContext], body: String): IO[DoFooResponse] =
         authContext.fold(
           {
-            case AuthResource.AuthError.Forbidden    => IO(DoFooResponse.Ok("authentication failed: forbidden"))
-            case AuthResource.AuthError.Unauthorized => IO(DoFooResponse.Ok("authentication failed: unauthorized"))
+            case AuthResource.AuthError.Forbidden    => IO(respond.Ok("authentication failed: forbidden"))
+            case AuthResource.AuthError.Unauthorized => IO(respond.Ok("authentication failed: unauthorized"))
           },
-          ctx => IO(DoFooResponse.Ok(ctx))
+          ctx => IO(respond.Ok(ctx))
         )
     })
 
