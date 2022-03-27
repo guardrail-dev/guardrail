@@ -20,6 +20,12 @@ paths:
             application/json:
               schema:
                 type: string
+        401:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: string
       security:
         - jwt:
           - "foo:read"

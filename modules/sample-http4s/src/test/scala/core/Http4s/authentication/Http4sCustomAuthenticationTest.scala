@@ -40,7 +40,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
 
       override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
-        authContext.fold(_ => IO(respond.Ok("authentication failed")), ctx => IO(respond.Ok(ctx.toString() + body)))
+        authContext.fold(_ => IO(respond.Unauthorized("authentication failed")), ctx => IO(respond.Ok(ctx.toString() + body)))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
@@ -72,7 +72,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
 
       override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
-        authContext.fold(f => IO(respond.Ok(f)), ctx => IO(respond.Ok(ctx.toString() + body)))
+        authContext.fold(f => IO(respond.Unauthorized(f)), ctx => IO(respond.Ok(ctx.toString() + body)))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
@@ -125,7 +125,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
 
       override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
-        authContext.fold(_ => IO(respond.Ok("test failed")), _ => IO(respond.Ok("test succeed")))
+        authContext.fold(_ => IO(respond.Unauthorized("test failed")), _ => IO(respond.Ok("test succeed")))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
@@ -162,7 +162,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
         authContext.fold(_ => IO(respond.Ok("non optional")), ctx => IO(respond.Ok("optional")))
 
       override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
-        authContext.fold(_ => IO(respond.Ok("non optional")), ctx => IO(respond.Ok("optional")))
+        authContext.fold(_ => IO(respond.Unauthorized("non optional")), ctx => IO(respond.Ok("optional")))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
@@ -196,7 +196,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       override def doBaz(respond: DoBazResponse.type)(authContext: AuthContext, body: String): IO[DoBazResponse] = ???
 
       override def doFoo(respond: DoFooResponse.type)(authContext: AuthContext, body: String): IO[DoFooResponse] =
-        authContext.fold(_ => IO(respond.Ok("authentication failed")), ctx => IO(respond.Ok(ctx.toString() + body)))
+        authContext.fold(_ => IO(respond.Unauthorized("authentication failed")), ctx => IO(respond.Ok(ctx.toString() + body)))
     })
 
     val client = Client.fromHttpApp(server.orNotFound)
