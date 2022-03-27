@@ -63,6 +63,7 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
   val authContextTypeName: Type.Name      = Type.Name("AuthContext")
   val authErrorTypeName: Type.Name        = Type.Name("AuthError")
   val authSchemesTypeName: Type.Name      = Type.Name("AuthSchemes")
+  val authRequirementTypeName: Type.Name  = Type.Name("AuthRequirement")
 
   private val bodyUtf8Decode = version match {
     case Http4sVersion.V0_22 => q"utf8Decode"
@@ -226,10 +227,10 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
             q"""object ${Term.Name(authSchemesTypeName.value)} {
               implicit val order: _root_.cats.kernel.Order[$authSchemesTypeName] = _root_.cats.kernel.Order.by(_.name)
 
-              sealed trait AuthRequirement
-              object AuthRequirement {
-                case object Required extends AuthRequirement
-                case object Optional extends AuthRequirement
+              sealed trait $authRequirementTypeName
+              object ${Term.Name(authRequirementTypeName.value)} {
+                case object Required extends ${Init(authRequirementTypeName, Name(""), List.empty)}
+                case object Optional extends ${Init(authRequirementTypeName, Name(""), List.empty)}
               }
 
               ..$list
@@ -299,9 +300,9 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
             param"""authenticationMiddleware: (_root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], Request[F]) => F[$authContextTypeName]"""
           )
         case Custom if securityExposure == SecurityExposure.Optional =>
+          val authRequirementType = Type.Select(Term.Select(resourceTerm, Term.Name(authSchemesTypeName.value)), authRequirementTypeName)
           Option(
-            param"""authenticationMiddleware: (_root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], ${Type
-              .Select(Term.Select(resourceTerm, Term.Name(authSchemesTypeName.value)), t"AuthRequirement")}, Request[F]) => F[$authContextTypeName]"""
+            param"""authenticationMiddleware: (_root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[${resourceTerm}.$authSchemesTypeName, Set[String]]], ${authRequirementType}, Request[F]) => F[$authContextTypeName]"""
           )
         case _ => Option.empty
       }
@@ -769,7 +770,12 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
                 val middlewareArgs = List(securityRequirements) ++ (securityExposure match {
                         case SecurityExposure.Optional =>
                           val isRequired = if (sr.optional) q"Optional" else q"Required"
-                          Some(Term.Select(Term.Select(Term.Select(resourceTerm, Term.Name(authSchemesTypeName.value)), q"AuthRequirement"), isRequired))
+                          Some(
+                            Term.Select(
+                              Term.Select(Term.Select(resourceTerm, Term.Name(authSchemesTypeName.value)), Term.Name(authRequirementTypeName.value)),
+                              isRequired
+                            )
+                          )
                         case _ => None
                       }) ++ List(q"req")
                 val authTransformer: Term => Term = inner => q"""
