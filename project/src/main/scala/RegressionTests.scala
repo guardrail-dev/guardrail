@@ -103,6 +103,11 @@ object RegressionTests {
     ExampleCase(sampleResource("server1.yaml"), "customExtraction").args("--custom-extraction").frameworks("scala" -> Set("akka-http", "http4s", "http4s-v0.22")),
     ExampleCase(sampleResource("mixed-content-types-3.0.2.yaml"), "mixedContentTypes").frameworks("scala" -> scalaFrameworks.map(_.name).toSet),
     ExampleCase(sampleResource("debug-body.yaml"), "debugBody").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
+  ) ++ List("disable", "simple", "custom", "native").map( authImpl =>
+    ExampleCase(sampleResource("authentication.yaml"), s"authentication-${authImpl}").args("--auth-implementation", authImpl).frameworks("scala" -> Set("http4s", "http4s-v0.22"))
+  ) ++ List(
+    ExampleCase(sampleResource("authentication-override.yaml"), "authentication-override-custom").args("--auth-implementation", "custom").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("authentication-override.yaml"), "authentication-override-simple").args("--auth-implementation", "simple").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
   )
 
   def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases

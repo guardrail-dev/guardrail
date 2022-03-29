@@ -4,6 +4,7 @@ import cats.Monad
 import cats.data.NonEmptyList
 import io.swagger.v3.oas.models.Operation
 
+import dev.guardrail.AuthImplementation
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameters, RenderedRoutes, TracingField }
 import dev.guardrail.languages.LA
@@ -22,6 +23,13 @@ case class GenerateRouteMeta[L <: LA](
     responses: Responses[L]
 )
 
+sealed trait SecurityExposure
+object SecurityExposure {
+  case object Undefined extends SecurityExposure
+  case object Required  extends SecurityExposure
+  case object Optional  extends SecurityExposure
+}
+
 abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) { self =>
   def MonadF: Monad[F]
   def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean): F[Option[CustomExtractionField[L]]]
@@ -33,9 +41,17 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       basePath: Option[String],
       routes: List[GenerateRouteMeta[L]],
       protocolElems: List[StrictProtocolElems[L]],
-      securitySchemes: Map[String, SecurityScheme[L]]
+      securitySchemes: Map[String, SecurityScheme[L]],
+      securityExposure: SecurityExposure,
+      authImplementation: AuthImplementation
   ): F[RenderedRoutes[L]]
-  def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): F[List[L#MethodParameter]]
+  def getExtraRouteParams(
+      resourceName: String,
+      customExtraction: Boolean,
+      tracing: Boolean,
+      authImplementation: AuthImplementation,
+      securityExposure: SecurityExposure
+  ): F[List[L#MethodParameter]]
   def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]): F[List[L#Definition]]
   def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]): F[List[SupportDefinition[L]]]
   def renderClass(
@@ -46,14 +62,18 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
       extraRouteParams: List[L#MethodParameter],
       responseDefinitions: List[L#Definition],
       supportDefinitions: List[L#Definition],
-      customExtraction: Boolean
+      securitySchemesDefinitions: List[L#Definition],
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation
   ): F[List[L#Definition]]
   def renderHandler(
       handlerName: String,
       methodSigs: List[L#MethodDeclaration],
       handlerDefinitions: List[L#Statement],
       responseDefinitions: List[L#Definition],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation,
+      securityExposure: SecurityExposure
   ): F[L#Definition]
   def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): F[List[L#Import]]
 
@@ -68,9 +88,11 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           Option[String],
           List[GenerateRouteMeta[L]],
           List[StrictProtocolElems[L]],
-          Map[String, SecurityScheme[L]]
+          Map[String, SecurityScheme[L]],
+          SecurityExposure,
+          AuthImplementation
       ) => F[RenderedRoutes[L]] = self.generateRoutes _,
-      getExtraRouteParams: (Boolean, Boolean) => F[List[L#MethodParameter]] = self.getExtraRouteParams _,
+      getExtraRouteParams: (String, Boolean, Boolean, AuthImplementation, SecurityExposure) => F[List[L#MethodParameter]] = self.getExtraRouteParams _,
       generateResponseDefinitions: (String, Responses[L], List[StrictProtocolElems[L]]) => F[List[L#Definition]] = self.generateResponseDefinitions _,
       generateSupportDefinitions: (Boolean, Map[String, SecurityScheme[L]]) => F[List[SupportDefinition[L]]] = self.generateSupportDefinitions _,
       renderClass: (
@@ -81,9 +103,19 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           List[L#MethodParameter],
           List[L#Definition],
           List[L#Definition],
-          Boolean
+          List[L#Definition],
+          Boolean,
+          AuthImplementation
       ) => F[List[L#Definition]] = self.renderClass _,
-      renderHandler: (String, List[L#MethodDeclaration], List[L#Statement], List[L#Definition], Boolean) => F[L#Definition] = self.renderHandler _,
+      renderHandler: (
+          String,
+          List[L#MethodDeclaration],
+          List[L#Statement],
+          List[L#Definition],
+          Boolean,
+          AuthImplementation,
+          SecurityExposure
+      ) => F[L#Definition] = self.renderHandler _,
       getExtraImports: (Boolean, NonEmptyList[String]) => F[List[L#Import]] = self.getExtraImports _
   ) = {
     val newMonadF                      = MonadF
@@ -110,9 +142,18 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           basePath: Option[String],
           routes: List[GenerateRouteMeta[L]],
           protocolElems: List[StrictProtocolElems[L]],
-          securitySchemes: Map[String, SecurityScheme[L]]
-      )                                                                    = newGenerateRoutes(tracing, resourceName, handlerName, basePath, routes, protocolElems, securitySchemes)
-      def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) = newGetExtraRouteParams(customExtraction, tracing)
+          securitySchemes: Map[String, SecurityScheme[L]],
+          securityExposure: SecurityExposure,
+          authImplementation: AuthImplementation
+      ) = newGenerateRoutes(tracing, resourceName, handlerName, basePath, routes, protocolElems, securitySchemes, securityExposure, authImplementation)
+      def getExtraRouteParams(
+          resourceName: String,
+          customExtraction: Boolean,
+          tracing: Boolean,
+          authImplementation: AuthImplementation,
+          securityExposure: SecurityExposure
+      ) =
+        newGetExtraRouteParams(resourceName, customExtraction, tracing, authImplementation, securityExposure)
       def generateResponseDefinitions(responseClsName: String, responses: Responses[L], protocolElems: List[StrictProtocolElems[L]]) =
         newGenerateResponseDefinitions(responseClsName, responses, protocolElems)
       def generateSupportDefinitions(tracing: Boolean, securitySchemes: Map[String, SecurityScheme[L]]) =
@@ -125,16 +166,31 @@ abstract class ServerTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]
           extraRouteParams: List[L#MethodParameter],
           responseDefinitions: List[L#Definition],
           supportDefinitions: List[L#Definition],
-          customExtraction: Boolean
+          securitySchemesDefinitions: List[L#Definition],
+          customExtraction: Boolean,
+          authImplementation: AuthImplementation
       ): F[List[L#Definition]] =
-        newRenderClass(resourceName, handlerName, annotations, combinedRouteTerms, extraRouteParams, responseDefinitions, supportDefinitions, customExtraction)
+        newRenderClass(
+          resourceName,
+          handlerName,
+          annotations,
+          combinedRouteTerms,
+          extraRouteParams,
+          responseDefinitions,
+          supportDefinitions,
+          securitySchemesDefinitions,
+          customExtraction,
+          authImplementation
+        )
       def renderHandler(
           handlerName: String,
           methodSigs: List[L#MethodDeclaration],
           handlerDefinitions: List[L#Statement],
           responseDefinitions: List[L#Definition],
-          customExtraction: Boolean
-      )                                                                           = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions, customExtraction)
+          customExtraction: Boolean,
+          authImplementation: AuthImplementation,
+          securityExposure: SecurityExposure
+      )                                                                           = newRenderHandler(handlerName, methodSigs, handlerDefinitions, responseDefinitions, customExtraction, authImplementation, securityExposure)
       def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) = newGetExtraImports(tracing, supportPackage)
     }
   }

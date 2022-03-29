@@ -8,7 +8,6 @@ import java.nio.file.Path
 import java.net.URI
 
 import dev.guardrail.core.{ SupportDefinition, Tracker }
-import dev.guardrail.core.extract.SecurityOptional
 import dev.guardrail.generators.{ ClientGenerator, Clients, ProtocolDefinitions, ProtocolGenerator, ServerGenerator, Servers }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.client.ClientTerms
@@ -73,8 +72,8 @@ object Common {
 
       paths = swagger.downField("paths", _.getPaths)
       globalSecurityRequirements = NonEmptyList
-        .fromList(swagger.downField("security", _.getSecurity).unwrapTracker)
-        .flatMap(SecurityRequirements(_, SecurityOptional(swagger), SecurityRequirements.Global))
+        .fromList(swagger.downField("security", _.getSecurity).indexedDistribute)
+        .flatMap(SecurityRequirements(_, SecurityRequirements.Global))
       requestBodies    <- extractCommonRequestBodies(swagger.downField("components", _.getComponents))
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
       prefixes         <- vendorPrefixes()

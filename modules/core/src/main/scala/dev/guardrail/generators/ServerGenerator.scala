@@ -9,7 +9,7 @@ import dev.guardrail.languages.LA
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.terms.server.{ GenerateRouteMeta, ServerTerms }
+import dev.guardrail.terms.server.{ GenerateRouteMeta, SecurityExposure, ServerTerms }
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, RouteMeta, SecurityScheme, SwaggerTerms }
 
 case class Servers[L <: LA](servers: List[Server[L]], supportDefinitions: List[SupportDefinition[L]])
@@ -21,7 +21,8 @@ case class RenderedRoutes[L <: LA](
     classAnnotations: List[L#Annotation],
     methodSigs: List[L#MethodDeclaration],
     supportDefinitions: List[L#Definition],
-    handlerDefinitions: List[L#Statement]
+    handlerDefinitions: List[L#Statement],
+    securitySchemesDefinitions: List[L#Definition]
 )
 
 object ServerGenerator {
@@ -50,6 +51,7 @@ object ServerGenerator {
           for {
             resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
             handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
+
             responseServerPair <- routes.traverse {
               case route @ RouteMeta(path, method, operation, securityRequirements) =>
                 for {
@@ -67,15 +69,37 @@ object ServerGenerator {
                 )
             }
             (responseDefinitions, serverOperations) = responseServerPair.unzip
-            renderedRoutes <- generateRoutes(context.tracing, resourceName, handlerName, basePath, serverOperations, protocolElems, securitySchemes)
+            securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+              case Nil => SecurityExposure.Undefined
+              case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
+            }
+            renderedRoutes <- generateRoutes(
+              context.tracing,
+              resourceName,
+              handlerName,
+              basePath,
+              serverOperations,
+              protocolElems,
+              securitySchemes,
+              securityExposure,
+              context.authImplementation
+            )
             handlerSrc <- renderHandler(
               handlerName,
               renderedRoutes.methodSigs,
               renderedRoutes.handlerDefinitions,
               responseDefinitions.flatten,
-              context.customExtraction
+              context.customExtraction,
+              context.authImplementation,
+              securityExposure
             )
-            extraRouteParams <- getExtraRouteParams(context.customExtraction, context.tracing)
+            extraRouteParams <- getExtraRouteParams(
+              resourceName,
+              context.customExtraction,
+              context.tracing,
+              context.authImplementation,
+              securityExposure
+            )
             classSrc <- renderClass(
               resourceName,
               handlerName,
@@ -84,7 +108,9 @@ object ServerGenerator {
               extraRouteParams,
               responseDefinitions.flatten,
               renderedRoutes.supportDefinitions,
-              context.customExtraction
+              renderedRoutes.securitySchemesDefinitions,
+              context.customExtraction,
+              context.authImplementation
             )
           } yield {
             Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)

@@ -7,18 +7,19 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
 import io.swagger.v3.oas.models.parameters.{ Parameter, RequestBody }
-import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+import io.swagger.v3.oas.models.security.{ SecurityRequirement, SecurityScheme => SwSecurityScheme }
 import java.net.URI
 import scala.util.Try
 
 import dev.guardrail._
-import dev.guardrail.core.extract.{ ClassPrefix, PackageName, SecurityOptional }
+import dev.guardrail.core.extract.{ ClassPrefix, PackageName }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ Mappish, Tracker }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
+import cats.data.NonEmptyList
 
 object SwaggerGenerator {
   def apply[L <: LA](): SwaggerTerms[L, Target] =
@@ -94,15 +95,12 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
               .raiseErrorIfEmpty("No operations defined")
             operationRoutes <- operationMap.indexedCosequence.value.toList.traverse({
               case (httpMethod, operation) =>
-                val securityRequirements =
-                  operation
-                    .downField("security", _.getSecurity)
-                    .toNel
-                    .orHistory
-                    .fold(
-                      _ => globalSecurityRequirements,
-                      security => SecurityRequirements(security.unwrapTracker, SecurityOptional(operation), SecurityRequirements.Local)
-                    )
+                val securityRequirements: Option[SecurityRequirements] =
+                  operation.downField[Option[List[SecurityRequirement]]]("security", _.getSecurity()).indexedDistribute.flatMap { srs =>
+                    NonEmptyList
+                      .fromList(srs.indexedDistribute)
+                      .fold(globalSecurityRequirements)(SecurityRequirements(_, SecurityRequirements.Local))
+                  }
 
                 // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
                 // requestBodies, so let's manually fix that up here.

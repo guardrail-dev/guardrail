@@ -45,9 +45,6 @@ package object extract {
   def FileHashAlgorithm[F: VendorExtension.VendorExtensible](v: F): Option[String] =
     extractWithFallback[F, String](v, "x-file-hash", "x-scala-file-hash")
 
-  def SecurityOptional[F: VendorExtension.VendorExtensible](v: F): List[String] =
-    VendorExtension(v).extract[List[String]]("x-security-optional").toList.flatten
-
   def DataRedaction[F: VendorExtension.VendorExtensible](v: F): Option[RedactionBehaviour] =
     VendorExtension(v).extract[RedactionBehaviour]("x-data-redaction")
 }

@@ -17,6 +17,7 @@ import scala.compat.java8.OptionConverters._
 import scala.language.existentials
 import scala.util.Try
 
+import dev.guardrail.AuthImplementation
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.ServerRawResponse
 import dev.guardrail.generators.RenderedRoutes
@@ -331,7 +332,9 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       basePath: Option[String],
       routes: List[GenerateRouteMeta[JavaLanguage]],
       protocolElems: List[StrictProtocolElems[JavaLanguage]],
-      securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+      securityExposure: SecurityExposure,
+      authImplementation: AuthImplementation
   ) =
     for {
       resourceType <- safeParseClassOrInterfaceType(resourceName)
@@ -702,10 +705,16 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
         resourceConstructor
       )
 
-      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
+      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty, List.empty)
     }
 
-  override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean) =
+  override def getExtraRouteParams(
+      resourceName: String,
+      customExtraction: Boolean,
+      tracing: Boolean,
+      authImplementation: AuthImplementation,
+      securityExposure: SecurityExposure
+  ) =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -750,7 +759,9 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      customExtraction: Boolean
+      securitySchemesDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation
   ) =
     safeParseSimpleName(className) >>
         safeParseSimpleName(handlerName) >>
@@ -761,7 +772,9 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
       handlerDefinitions: List[com.github.javaparser.ast.Node],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation,
+      securityExposure: SecurityExposure
   ) = {
     val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
     sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

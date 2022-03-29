@@ -16,6 +16,7 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.Future
 import scala.language.existentials
 
+import dev.guardrail.AuthImplementation
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.core.extract.ServerRawResponse
@@ -269,7 +270,9 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       basePath: Option[String],
       routes: List[GenerateRouteMeta[JavaLanguage]],
       protocolElems: List[StrictProtocolElems[JavaLanguage]],
-      securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+      securityExposure: SecurityExposure,
+      authImplementation: AuthImplementation
   ): Target[RenderedRoutes[JavaLanguage]] =
     for {
       resourceType <- safeParseClassOrInterfaceType(resourceName)
@@ -635,10 +638,16 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
         resourceConstructor
       )
 
-      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty)
+      RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty, List.empty)
     }
 
-  override def getExtraRouteParams(customExtraction: Boolean, tracing: Boolean): Target[List[Parameter]] =
+  override def getExtraRouteParams(
+      resourceName: String,
+      customExtraction: Boolean,
+      tracing: Boolean,
+      authImplementation: AuthImplementation,
+      securityExposure: SecurityExposure
+  ): Target[List[Parameter]] =
     for {
       customExtraction <- if (customExtraction) {
         Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
@@ -710,7 +719,9 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       extraRouteParams: List[com.github.javaparser.ast.body.Parameter],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
       supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      customExtraction: Boolean
+      securitySchemesDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation
   ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
     safeParseSimpleName(className) >>
         safeParseSimpleName(handlerName) >>
@@ -721,7 +732,9 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
       handlerDefinitions: List[com.github.javaparser.ast.Node],
       responseDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      customExtraction: Boolean
+      customExtraction: Boolean,
+      authImplementation: AuthImplementation,
+      securityExposure: SecurityExposure
   ): Target[BodyDeclaration[_ <: BodyDeclaration[_]]] = {
     val handlerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), true, handlerName)
     sortDefinitions(methodSigs ++ responseDefinitions).foreach(handlerClass.addMember)

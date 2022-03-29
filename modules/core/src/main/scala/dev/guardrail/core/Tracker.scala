@@ -33,7 +33,8 @@ class Tracker[+A] private[core] (private[core] val get: A, private[core] val his
 }
 
 trait LowPriorityTrackerEvidence {
-  implicit def arbConvincer[A]: Tracker.Convincer[A, A] = Tracker.Convincer(identity _)
+  implicit def arbConvincer[A]: Tracker.Convincer[A, A]                                          = Tracker.Convincer(identity _)
+  implicit def juListConvincer[A]: Tracker.Convincer[Option[java.util.List[A]], Option[List[A]]] = Tracker.Convincer(_.map(_.asScala.toList))
 }
 
 trait HighPriorityTrackerEvidence extends LowPriorityTrackerEvidence {
@@ -137,6 +138,9 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
 
     @deprecated("Tracker.get will be removed once the migration has been completed. Please use the fold/traverse combinators to get values out.", "0.0.0")
     def history: Vector[String] = tracker.history
+
+    def forceConvince[C](implicit ev: Tracker.Convincer[Option[A], C]): Tracker[C] =
+      tracker.map(x => ev(Option(x)))
   }
 }
 

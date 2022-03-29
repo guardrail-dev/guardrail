@@ -1,0 +1,114 @@
+openapi: 3.0.2
+info:
+  title: Test for security support
+  version: 1.0.0
+paths:
+  /foo:
+    post:
+      x-jvm-package: auth
+      operationId: doFoo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - jwt:
+          - "foo:read"
+          - "bar:write"
+          basic:
+          - "bar:basic"
+        - secretHeader:
+          - "bar:admin"
+          apiKey:
+          - "bar:api"
+        - OAuth2:
+          - "oauth:scope"
+
+  /bar:
+    post:
+      x-jvm-package: auth
+      operationId: doBar
+      parameters:
+        - name: p1
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/sdp:
+            schema:
+              type: string
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /baz:
+    post:
+      x-jvm-package: auth
+      operationId: doBaz
+      requestBody:
+        required: true
+        content:
+          application/sdp:
+            schema:
+              type: string
+      responses:
+        200:
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - {}
+        - basic:
+          - "bar:basic"
+
+components:
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basic:
+      type: http
+      scheme: basic
+    apiKey:
+      type: apiKey
+      name: api_key
+      in: header
+    secretHeader:
+      type: apiKey
+      name: needle
+      in: header
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://example.com/oauth/authorize
+          tokenUrl: https://example.com/oauth/token
+          scopes:
+            read: Grants read access
+            write: Grants write access
+            admin: Grants access to admin operations

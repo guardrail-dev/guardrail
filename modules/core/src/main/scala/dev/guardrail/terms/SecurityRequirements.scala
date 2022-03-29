@@ -8,6 +8,8 @@ import scala.jdk.CollectionConverters._
 import scala.collection.immutable.TreeMap
 
 import dev.guardrail.terms.SecurityRequirements.SecurityScopes
+import dev.guardrail.core.Tracker
+import dev.guardrail.core.implicits._
 
 object SecurityRequirements {
   type SecurityScopes = List[String]
@@ -16,23 +18,23 @@ object SecurityRequirements {
   case object Global extends Location
   case object Local  extends Location
 
-  def apply(requirements: NonEmptyList[SecurityRequirement], optionalSchemes: List[String], location: Location): Option[SecurityRequirements] = {
+  def apply(requirements: NonEmptyList[Tracker[SecurityRequirement]], location: Location): Option[SecurityRequirements] = {
     implicit val strOrder = Order.fromComparable[String]
+    val optional          = requirements.exists(_.unwrapTracker.isEmpty())
+
     for {
       convertedReqs <- NonEmptyList.fromList(
         requirements.toList
-          .flatMap(
-            req =>
-              NonEmptyMap.fromMap(
-                TreeMap(req.asScala.view.mapValues(_.asScala.toList).toSeq: _*)
-              )
-          )
+          .flatMap({ requirement =>
+            val nameAndScopes: Tracker[List[(String, List[String])]] = requirement.forceConvince.map(_.map(_.asScala.toList).value)
+            nameAndScopes.map(reqs => NonEmptyMap.fromMap(TreeMap(reqs: _*))).indexedDistribute
+          })
       )
-    } yield SecurityRequirements(convertedReqs, optionalSchemes, location)
+    } yield SecurityRequirements(convertedReqs, optional, location)
   }
 }
 case class SecurityRequirements(
-    requirements: NonEmptyList[NonEmptyMap[String, SecurityScopes]],
-    optionalSchemes: List[String],
+    requirements: NonEmptyList[Tracker[NonEmptyMap[String, SecurityScopes]]],
+    optional: Boolean,
     location: SecurityRequirements.Location
 )
