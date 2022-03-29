@@ -11,7 +11,7 @@ import scala.util.Try
 class JacksonPropertyTest extends AnyFreeSpec with Matchers {
   private final val mapper = new ObjectMapper
 
-  private val badStr = "{}"
+  private val badStr  = "{}"
   private val goodStr = """{ "id": 5 }"""
 
   "Missing required primitive property should not deserialize" in {
