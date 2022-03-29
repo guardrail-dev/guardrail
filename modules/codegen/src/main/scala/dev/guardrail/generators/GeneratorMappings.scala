@@ -16,14 +16,14 @@ object GeneratorMappings {
   implicit def scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
     xs => FrameworkLoader.load[ScalaLanguage](xs, MissingDependency(xs.mkString(", "))),
-    { case frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName, MissingDependency(frameworkName)) },
+    frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName, MissingDependency(frameworkName)),
     _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
   )
 
   implicit def javaInterpreter = new CoreTermInterp[JavaLanguage](
     "dropwizard",
     xs => FrameworkLoader.load[JavaLanguage](xs, MissingDependency(xs.mkString(", "))),
-    { case frameworkName => ModuleMapperLoader.load[JavaLanguage](frameworkName, MissingDependency(frameworkName)) },
+    frameworkName => ModuleMapperLoader.load[JavaLanguage](frameworkName, MissingDependency(frameworkName)),
     { str =>
       Try(StaticJavaParser.parseImport(s"import ${str};")) match {
         case Success(value) => Right(value)
