@@ -1,7 +1,7 @@
 package core.JacksonVavr
 
-import examples.client.dropwizardVavr.definitions.{Category, Pet}
-import io.vavr.control.{Option => VavrOption}
+import examples.client.dropwizardVavr.definitions.{ Category, Pet }
+import io.vavr.control.{ Option => VavrOption }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 

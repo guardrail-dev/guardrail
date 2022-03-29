@@ -17,7 +17,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.TestContextManager
 import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.{ asyncDispatch, post, get}
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.{ asyncDispatch, get, post }
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.{ request, status }
 import spring.test.TestApplication
@@ -28,7 +28,7 @@ import spring.test.TestApplication
 @ComponentScan
 @EnableAutoConfiguration
 class DateTimeSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll with MockitoSugar with ArgumentMatchersSugar {
-  @Autowired var mvc: MockMvc                    = _
+  @Autowired var mvc: MockMvc                 = _
   @Autowired var handlerMock: DateTimeHandler = _
 
   new TestContextManager(this.getClass).prepareTestInstance(this)
@@ -37,7 +37,7 @@ class DateTimeSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll wit
     "dates everywhere" in {
 
       val offsetDtNow = OffsetDateTime.now
-      val localDtNow = LocalDate.now
+      val localDtNow  = LocalDate.now
 
       when(
         handlerMock.getSomething(

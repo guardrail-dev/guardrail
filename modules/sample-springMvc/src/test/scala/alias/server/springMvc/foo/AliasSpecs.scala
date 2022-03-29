@@ -3,7 +3,7 @@ package alias.server.springMvc.foo
 import java.util.concurrent.CompletableFuture
 
 import org.junit.runner.RunWith
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.{ ArgumentMatchersSugar, MockitoSugar }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -17,9 +17,9 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.TestContextManager
 import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.{asyncDispatch, get, post}
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.{ asyncDispatch, get, post }
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.{request, status}
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.{ request, status }
 import spring.test.TestApplication
 
 @RunWith(classOf[SpringRunner])
@@ -28,7 +28,7 @@ import spring.test.TestApplication
 @ComponentScan
 @EnableAutoConfiguration
 class AliasSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll with MockitoSugar with ArgumentMatchersSugar {
-  @Autowired var mvc: MockMvc               = _
+  @Autowired var mvc: MockMvc            = _
   @Autowired var handlerMock: FooHandler = _
 
   new TestContextManager(this.getClass).prepareTestInstance(this)

@@ -3,11 +3,11 @@ package examples.server.springMvc.pet
 import java.util
 import java.util.concurrent.CompletableFuture
 
-import examples.server.springMvc.definitions.{ApiResponse, Pet}
-import examples.server.springMvc.pet.PetHandler.{FindPetsByStatusEnumResponse, FindPetsByStatusResponse, FindPetsByTagsResponse}
+import examples.server.springMvc.definitions.{ ApiResponse, Pet }
+import examples.server.springMvc.pet.PetHandler.{ FindPetsByStatusEnumResponse, FindPetsByStatusResponse, FindPetsByTagsResponse }
 import org.junit.Assert.assertTrue
 import org.junit.runner.RunWith
-import org.mockito.{ArgumentCaptor, ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.{ ArgumentCaptor, ArgumentMatchersSugar, MockitoSugar }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
@@ -23,9 +23,9 @@ import org.springframework.test.context.TestContextManager
 import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.{asyncDispatch, get, post, put}
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.{ asyncDispatch, get, post, put }
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.{request, status}
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.{ request, status }
 import org.springframework.web.multipart.MultipartFile
 import spring.test.TestApplication
 
@@ -37,7 +37,7 @@ import scala.jdk.CollectionConverters._
 @ComponentScan
 @EnableAutoConfiguration
 class BaselineSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll with MockitoSugar with ArgumentMatchersSugar {
-  @Autowired var mvc: MockMvc               = _
+  @Autowired var mvc: MockMvc            = _
   @Autowired var handlerMock: PetHandler = _
 
   new TestContextManager(this.getClass).prepareTestInstance(this)
@@ -123,32 +123,47 @@ class BaselineSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll wit
 
     "multipart" in {
 
-      val firstFileCaptor = ArgumentCaptor.forClass(classOf[java.util.Optional[MultipartFile]])
+      val firstFileCaptor  = ArgumentCaptor.forClass(classOf[java.util.Optional[MultipartFile]])
       val secondFileCaptor = ArgumentCaptor.forClass(classOf[MultipartFile])
-      val thirdFileCaptor = ArgumentCaptor.forClass(classOf[MultipartFile])
+      val thirdFileCaptor  = ArgumentCaptor.forClass(classOf[MultipartFile])
 
-      when(handlerMock.uploadFile(
-        any[java.lang.Long],
-        any[java.util.Optional[String]],
-        any[java.util.Optional[MultipartFile]],
-        any[MultipartFile],
-        any[MultipartFile],
-        any[java.lang.Long],
-        any[java.lang.Long],
-        any[java.util.Optional[java.lang.Long]]
-      )).thenReturn(CompletableFuture.completedFuture(PetHandler.UploadFileResponse.Ok(new ApiResponse.Builder().build())))
+      when(
+        handlerMock.uploadFile(
+          any[java.lang.Long],
+          any[java.util.Optional[String]],
+          any[java.util.Optional[MultipartFile]],
+          any[MultipartFile],
+          any[MultipartFile],
+          any[java.lang.Long],
+          any[java.lang.Long],
+          any[java.util.Optional[java.lang.Long]]
+        )
+      ).thenReturn(CompletableFuture.completedFuture(PetHandler.UploadFileResponse.Ok(new ApiResponse.Builder().build())))
 
-      val secondFile = new MockMultipartFile("file2", "other-file-name.data", "text/plain", ("some " +
-        "other type").getBytes)
-      val thirdFile = new MockMultipartFile("file3", "other-file-name.data", "text/plain", ("some " +
-        "other other type").getBytes)
+      val secondFile = new MockMultipartFile(
+        "file2",
+        "other-file-name.data",
+        "text/plain",
+        ("some " +
+            "other type").getBytes
+      )
+      val thirdFile = new MockMultipartFile(
+        "file3",
+        "other-file-name.data",
+        "text/plain",
+        ("some " +
+            "other other type").getBytes
+      )
 
-      val mvcResult = mvc.perform(MockMvcRequestBuilders
-        .multipart("/v2/pet/1/uploadImage")
-        .file(secondFile)
-        .file(thirdFile)
-        .param("long-value", "4")
-        .param("custom-value", "5"))
+      val mvcResult = mvc
+        .perform(
+          MockMvcRequestBuilders
+            .multipart("/v2/pet/1/uploadImage")
+            .file(secondFile)
+            .file(thirdFile)
+            .param("long-value", "4")
+            .param("custom-value", "5")
+        )
         .andExpect(request.asyncStarted)
         .andReturn
 
