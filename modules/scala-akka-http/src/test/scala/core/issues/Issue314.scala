@@ -141,7 +141,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         _,
         Clients(Client(_, _, _, staticDefns, cls, _) :: _, Nil),
         _
-      )       = runSwaggerSpec(swagger(config))(Context.empty, AkkaHttp)
+      )       = runSwaggerSpec(swagger(config))(Context.empty.copy(tagsBehaviour = Context.PackageFromTags), AkkaHttp)
       val cmp = companionForStaticDefns(staticDefns)
 
       verifyTree(cls.head.value, client(expectedClassPrefix))
@@ -153,7 +153,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: Nil) :: Nil, Nil)
-      ) = runSwaggerSpec(swagger(config))(Context.empty, AkkaHttp)
+      ) = runSwaggerSpec(swagger(config))(Context.empty.copy(tagsBehaviour = Context.PackageFromTags), AkkaHttp)
 
       verifyTree(genHandler, handler(expectedClassPrefix))
       verifyTree(genResource, resource(expectedClassPrefix))
