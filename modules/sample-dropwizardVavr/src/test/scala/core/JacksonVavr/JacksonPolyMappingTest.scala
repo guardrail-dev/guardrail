@@ -3,7 +3,7 @@ package core.JacksonVavr
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import polymorphismMapped.client.dropwizardVavr.definitions.{A, B, Base, C, DiscrimEnum, EnumA, EnumB, EnumBase, EnumC}
+import polymorphismMapped.client.dropwizardVavr.definitions.{ A, B, Base, C, DiscrimEnum, EnumA, EnumB, EnumBase, EnumC }
 
 import scala.reflect.ClassTag
 

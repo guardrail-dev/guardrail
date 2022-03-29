@@ -4,7 +4,7 @@ import java.lang.reflect.Modifier
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import polymorphismNested.client.dropwizardVavr.definitions.{A, B, C, TestResponse}
+import polymorphismNested.client.dropwizardVavr.definitions.{ A, B, C, TestResponse }
 
 class JacksonNestedTest extends AnyFreeSpec with Matchers {
   "Jackson nested schemas" - {
