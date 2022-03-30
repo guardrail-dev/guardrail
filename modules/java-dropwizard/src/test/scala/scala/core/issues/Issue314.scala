@@ -75,7 +75,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     def verifyClient(config: String, expectedClassPrefix: String)(implicit pos: source.Position): Unit = {
 
       val (_, Clients(clt :: _, _), _) =
-        runSwaggerSpec(swagger(config))(Context.empty, Dropwizard)
+        runSwaggerSpec(swagger(config))(Context.empty.copy(tagsBehaviour = Context.PackageFromTags), Dropwizard)
       val cls = clt.client.head.getOrElse(fail("Client does not contain a ClassDefinition"))
 
       verifyNode(cls, client(expectedClassPrefix))
@@ -86,7 +86,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: Nil) :: Nil, _)
-      ) = runSwaggerSpec(swagger(config))(Context.empty, Dropwizard)
+      ) = runSwaggerSpec(swagger(config))(Context.empty.copy(tagsBehaviour = Context.PackageFromTags), Dropwizard)
 
       verifyNode(genHandler, handler(expectedClassPrefix))
       verifyNode(genResource, resource(expectedClassPrefix))
