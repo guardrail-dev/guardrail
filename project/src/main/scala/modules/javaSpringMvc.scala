@@ -8,7 +8,7 @@ import sbt.Keys._
 object javaSpringMvc {
   val javaxAnnotationVersion = "1.3.2"
   val scalatestVersion       = "3.2.11"
-  val springBootVersion      = "2.6.3"
+  val springBootVersion      = "2.6.6"
 
   val dependencies = Seq(
     "org.springframework.boot"   %  "spring-boot-starter-web"  % springBootVersion,
@@ -19,7 +19,7 @@ object javaSpringMvc {
   ) ++ Seq(
     "org.scala-lang.modules"     %% "scala-java8-compat"       % "1.0.2"            % Test,
     "org.scalatest"              %% "scalatest"                % scalatestVersion   % Test,
-    "org.mockito"                %% "mockito-scala"            % "1.17.0"           % Test,
+    "org.mockito"                %% "mockito-scala"            % "1.17.5"           % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
 
   val project = commonModule("java-spring-mvc")
