@@ -22,13 +22,13 @@ object javaDropwizard {
     "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
     "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
     "junit"                      %  "junit"                  % "4.13.2"             % Test,
-    "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.9.1"            % Test,
+    "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.10"            % Test,
     "com.github.sbt"               %  "junit-interface"        % "0.13.3"             % Test,
     "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
     "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
     "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
   ) ++ Seq(
-    "org.mockito"                %% "mockito-scala"          % "1.17.0"           % Test,
+    "org.mockito"                %% "mockito-scala"          % "1.17.5"           % Test,
     "org.scala-lang.modules"     %% "scala-java8-compat"     % "1.0.2"            % Test,
     "org.scalatest"              %% "scalatest"              % scalatestVersion   % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))

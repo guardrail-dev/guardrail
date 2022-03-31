@@ -9,7 +9,7 @@ object scalaDropwizard {
   val catsVersion            = "2.7.0"
   val dropwizardScalaVersion = "1.3.7-1"
   val dropwizardVersion      = "1.3.29"
-  val jacksonVersion         = "2.13.0"
+  val jacksonVersion         = "2.13.2"
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
   val jerseyVersion          = "2.25.1"
@@ -32,7 +32,7 @@ object scalaDropwizard {
     "org.typelevel"                  %% "cats-core"               % catsVersion,
     "org.scala-lang.modules"         %% "scala-java8-compat"      % "1.0.2"            % Test,
     "org.scalatest"                  %% "scalatest"               % scalatestVersion   % Test,
-    "org.mockito"                    %% "mockito-scala-scalatest" % "1.17.0"           % Test,
+    "org.mockito"                    %% "mockito-scala-scalatest" % "1.17.5"           % Test,
   ).map(_.cross(CrossVersion.for3Use2_13))
 
   val project = commonModule("scala-dropwizard")
