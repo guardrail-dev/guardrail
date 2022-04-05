@@ -109,9 +109,8 @@ class CoreTermInterp[L <: LA](
         customImports <- args.imports
           .traverse(x =>
             for {
-              _ <- Target.log.debug(s"Attempting to parse $x as an import directive")
-              customImport <- handleImport(x)
-                .fold[Target[L#Import]](err => Target.raiseError(UnparseableArgument("import", err.toString)), Target.pure _)
+              _            <- Target.log.debug(s"Attempting to parse $x as an import directive")
+              customImport <- Target.fromEither(handleImport(x).left.map(err => UnparseableArgument("import", err.toString)))
             } yield customImport
           )
         _ <- Target.log.debug("Finished processing arguments")
