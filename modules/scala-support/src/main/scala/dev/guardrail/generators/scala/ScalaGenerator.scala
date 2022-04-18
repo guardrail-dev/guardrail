@@ -235,18 +235,18 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
                 def show(v: T): String = f(v)
               }
 
-              implicit val showString = build[String](Predef.identity)
-              implicit val showInt = build[Int](_.toString)
-              implicit val showLong = build[Long](_.toString)
-              implicit val showFloat = build[Float](_.toString)
-              implicit val showDouble = build[Double](_.toString)
-              implicit val showBigInt = build[BigInt](_.toString)
-              implicit val showBigDecimal = build[BigDecimal](_.toString)
-              implicit val showBoolean = build[Boolean](_.toString)
-              implicit val showLocalDate = build[java.time.LocalDate](_.format(java.time.format.DateTimeFormatter.ISO_DATE))
-              implicit val showOffsetDateTime = build[java.time.OffsetDateTime](_.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-              implicit val showJavaURL = build[java.net.URI](_.toString)
-              implicit val showUUID = build[java.util.UUID](_.toString)
+              implicit val showString: Show[String] = build[String](Predef.identity)
+              implicit val showInt: Show[Int] = build[Int](_.toString)
+              implicit val showLong: Show[Long] = build[Long](_.toString)
+              implicit val showFloat: Show[Float] = build[Float](_.toString)
+              implicit val showDouble: Show[Double] = build[Double](_.toString)
+              implicit val showBigInt: Show[BigInt] = build[BigInt](_.toString)
+              implicit val showBigDecimal: Show[BigDecimal] = build[BigDecimal](_.toString)
+              implicit val showBoolean: Show[Boolean] = build[Boolean](_.toString)
+              implicit val showLocalDate: Show[java.time.LocalDate] = build(_.format(java.time.format.DateTimeFormatter.ISO_DATE))
+              implicit val showOffsetDateTime: Show[java.time.OffsetDateTime] = build(_.format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+              implicit val showJavaURL: Show[java.net.URI] = build(_.toString)
+              implicit val showUUID: Show[java.util.UUID] = build(_.toString)
             }
 
             object Formatter {
