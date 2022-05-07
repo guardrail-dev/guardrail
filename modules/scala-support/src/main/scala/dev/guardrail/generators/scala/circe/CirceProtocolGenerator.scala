@@ -5,18 +5,29 @@ import cats.Monad
 import cats.data.{ NonEmptyList, NonEmptyVector }
 import cats.syntax.all._
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
-import dev.guardrail.generators.scala.CirceModelGenerator
-import dev.guardrail.generators.scala.{ ScalaGenerator, ScalaLanguage }
+import dev.guardrail.generators.spi.ProtocolGeneratorLoader
+import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaCollectionsGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import dev.guardrail.{ SwaggerUtil, Target, UserError }
+
+class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
+  type L = ScalaLanguage
+  def reified     = typeTag[Target[ScalaLanguage]]
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]): Option[ProtocolTerms[ScalaLanguage, Target]] =
+    for {
+      circeVersion <- parameters.collectFirst { case CirceModelGenerator(version) => version }
+    } yield CirceProtocolGenerator(circeVersion)
+}
 
 object CirceProtocolGenerator {
   def apply(circeVersion: CirceModelGenerator)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
