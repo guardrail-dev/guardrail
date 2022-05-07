@@ -1,10 +1,24 @@
 package dev.guardrail.generators.scala.http4s
 
+import scala.meta._
+import scala.reflect.runtime.universe.typeTag
+
 import dev.guardrail.Target
+import dev.guardrail.generators.scala._
+import dev.guardrail.generators.spi.FrameworkGeneratorLoader
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
-import dev.guardrail.generators.scala._
-import scala.meta._
+
+class Http4sGeneratorLoader extends FrameworkGeneratorLoader {
+  type L = ScalaLanguage
+  def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      http4sVersion <- parameters.collectFirst { case Http4sVersion(version) => version }
+    } yield Http4sGenerator()
+}
 
 object Http4sGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): FrameworkTerms[ScalaLanguage, Target] = new Http4sGenerator

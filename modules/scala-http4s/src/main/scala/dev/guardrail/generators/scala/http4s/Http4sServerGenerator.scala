@@ -4,6 +4,9 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import cats.Traverse
+import scala.meta._
+import scala.reflect.runtime.universe.typeTag
+
 import dev.guardrail.{ AuthImplementation, Target, UserError }
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.core.Tracker
@@ -13,13 +16,13 @@ import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.scala.{ CirceModelGenerator, ModelGeneratorType, ResponseADTHelper }
-import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.{ ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.spi.ServerGeneratorLoader
 import dev.guardrail.terms.{ ContentType, Header, Response, Responses }
 import dev.guardrail.terms.server._
 import dev.guardrail.shims._
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
-import scala.meta._
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import _root_.io.swagger.v3.oas.models.Operation
 import dev.guardrail.terms.SecurityRequirements
@@ -27,6 +30,17 @@ import dev.guardrail.AuthImplementation.Disable
 import dev.guardrail.AuthImplementation.Native
 import dev.guardrail.AuthImplementation.Simple
 import dev.guardrail.AuthImplementation.Custom
+
+class Http4sServerGeneratorLoader extends ServerGeneratorLoader {
+  type L = ScalaLanguage
+  override def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      http4sVersion <- parameters.collectFirst { case Http4sVersion(version) => version }
+    } yield Http4sServerGenerator(http4sVersion)
+}
 
 object Http4sServerGenerator {
   @deprecated("0.69.0", "Explicitly set Http4sVersion")

@@ -6,11 +6,13 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import java.net.URI
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.scala.syntax._
-import dev.guardrail.generators.scala.{ ResponseADTHelper, ScalaLanguage }
+import dev.guardrail.generators.scala.{ ResponseADTHelper, ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
 import dev.guardrail.shims._
@@ -18,6 +20,17 @@ import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 import dev.guardrail.terms.{ ContentType, Header, MultipartFormData, Responses }
+
+class Http4sClientGeneratorLoader extends ClientGeneratorLoader {
+  type L = ScalaLanguage
+  def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      _ <- parameters.collectFirst { case Http4sVersion(version) => version }
+    } yield Http4sClientGenerator()
+}
 
 object Http4sClientGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
