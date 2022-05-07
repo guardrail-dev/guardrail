@@ -19,6 +19,7 @@ import scala.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.existentials
+import scala.reflect.runtime.universe.typeTag
 import scala.util.Try
 
 import dev.guardrail.Common.resolveFile
@@ -26,14 +27,28 @@ import dev.guardrail._
 import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.generators.java.JavaLanguage.JavaTypeName
 import dev.guardrail.generators.java.syntax._
+import dev.guardrail.generators.spi.LanguageLoader
 import dev.guardrail.generators.syntax.RichString
 import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
 
+class JavaGeneratorLoader extends LanguageLoader {
+  type L = JavaLanguage
+  def reified = typeTag[Target[JavaLanguage]]
+  def apply(parameters: Set[String]): Option[LanguageTerms[JavaLanguage, Target]] =
+    for {
+      generator <- parameters.collectFirst { case JavaGenerator(version) => version }
+    } yield generator
+}
+
 object JavaGenerator {
   def apply(): LanguageTerms[JavaLanguage, Target] =
     new JavaGenerator
+  def unapply(value: String): Option[LanguageTerms[JavaLanguage, Target]] = value match {
+    case "java-language" => Some(apply())
+    case _               => None
+  }
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
