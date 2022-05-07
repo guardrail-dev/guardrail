@@ -11,7 +11,7 @@ import dev.guardrail.AuthImplementation
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
 import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, Tracker, VectorRawType }
 import dev.guardrail.generators.operations.TracingLabelFormatter
-import dev.guardrail.generators.scala.{ AkkaHttpVersion, ModelGeneratorType }
+import dev.guardrail.generators.scala.ModelGeneratorType
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.syntax._

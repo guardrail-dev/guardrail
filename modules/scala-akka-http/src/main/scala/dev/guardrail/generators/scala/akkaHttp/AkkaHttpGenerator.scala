@@ -1,7 +1,7 @@
 package dev.guardrail.generators.scala.akkaHttp
 
 import dev.guardrail.{ RuntimeFailure, Target }
-import dev.guardrail.generators.scala.{ AkkaHttpVersion, CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
 import scala.meta._

@@ -3,7 +3,7 @@ package dev.guardrail.generators.scala.akkaHttp
 import dev.guardrail.Target
 import dev.guardrail.generators.scala.{ JacksonModelGenerator, ScalaCollectionsGenerator, ScalaLanguage }
 import dev.guardrail.generators.scala.jackson.JacksonProtocolGenerator
-import dev.guardrail.generators.scala.{ AkkaHttpVersion, ScalaGenerator }
+import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.{ Framework, SwaggerGenerator }
 
 object AkkaHttpJackson extends Framework[ScalaLanguage, Target] {

@@ -9,12 +9,12 @@ import scala.meta._
 
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
+import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
 import dev.guardrail.generators.scala.ModelGeneratorType
 import dev.guardrail.generators.scala.ResponseADTHelper
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.syntax._
-import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
 import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }

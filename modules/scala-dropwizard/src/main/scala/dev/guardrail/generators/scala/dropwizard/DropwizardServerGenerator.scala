@@ -9,8 +9,8 @@ import scala.meta._
 import dev.guardrail.AuthImplementation
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
-import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.scalaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.protocol.StrictProtocolElems
