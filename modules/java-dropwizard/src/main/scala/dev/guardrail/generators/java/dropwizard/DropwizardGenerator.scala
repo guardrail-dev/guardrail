@@ -4,14 +4,36 @@ import cats.syntax.all._
 import com.github.javaparser.ast.ImportDeclaration
 import com.github.javaparser.ast.body.BodyDeclaration
 import com.github.javaparser.ast.expr._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Target
 import dev.guardrail.core.SupportDefinition
+import dev.guardrail.generators.collections.{ JavaCollectionsGenerator, JavaVavrCollectionsGenerator }
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
+import dev.guardrail.generators.spi.FrameworkGeneratorLoader
 import dev.guardrail.terms.CollectionsLibTerms
+import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.framework._
+
+class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
+  type L = JavaLanguage
+  def reified = typeTag[Target[JavaLanguage]]
+
+  def apply(parameters: Set[String]) =
+    for {
+      _ <- parameters.collectFirst { case DropwizardVersion(version) => version }
+      implicit0(cl: CollectionsLibTerms[JavaLanguage, Target]) <- parameters.collectFirst {
+        case JavaVavrCollectionsGenerator(version) => version
+        case JavaCollectionsGenerator(version)     => version
+      }
+      implicit0(ca: CollectionsAbstraction[JavaLanguage]) <- parameters.collectFirst {
+        case JavaVavrCollections(version)   => version
+        case JavaStdLibCollections(version) => version
+      }
+    } yield DropwizardGenerator()
+}
 
 object DropwizardGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): FrameworkTerms[JavaLanguage, Target] = new DropwizardGenerator
