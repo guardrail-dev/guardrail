@@ -6,14 +6,15 @@ import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.AuthImplementation
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
 import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, Tracker, VectorRawType }
 import dev.guardrail.generators.operations.TracingLabelFormatter
-import dev.guardrail.generators.scala.ModelGeneratorType
-import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaCollectionsGenerator, ScalaLanguage }
 import dev.guardrail.generators.scala.syntax._
+import dev.guardrail.generators.spi.ServerGeneratorLoader
 import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
 import dev.guardrail.shims._
@@ -22,6 +23,23 @@ import dev.guardrail.terms.server._
 import dev.guardrail.terms.{ ApplicationJson, BinaryContent, CollectionsLibTerms, ContentType, Header, MultipartFormData, Response }
 import dev.guardrail.terms.{ Responses, RouteMeta, SecurityScheme, TextContent, TextPlain, UrlencodedFormData }
 import dev.guardrail.{ Target, UserError }
+
+class AkkaHttpServerGeneratorLoader extends ServerGeneratorLoader {
+  type L = ScalaLanguage
+  override def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      akkaHttpVersion <- parameters.collectFirst { case AkkaHttpVersion(version) =>
+        version
+      }
+      collectionVersion <- parameters.collectFirst {
+        case CirceModelGenerator(version)   => version
+        case JacksonModelGenerator(version) => version
+      }
+    } yield AkkaHttpServerGenerator(akkaHttpVersion, collectionVersion)
+}
 
 object AkkaHttpServerGenerator {
   def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(implicit

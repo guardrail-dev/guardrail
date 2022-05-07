@@ -6,20 +6,42 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import java.net.URI
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
-import dev.guardrail.generators.scala.ModelGeneratorType
-import dev.guardrail.generators.scala.ResponseADTHelper
-import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.{
+  CirceModelGenerator,
+  JacksonModelGenerator,
+  ModelGeneratorType,
+  ResponseADTHelper,
+  ScalaCollectionsGenerator,
+  ScalaLanguage
+}
 import dev.guardrail.generators.scala.syntax._
+import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.generators.syntax._
 import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, Responses, TextPlain }
 import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+
+class AkkaHttpClientGeneratorLoader extends ClientGeneratorLoader {
+  type L = ScalaLanguage
+  def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      _ <- parameters.collectFirst { case AkkaHttpVersion(version) => version }
+      collectionVersion <- parameters.collectFirst {
+        case CirceModelGenerator(version)   => version
+        case JacksonModelGenerator(version) => version
+      }
+    } yield AkkaHttpClientGenerator(collectionVersion)
+}
 
 object AkkaHttpClientGenerator {
   def apply(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
