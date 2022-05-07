@@ -3,17 +3,30 @@ package dev.guardrail.generators.scala.jackson
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core.{ EmptyIsNull, SupportDefinition }
-import dev.guardrail.generators.scala.CirceModelGenerator
-import dev.guardrail.generators.scala.ScalaGenerator
-import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ScalaCollectionsGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
+import dev.guardrail.generators.spi.ProtocolGeneratorLoader
 import dev.guardrail.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.protocol.{ Discriminator, PropertyRequirement }
 import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms }
 import dev.guardrail.{ RuntimeFailure, Target }
+
+class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
+  type L = ScalaLanguage
+  def reified     = typeTag[Target[ScalaLanguage]]
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]): Option[ProtocolTerms[ScalaLanguage, Target]] =
+    for {
+      // We do not support different versions of Jackson at this time, so if
+      // this is desirable in the future we can adopt a similar strategy as is
+      // used in CirceProtocolGenerator.
+      _ <- parameters.collectFirst { case JacksonModelGenerator(version) => version }
+    } yield JacksonProtocolGenerator.apply
+}
 
 object JacksonProtocolGenerator {
   private def discriminatorValue(discriminator: Discriminator[ScalaLanguage], className: String): String =
