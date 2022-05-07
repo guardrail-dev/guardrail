@@ -5,15 +5,34 @@ import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.{ Node, NodeList }
 import com.github.javaparser.ast.expr.ObjectCreationExpr
+import scala.reflect.runtime.universe.typeTag
+
 import dev.guardrail.core.LazyResolvedType
 import dev.guardrail.Target
 import dev.guardrail.core
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.CollectionsLibTerms
+import dev.guardrail.generators.spi.CollectionsGeneratorLoader
+
+class JavaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
+  type L = JavaLanguage
+  def reified = typeTag[Target[JavaLanguage]]
+
+  def apply(parameters: Set[String]) =
+    for {
+      cl <- parameters.collectFirst { case JavaCollectionsGenerator(version) =>
+        version
+      }
+    } yield cl
+}
 
 object JavaCollectionsGenerator {
   def apply(): CollectionsLibTerms[JavaLanguage, Target] = new JavaCollectionsGenerator
+  def unapply(value: String): Option[JavaCollectionsGenerator] = value match {
+    case "java-stdlib" => Some(new JavaCollectionsGenerator)
+    case _             => None
+  }
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
