@@ -6,8 +6,8 @@ import java.net.URI
 import scala.meta.{ Defn, Import, Term }
 
 import dev.guardrail.core.SupportDefinition
-import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.{ LanguageParameters, RenderedClientOperation }
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }

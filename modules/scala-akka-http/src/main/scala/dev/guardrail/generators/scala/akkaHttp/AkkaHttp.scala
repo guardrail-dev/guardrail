@@ -1,7 +1,7 @@
 package dev.guardrail.generators.scala.akkaHttp
 
 import dev.guardrail.Target
-import dev.guardrail.generators.scala.{ AkkaHttpVersion, CirceModelGenerator, ScalaCollectionsGenerator, ScalaGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaCollectionsGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
 import dev.guardrail.generators.{ Framework, SwaggerGenerator }
 

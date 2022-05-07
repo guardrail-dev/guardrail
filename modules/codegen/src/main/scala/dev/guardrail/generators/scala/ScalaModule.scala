@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 
 import dev.guardrail._
 import dev.guardrail.generators._
-import dev.guardrail.generators.scala.akkaHttp.{ AkkaHttpClientGenerator, AkkaHttpGenerator, AkkaHttpServerGenerator }
+import dev.guardrail.generators.scala.akkaHttp.{ AkkaHttpClientGenerator, AkkaHttpGenerator, AkkaHttpServerGenerator, AkkaHttpVersion }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
 import dev.guardrail.generators.scala.dropwizard.{ DropwizardClientGenerator, DropwizardGenerator, DropwizardServerGenerator }
 import dev.guardrail.generators.scala.http4s.{ Http4sClientGenerator, Http4sGenerator, Http4sServerGenerator, Http4sVersion }
