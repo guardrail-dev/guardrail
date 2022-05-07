@@ -18,7 +18,7 @@ import scala.annotation.tailrec
 import dev.guardrail.Target
 import dev.guardrail.core.{ PathExtractor, SupportDefinition }
 import dev.guardrail.generators.RenderedClientOperation
-import dev.guardrail.generators.collections.JavaCollectionsGenerator
+import dev.guardrail.generators.collections.{ JavaCollectionsGenerator, JavaVavrCollectionsGenerator }
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.asyncHttpClient.AsyncHttpClientHelpers._
@@ -35,25 +35,30 @@ import dev.guardrail.terms.{
   AnyContentType,
   ApplicationJson,
   BinaryContent,
+  CollectionsLibTerms,
   ContentType,
   MultipartFormData,
   OctetStream,
   Response,
   Responses,
+  RouteMeta,
+  SecurityScheme,
   TextContent,
   TextPlain,
   UrlencodedFormData
 }
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
 
 class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
 
-  implicit val Cl = JavaCollectionsGenerator()
   def apply(parameters: Set[String]) =
     for {
       _ <- parameters.collectFirst { case AsyncHttpClientVersion(version) => version }
+      implicit0(cl: CollectionsLibTerms[JavaLanguage, Target]) <- parameters.collectFirst {
+        case JavaVavrCollectionsGenerator(version) => version
+        case JavaCollectionsGenerator(version)     => version
+      }
       implicit0(ca: CollectionsAbstraction[JavaLanguage]) <- parameters.collectFirst {
         case JavaVavrCollections(version)   => version
         case JavaStdLibCollections(version) => version
