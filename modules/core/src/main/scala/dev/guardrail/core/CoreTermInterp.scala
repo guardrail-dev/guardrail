@@ -70,9 +70,10 @@ class CoreTermInterp[L <: LA](
     for {
       args <- Target.pure(parsed.filterNot(_.defaults))
       args <- Target.fromOption(NonEmptyList.fromList(args.filterNot(Args.isEmpty)), NoArgsSpecified)
-      args <- if (args.exists(_.printHelp))
-        Target.raiseError[NonEmptyList[Args]](PrintHelp)
-      else Target.pure(args)
+      args <-
+        if (args.exists(_.printHelp))
+          Target.raiseError[NonEmptyList[Args]](PrintHelp)
+        else Target.pure(args)
     } yield args
 
   private def verifyPropertyRequirement: PropertyRequirement.Configured => Target[Unit] = {
@@ -95,80 +96,76 @@ class CoreTermInterp[L <: LA](
   }
 
   def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] =
-    Target.log.function("processArgSet")(for {
-      _          <- Target.log.debug("Processing arguments")
-      specPath   <- Target.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
-      outputPath <- Target.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
-      pkgName    <- Target.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
-      kind       = args.kind
-      dtoPackage = args.dtoPackage
-      context    = args.context
-      _ <- verifyPropertyRequirement(context.propertyRequirement)
-      customImports <- args.imports
-        .traverse(
-          x =>
+    Target.log.function("processArgSet")(
+      for {
+        _          <- Target.log.debug("Processing arguments")
+        specPath   <- Target.fromOption(args.specPath, MissingArg(args, Error.ArgName("--specPath")))
+        outputPath <- Target.fromOption(args.outputPath, MissingArg(args, Error.ArgName("--outputPath")))
+        pkgName    <- Target.fromOption(args.packageName, MissingArg(args, Error.ArgName("--packageName")))
+        kind       = args.kind
+        dtoPackage = args.dtoPackage
+        context    = args.context
+        _ <- verifyPropertyRequirement(context.propertyRequirement)
+        customImports <- args.imports
+          .traverse(x =>
             for {
               _ <- Target.log.debug(s"Attempting to parse $x as an import directive")
               customImport <- handleImport(x)
                 .fold[Target[L#Import]](err => Target.raiseError(UnparseableArgument("import", err.toString)), Target.pure _)
             } yield customImport
-        )
-      _ <- Target.log.debug("Finished processing arguments")
-    } yield {
-      ReadSwagger(
-        Paths.get(specPath), {
-          swagger =>
-            try {
-              import targetInterpreter._
-              val Sw = implicitly[SwaggerTerms[L, Target]]
-              val Sc = implicitly[LanguageTerms[L, Target]]
-              val Ps = implicitly[ProtocolTerms[L, Target]]
-              for {
-                _                  <- Sw.log.debug("Running guardrail codegen")
-                formattedPkgName   <- Sc.formatPackageName(pkgName)
-                definitionsPkgName <- Sc.fullyQualifyPackageName(formattedPkgName)
-                (proto, codegen) <- Common
-                  .prepareDefinitions[L, Target](
-                    kind,
-                    context,
-                    Tracker(swagger),
-                    definitionsPkgName.toList ++ ("definitions" :: dtoPackage),
-                    definitionsPkgName :+ "support"
-                  )
-                protocolSupport <- Ps.generateSupportDefinitions()
-                result <- Common
-                  .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), formattedPkgName.toList, dtoPackage, customImports, protocolSupport)
-              } yield result
-            } catch {
-              case NonFatal(ex) =>
-                val stackTrace =
-                  ex.getStackTrace()
-                    .toList
-                    .foldLeftM[State[Option[String], *], List[String]](List.empty)({
-                      case (acc, next) =>
-                        for {
-                          lastClassName <- State.get
-                          _             <- State.set(Option(next.getClassName()))
-                        } yield {
-                          if (next.getClassName().startsWith("dev.guardrail")) {
-                            acc :+ s"        at ${next.toString()}"
-                          } else {
-                            if (lastClassName.exists(_.startsWith("dev.guardrail"))) {
-                              acc :+ "          ..."
-                            } else acc
-                          }
-                        }
-                    })
-                    .runA(Option.empty)
-                    .value
-                Target.raiseException(s"""
+          )
+        _ <- Target.log.debug("Finished processing arguments")
+      } yield ReadSwagger(
+        Paths.get(specPath),
+        swagger =>
+          try {
+            import targetInterpreter._
+            val Sw = implicitly[SwaggerTerms[L, Target]]
+            val Sc = implicitly[LanguageTerms[L, Target]]
+            val Ps = implicitly[ProtocolTerms[L, Target]]
+            for {
+              _                  <- Sw.log.debug("Running guardrail codegen")
+              formattedPkgName   <- Sc.formatPackageName(pkgName)
+              definitionsPkgName <- Sc.fullyQualifyPackageName(formattedPkgName)
+              (proto, codegen) <- Common
+                .prepareDefinitions[L, Target](
+                  kind,
+                  context,
+                  Tracker(swagger),
+                  definitionsPkgName.toList ++ ("definitions" :: dtoPackage),
+                  definitionsPkgName :+ "support"
+                )
+              protocolSupport <- Ps.generateSupportDefinitions()
+              result <- Common
+                .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), formattedPkgName.toList, dtoPackage, customImports, protocolSupport)
+            } yield result
+          } catch {
+            case NonFatal(ex) =>
+              val stackTrace =
+                ex.getStackTrace()
+                  .toList
+                  .foldLeftM[State[Option[String], *], List[String]](List.empty) { case (acc, next) =>
+                    for {
+                      lastClassName <- State.get
+                      _             <- State.set(Option(next.getClassName()))
+                    } yield
+                      if (next.getClassName().startsWith("dev.guardrail")) {
+                        acc :+ s"        at ${next.toString()}"
+                      } else {
+                        if (lastClassName.exists(_.startsWith("dev.guardrail"))) {
+                          acc :+ "          ..."
+                        } else acc
+                      }
+                  }
+                  .runA(Option.empty)
+                  .value
+              Target.raiseException(s"""
                   |Error attempting to process ${specPath}:
                   |
                   |${ex.toString()}
                   |${stackTrace.mkString("\n")}
                   |""".stripMargin.trim)
-            }
-        }
+          }
       )
-    })
+    )
 }

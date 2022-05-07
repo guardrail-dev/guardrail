@@ -39,25 +39,34 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
     it("should be possible to define an arbitrary class name") {
       flavours.foreach { flavour =>
-        verify(s"""
+        verify(
+          s"""
              |      x-$flavour-package: users
              |      x-$flavour-class-prefix: hello
-             """.stripMargin, "Hello")
+             """.stripMargin,
+          "Hello"
+        )
       }
     }
 
     it("should use the last component of a package name as a class name") {
       flavours.foreach { flavour =>
-        verify(s"""
+        verify(
+          s"""
              |      x-$flavour-package: users
-             """.stripMargin, "Users")
+             """.stripMargin,
+          "Users"
+        )
       }
     }
 
     it("should fallback to tags in order to determine class name") {
-      verify(s"""
+      verify(
+        s"""
            |      tags: [hello]
-         """.stripMargin, "Hello")
+         """.stripMargin,
+        "Hello"
+      )
     }
 
     it("should be possible to override a class name") {
@@ -141,7 +150,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         _,
         Clients(Client(_, _, _, staticDefns, cls, _) :: _, Nil),
         _
-      )       = runSwaggerSpec(swagger(config))(Context.empty.copy(tagsBehaviour = Context.PackageFromTags), AkkaHttp)
+      ) = runSwaggerSpec(swagger(config))(Context.empty.copy(tagsBehaviour = Context.PackageFromTags), AkkaHttp)
       val cmp = companionForStaticDefns(staticDefns)
 
       verifyTree(cls.head.value, client(expectedClassPrefix))

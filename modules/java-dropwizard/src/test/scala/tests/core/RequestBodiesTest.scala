@@ -77,21 +77,19 @@ class RequestBodiesTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner
     val fooMethod = cls.getMethodsByName("foo").get(0)
     fooMethod.getParameter(0).getType shouldBe PrimitiveType.doubleType
 
-    val fooCallBuilder = cls.getMembers.toList
-      .collectFirst({
-        case cbClass: ClassOrInterfaceDeclaration if cbClass.getNameAsString == "FooCallBuilder" => cbClass
-      })
-      .get
+    val fooCallBuilder = cls.getMembers.toList.collectFirst {
+      case cbClass: ClassOrInterfaceDeclaration if cbClass.getNameAsString == "FooCallBuilder" => cbClass
+    }.get
     val withCMethods = fooCallBuilder.getMethodsByName("withC").asScala
     withCMethods.length shouldBe 2
-    withCMethods.foreach({
+    withCMethods.foreach {
       case md if md.getParameter(0).getType.isPrimitiveType =>
         md.getParameter(0).getType shouldBe PrimitiveType.longType
       case md =>
         val paramType = md.getParameter(0).getType.asClassOrInterfaceType
         paramType.getNameAsString shouldBe "Optional"
         paramType.getTypeArguments.get.get(0).asClassOrInterfaceType.getNameAsString shouldBe "Long"
-    })
+    }
 
     val barMethod          = cls.getMethodsByName("bar").get(0)
     val barMethodParamType = barMethod.getParameter(0).getType.asClassOrInterfaceType

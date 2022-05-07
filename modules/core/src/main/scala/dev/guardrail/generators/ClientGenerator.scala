@@ -43,41 +43,37 @@ object ClientGenerator {
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      clients <- groupedRoutes.traverse({
-        case (className, unsortedRoutes) =>
-          val routes = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
-          for {
-            clientName <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
-            responseClientPair <- routes.traverse {
-              case route @ RouteMeta(path, method, operation, securityRequirements) =>
-                for {
-                  operationId         <- getOperationId(operation)
-                  responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems)
-                  responseClsName     <- formatTypeName(operationId, Some("Response"))
-                  responseDefinitions <- generateResponseDefinitions(responseClsName, responses, protocolElems)
-                  parameters          <- route.getParameters[L, F](protocolElems)
-                  methodName          <- formatMethodName(operationId)
-                  clientOp            <- generateClientOperation(className, responseClsName, context.tracing, securitySchemes, parameters)(route, methodName, responses)
-                } yield (responseDefinitions, clientOp)
-            }
-            (responseDefinitions, clientOperations) = responseClientPair.unzip
-            tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
-            ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
-            staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
-            client <- buildClient(
-              clientName,
-              tracingName,
-              serverUrls,
-              basePath,
-              ctorArgs,
-              clientOperations.map(_.clientOperation),
-              clientOperations.flatMap(_.supportDefinitions),
-              context.tracing
-            )
-          } yield {
-            Client[L](className, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), staticDefns, client, responseDefinitions.flatten)
+      clients <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+        val routes = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
+        for {
+          clientName <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
+          responseClientPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
+            for {
+              operationId         <- getOperationId(operation)
+              responses           <- Responses.getResponses[L, F](operationId, operation, protocolElems)
+              responseClsName     <- formatTypeName(operationId, Some("Response"))
+              responseDefinitions <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              parameters          <- route.getParameters[L, F](protocolElems)
+              methodName          <- formatMethodName(operationId)
+              clientOp <- generateClientOperation(className, responseClsName, context.tracing, securitySchemes, parameters)(route, methodName, responses)
+            } yield (responseDefinitions, clientOp)
           }
-      })
+          (responseDefinitions, clientOperations) = responseClientPair.unzip
+          tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
+          ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
+          staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
+          client <- buildClient(
+            clientName,
+            tracingName,
+            serverUrls,
+            basePath,
+            ctorArgs,
+            clientOperations.map(_.clientOperation),
+            clientOperations.flatMap(_.supportDefinitions),
+            context.tracing
+          )
+        } yield Client[L](className, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), staticDefns, client, responseDefinitions.flatten)
+      }
     } yield Clients[L](clients, supportDefinitions)
   }
 }

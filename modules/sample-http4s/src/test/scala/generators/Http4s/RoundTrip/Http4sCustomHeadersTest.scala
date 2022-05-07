@@ -8,9 +8,9 @@ import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-import tests.customTypes.customHeader.client.http4s.{ definitions => cdefs, Client }
+import tests.customTypes.customHeader.client.http4s.{ Client, definitions => cdefs }
 import tests.customTypes.customHeader.server.http4s.Implicits.Formatter
-import tests.customTypes.customHeader.server.http4s.{ definitions => sdefs, Handler, Resource }
+import tests.customTypes.customHeader.server.http4s.{ Handler, Resource, definitions => sdefs }
 import tests.customTypes.customHeader.server.http4s.Resource.GetFooResponse
 
 class Http4sCustomHeadersTest extends AnyFlatSpec with Matchers with EitherValues {

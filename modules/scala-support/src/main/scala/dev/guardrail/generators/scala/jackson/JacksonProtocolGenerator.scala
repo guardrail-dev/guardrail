@@ -18,7 +18,7 @@ import dev.guardrail.{ RuntimeFailure, Target }
 object JacksonProtocolGenerator {
   private def discriminatorValue(discriminator: Discriminator[ScalaLanguage], className: String): String =
     discriminator.mapping
-      .collectFirst({ case (value, elem) if elem.name == className => value })
+      .collectFirst { case (value, elem) if elem.name == className => value }
       .getOrElse(className)
 
   private def paramAnnotations(
@@ -122,36 +122,35 @@ object JacksonProtocolGenerator {
       renderDTOClass = (className, supportPackage, terms, parents) =>
         for {
           renderedClass <- baseInterp.renderDTOClass(className, supportPackage, terms, parents)
-          discriminatorParams = parents.flatMap(
-            parent => parent.discriminators.flatMap(discrim => parent.params.find(_.name.value == discrim.propertyName).map((discrim, _)))
+          discriminatorParams = parents.flatMap(parent =>
+            parent.discriminators.flatMap(discrim => parent.params.find(_.name.value == discrim.propertyName).map((discrim, _)))
           )
-          discriminators <- discriminatorParams.traverse({
-            case (discriminator, param) =>
-              for {
-                discrimTpe <- Target.fromOption(param.term.decltpe, RuntimeFailure(s"Property ${param.name.value} has no type"))
-                discrimValue <- JacksonHelpers
-                  .discriminatorExpression[ScalaLanguage](
-                    param.name.value,
-                    discriminatorValue(discriminator, className),
-                    param.rawType
-                  )(
-                    v => Target.pure[Term](q"""BigInt(${Lit.String(v)})"""),
-                    v => Target.pure[Term](q"""BigDecimal(${Lit.String(v)})"""),
-                    v =>
-                      param.term.decltpe.fold(
-                        Target.raiseUserError[Term](s"No declared type for property '${param.name.value}' on class $className")
-                      )({
-                        case tpe @ (_: Type.Name | _: Type.Select) =>
-                          ScalaGenerator().formatEnumName(v).map(ev => Term.Select(Term.Name(tpe.toString), Term.Name(ev)))
-                        case tpe => Target.raiseError(RuntimeFailure(s"Assumed property ${param.name.value} was an enum, but can't handle $tpe"))
-                      })
-                  )(ScalaGenerator())
-              } yield (param.name.value, param.term.name.value, param.term.decltpe, discrimValue)
-          })
+          discriminators <- discriminatorParams.traverse { case (discriminator, param) =>
+            for {
+              discrimTpe <- Target.fromOption(param.term.decltpe, RuntimeFailure(s"Property ${param.name.value} has no type"))
+              discrimValue <- JacksonHelpers
+                .discriminatorExpression[ScalaLanguage](
+                  param.name.value,
+                  discriminatorValue(discriminator, className),
+                  param.rawType
+                )(
+                  v => Target.pure[Term](q"""BigInt(${Lit.String(v)})"""),
+                  v => Target.pure[Term](q"""BigDecimal(${Lit.String(v)})"""),
+                  v =>
+                    param.term.decltpe.fold(
+                      Target.raiseUserError[Term](s"No declared type for property '${param.name.value}' on class $className")
+                    ) {
+                      case tpe @ (_: Type.Name | _: Type.Select) =>
+                        ScalaGenerator().formatEnumName(v).map(ev => Term.Select(Term.Name(tpe.toString), Term.Name(ev)))
+                      case tpe => Target.raiseError(RuntimeFailure(s"Assumed property ${param.name.value} was an enum, but can't handle $tpe"))
+                    }
+                )(ScalaGenerator())
+            } yield (param.name.value, param.term.name.value, param.term.decltpe, discrimValue)
+          }
           presenceSerType        <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
           presenceDeserType      <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
           optionNonNullDeserType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
-          emptyIsNullDeserType   <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
+          emptyIsNullDeserType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
           emptyIsNullOptionDeserType <- ScalaGenerator().selectType(
             NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer")
           )
@@ -163,36 +162,33 @@ object JacksonProtocolGenerator {
           mods = jsonIgnoreProperties +: renderedClass.mods,
           ctor = renderedClass.ctor.copy(
             paramss = renderedClass.ctor.paramss.map(
-              _.map(
-                param =>
-                  allTerms
-                    .find(_.term.name.value == param.name.value)
-                    .fold(param)({ term =>
-                      param.copy(
-                        mods = paramAnnotations(
-                            term,
-                            presenceSerType,
-                            presenceDeserType,
-                            optionNonNullDeserType,
-                            optionNonMissingDeserType,
-                            emptyIsNullDeserType,
-                            emptyIsNullOptionDeserType
-                          ) ++ param.mods,
-                        default = fixDefaultValue(term)
-                      )
-                    })
+              _.map(param =>
+                allTerms
+                  .find(_.term.name.value == param.name.value)
+                  .fold(param) { term =>
+                    param.copy(
+                      mods = paramAnnotations(
+                        term,
+                        presenceSerType,
+                        presenceDeserType,
+                        optionNonNullDeserType,
+                        optionNonMissingDeserType,
+                        emptyIsNullDeserType,
+                        emptyIsNullOptionDeserType
+                      ) ++ param.mods,
+                      default = fixDefaultValue(term)
+                    )
+                  }
               )
             )
           ),
           templ = renderedClass.templ.copy(
-            stats =
-              discriminators.map({
-                case (propertyName, fieldName, tpe, value) =>
-                  q"""
+            stats = discriminators.map { case (propertyName, fieldName, tpe, value) =>
+              q"""
                   @com.fasterxml.jackson.annotation.JsonProperty(${Lit.String(propertyName)})
                   val ${Pat.Var(Term.Name(fieldName))}: $tpe = $value
                 """
-              }) ++ renderedClass.templ.stats
+            } ++ renderedClass.templ.stats
           )
         ),
       encodeModel = (_, _, _, _) => Target.pure(None),
@@ -203,19 +199,19 @@ object JacksonProtocolGenerator {
           classType = Type.Name(className)
         } yield renderedDTOStaticDefns.copy(
           definitions = renderedDTOStaticDefns.definitions ++ List(
-                  q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
-                  q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
-                  q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.instance"
-                )
+            q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
+            q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
+            q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.instance"
+          )
         ),
       renderClass = (className, tpe, elems) =>
         for {
           renderedClass <- baseInterp.renderClass(className, tpe, elems)
         } yield renderedClass.copy(
           mods = List(
-              mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Serializer"))}])",
-              mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
-            ) ++ renderedClass.mods
+            mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Serializer"))}])",
+            mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(using=classOf[${Type.Select(Term.Name(className), Type.Name(className + "Deserializer"))}])"
+          ) ++ renderedClass.mods
         ),
       encodeEnum = { (className, tpe) =>
         for {
@@ -229,7 +225,9 @@ object JacksonProtocolGenerator {
           q"""
          class ${Type.Name(className + "Serializer")} extends com.fasterxml.jackson.databind.JsonSerializer[${Type.Name(className)}] {
            override def serialize(value: ${Type
-            .Name(className)}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.${writeMethod}(value.value)
+              .Name(
+                className
+              )}, gen: com.fasterxml.jackson.core.JsonGenerator, serializers: com.fasterxml.jackson.databind.SerializerProvider): Unit = gen.${writeMethod}(value.value)
          }
        """
         )
@@ -246,11 +244,11 @@ object JacksonProtocolGenerator {
           q"""
          class ${Type.Name(className + "Deserializer")} extends com.fasterxml.jackson.databind.JsonDeserializer[${Type.Name(className)}] {
            override def deserialize(p: com.fasterxml.jackson.core.JsonParser, ctxt: com.fasterxml.jackson.databind.DeserializationContext): ${Type.Name(
-            className
-          )} =
+              className
+            )} =
             ${Term.Name(className)}.from(p.${getter})
               .getOrElse({ throw new com.fasterxml.jackson.databind.JsonMappingException(p, s"Invalid value '$${p.${getter}}' for " + ${Lit
-            .String(className)}) })
+              .String(className)}) })
          }
        """
         )
@@ -261,10 +259,10 @@ object JacksonProtocolGenerator {
           classType = Type.Name(className)
         } yield renderedStaticDefns.copy(
           definitions = renderedStaticDefns.definitions ++ List(
-                  q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
-                  q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
-                  q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.noop"
-                )
+            q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
+            q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
+            q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.noop"
+          )
         ),
       protocolImports = () =>
         Target.pure(
@@ -436,12 +434,11 @@ object JacksonProtocolGenerator {
         } yield {
           val (presence, others) = generatedSupportDefinitions.partition(_.className.value == "Presence")
           presence.headOption
-            .map(
-              defn =>
-                defn.copy(
-                  definition = defn.definition.map({
-                    case q"object Presence { ..$stmts }" =>
-                      q"""
+            .map(defn =>
+              defn.copy(
+                definition = defn.definition.map {
+                  case q"object Presence { ..$stmts }" =>
+                    q"""
                   object Presence {
                     import com.fasterxml.jackson.annotation.JsonInclude
                     import com.fasterxml.jackson.core.{JsonGenerator, JsonParser, JsonToken}
@@ -582,9 +579,9 @@ object JacksonProtocolGenerator {
                     ..$stmts
                   }
                """
-                    case other => other
-                  })
-                )
+                  case other => other
+                }
+              )
             )
             .toList ++ others ++ List(
             SupportDefinition[ScalaLanguage](
@@ -630,30 +627,29 @@ object JacksonProtocolGenerator {
           renderedTrait      <- baseInterp.renderSealedTrait(className, params, discriminator, parents, children)
           discriminatorParam <- Target.pure(params.find(_.name.value == discriminator.propertyName))
         } yield {
-          val subTypes = children.map(
-            child =>
-              q"new com.fasterxml.jackson.annotation.JsonSubTypes.Type(name = ${Lit.String(discriminatorValue(discriminator, child))}, value = classOf[${Type.Name(child)}])"
+          val subTypes = children.map(child =>
+            q"new com.fasterxml.jackson.annotation.JsonSubTypes.Type(name = ${Lit.String(discriminatorValue(discriminator, child))}, value = classOf[${Type.Name(child)}])"
           )
 
           renderedTrait.copy(
             mods = List(
-                mod"""
+              mod"""
         @com.fasterxml.jackson.annotation.JsonTypeInfo(
           use = com.fasterxml.jackson.annotation.JsonTypeInfo.Id.NAME,
           include = com.fasterxml.jackson.annotation.JsonTypeInfo.As.PROPERTY,
           property = ${Lit.String(discriminator.propertyName)}
         )
         """,
-                mod"""
+              mod"""
         @com.fasterxml.jackson.annotation.JsonSubTypes(Array(
           ..$subTypes
         ))
          """
-              ) ++ renderedTrait.mods,
+            ) ++ renderedTrait.mods,
             templ = renderedTrait.templ.copy(
-              stats = renderedTrait.templ.stats ++ discriminatorParam.map(
-                      param => q"def ${Term.Name(param.term.name.value)}: ${param.term.decltpe.getOrElse(t"Any")}"
-                    )
+              stats = renderedTrait.templ.stats ++ discriminatorParam.map(param =>
+                q"def ${Term.Name(param.term.name.value)}: ${param.term.decltpe.getOrElse(t"Any")}"
+              )
             )
           )
         },
@@ -665,10 +661,10 @@ object JacksonProtocolGenerator {
           classType = Type.Name(className)
         } yield renderedADTStaticDefns.copy(
           definitions = renderedADTStaticDefns.definitions ++ List(
-                  q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
-                  q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
-                  q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.instance"
-                )
+            q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$classType] = GuardrailEncoder.instance",
+            q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})",
+            q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.instance"
+          )
         )
     )
   }

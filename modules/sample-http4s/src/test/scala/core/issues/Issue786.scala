@@ -31,14 +31,13 @@ class Issue786Suite extends AnyFunSuite with Matchers {
 
     client
       .run(req)
-      .use({
-        case Status.Ok(resp) =>
-          IO.pure({
-            resp.status should equal(Status.Ok)
-            resp.bodyText.compile.string.unsafeRunSync() should equal("""[{"food":"bones","colour":"black","animalType":"Dog"}]""")
-            ()
-          })
-      })
+      .use { case Status.Ok(resp) =>
+        IO.pure {
+          resp.status should equal(Status.Ok)
+          resp.bodyText.compile.string.unsafeRunSync() should equal("""[{"food":"bones","colour":"black","animalType":"Dog"}]""")
+          ()
+        }
+      }
       .unsafeRunSync()
   }
 }

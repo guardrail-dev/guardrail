@@ -32,13 +32,13 @@ class AkkaHttpTextPlainTest
 
   test("Plain text should be emitted for required parameters (raw)") {
     val route: Route = (path("foo") & extractRequestEntity & entity(as[String])) { (entity, value) =>
-      complete({
+      complete {
         if (entity.contentType == ContentTypes.`text/plain(UTF-8)` && value == "sample") {
           HttpResponse(StatusCodes.Created).withEntity(HttpEntity(ContentTypes.`text/plain(UTF-8)`, "response"))
         } else {
           StatusCodes.NotAcceptable
         }
-      })
+      }
     }
     val client: HttpRequest => Future[HttpResponse] = Route.toFunction(route)
     val fooClient                                   = FooClient.httpClient(client)
@@ -47,13 +47,13 @@ class AkkaHttpTextPlainTest
 
   test("Plain text should be emitted for optional parameters (raw)") {
     val route: Route = (path("bar") & extractRequestEntity & entity(as[String])) { (entity, value) =>
-      complete({
+      complete {
         if (entity.contentType == ContentTypes.`text/plain(UTF-8)` && value == "sample") {
           HttpResponse(StatusCodes.Created).withEntity(HttpEntity(ContentTypes.`text/plain(UTF-8)`, "response"))
         } else {
           StatusCodes.NotAcceptable
         }
-      })
+      }
     }
     val client: HttpRequest => Future[HttpResponse] = Route.toFunction(route)
     val fooClient                                   = FooClient.httpClient(client)

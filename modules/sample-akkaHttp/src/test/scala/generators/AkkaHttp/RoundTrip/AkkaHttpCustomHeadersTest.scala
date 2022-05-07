@@ -1,7 +1,7 @@
 package generators.AkkaHttp.RoundTrip
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.server.{ Route }
+import akka.http.scaladsl.server.Route
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import org.scalatest.EitherValues
@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import tests.customTypes.customHeader.client.akkaHttp.Client
 import tests.customTypes.customHeader.client.akkaHttp.{ definitions => cdefs }
 import tests.customTypes.customHeader.server.akkaHttp.Implicits.Formatter
-import tests.customTypes.customHeader.server.akkaHttp.{ definitions => sdefs, Handler, Resource }
+import tests.customTypes.customHeader.server.akkaHttp.{ Handler, Resource, definitions => sdefs }
 import scala.concurrent.Future
 
 class AkkaHttpCustomHeadersTest extends AnyFlatSpec with Matchers with ScalaFutures with EitherValues {

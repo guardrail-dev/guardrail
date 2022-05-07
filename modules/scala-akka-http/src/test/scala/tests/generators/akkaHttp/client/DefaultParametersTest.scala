@@ -127,7 +127,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
       _,
       Clients(Client(tags, className, _, staticDefns, cls, _) :: _, Nil),
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))

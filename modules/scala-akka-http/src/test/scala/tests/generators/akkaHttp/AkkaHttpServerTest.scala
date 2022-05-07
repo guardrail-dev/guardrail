@@ -132,7 +132,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    val handler  = q"""
+    val handler = q"""
       trait StoreHandler {
         def getRoot(respond: StoreResource.GetRootResponse.type)(): scala.concurrent.Future[StoreResource.GetRootResponse]
         def putBar(respond: StoreResource.PutBarResponse.type)(bar: Long): scala.concurrent.Future[HttpResponse]
@@ -269,7 +269,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
     ) = runSwaggerSpec(swagger)(Context.empty.copy(tracing = true), AkkaHttp)
 
-    val handler  = q"""
+    val handler = q"""
       trait StoreHandler {
         def getRoot(respond: StoreResource.GetRootResponse.type)()(traceBuilder: TraceBuilder): scala.concurrent.Future[StoreResource.GetRootResponse]
         def putBar(respond: StoreResource.PutBarResponse.type)(bar: Long)(traceBuilder: TraceBuilder): scala.concurrent.Future[HttpResponse]
@@ -406,7 +406,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
     ) = runSwaggerSpec(swagger)(Context.empty.copy(customExtraction = true), AkkaHttp)
 
-    val handler  = q"""
+    val handler = q"""
       trait StoreHandler[-E] {
         def getRoot(respond: StoreResource.GetRootResponse.type)()(extracted: E): scala.concurrent.Future[StoreResource.GetRootResponse]
         def putBar(respond: StoreResource.PutBarResponse.type)(bar: Long)(extracted: E): scala.concurrent.Future[HttpResponse]

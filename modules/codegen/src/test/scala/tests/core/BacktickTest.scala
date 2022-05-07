@@ -74,7 +74,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, imports, staticDefns, cls, _) :: _, Nil),
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("dashy-package"))
@@ -146,13 +146,13 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
     case class DashyClass(dashyParam: Option[Long] = None)
     """
-    val companion  = q"""
+    val companion = q"""
       object DashyClass {
         implicit val encodeDashyClass: _root_.io.circe.Encoder.AsObject[DashyClass] = {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
@@ -182,7 +182,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: EnumDefinition(_, _, _, _, cls, staticDefns) :: _, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -190,7 +190,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       override def toString: String = value.toString
     }
     """
-    val companion  = q"""
+    val companion = q"""
     object DashyEnum {
       object members {
         case object DashyValueA extends DashyEnum("dashy-value-a")

@@ -30,7 +30,7 @@ class Issue126 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    val handler  = q"""
+    val handler = q"""
       trait StoreHandler {
         def getRoot(respond: StoreResource.GetRootResponse.type)(): scala.concurrent.Future[StoreResource.GetRootResponse]
       }

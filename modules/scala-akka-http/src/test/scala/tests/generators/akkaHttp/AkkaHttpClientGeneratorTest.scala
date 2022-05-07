@@ -116,7 +116,7 @@ class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with Swagger
       _,
       Clients(Client(tags, className, _, staticDefns, cls, _) :: Nil, Nil),
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))
@@ -186,7 +186,7 @@ class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with Swagger
       _,
       Clients(List(Client(tags, className, _, staticDefns, cls, _)), Nil),
       _
-    )       = runSwaggerSpec(swagger)(Context.empty.copy(framework = Some("akka-http"), tracing = true), AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty.copy(framework = Some("akka-http"), tracing = true), AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))

@@ -91,7 +91,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
         _,
         _
-      )       = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
       val cmp = companionForStaticDefns(staticDefns)
 
       val definition = q"""
@@ -117,14 +117,14 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         _,
         Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
         _
-      )       = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
       val cmp = companionForStaticDefns(staticDefns)
 
       val companion = q"""object Client {
       def apply[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]): Client[F] = new Client[F](host = host)(F = F, httpClient = httpClient)
       def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://localhost:1234")(implicit F: Async[F]): Client[F] = new Client[F](host = host)(F = F, httpClient = httpClient)
     }"""
-      val client    = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
+      val client = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
 
       private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
@@ -267,7 +267,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         q"""object DeleteFooResponse { case object Ok extends DeleteFooResponse }"""
       )
 
-      expected.zip(statements).foreach({ case (a, b) => a.structure should equal(b.structure) })
+      expected.zip(statements).foreach { case (a, b) => a.structure should equal(b.structure) }
       cmp.structure should equal(companion.structure)
       cls.head.value.structure should equal(client.structure)
     }

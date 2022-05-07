@@ -20,9 +20,9 @@ object Target {
 
   @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   def unsafeExtract[T](x: Target[T]): T =
-    x.valueOr({ err =>
+    x.valueOr { err =>
       throw new Exception(err.toString)
-    })
+    }
 
   implicit val targetInstances: MonadError[Target, Error] with Traverse[Target] = new MonadError[Target, Error] with Traverse[Target] {
     def pure[A](x: A): Target[A] = new TargetValue(x, StructuredLogger.Empty)

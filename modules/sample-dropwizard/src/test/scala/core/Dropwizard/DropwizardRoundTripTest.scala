@@ -1,7 +1,7 @@
 package core.Dropwizard
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import examples.client.dropwizard.user.{ UserClient, GetUserByNameResponse => GetUserByNameClientResponse }
+import examples.client.dropwizard.user.{ GetUserByNameResponse => GetUserByNameClientResponse, UserClient }
 import examples.server.dropwizard.definitions.User
 import examples.server.dropwizard.user.UserHandler._
 import examples.server.dropwizard.user._
@@ -62,13 +62,13 @@ class DropwizardRoundTripTest extends AnyFreeSpec with Matchers with Waiters wit
       request.getUri.getPath match {
         case userPath(username) =>
           resource.getUserByName(username, asyncResponse)
-          serverFuture.thenApply({ response =>
+          serverFuture.thenApply { response =>
             val entityBody = response match {
               case r: GetUserByNameResponse.Ok => Some(r.getEntityBody)
               case _                           => None
             }
             mockAHCResponse(request.getUrl, response.getStatusCode, entityBody)
-          })
+          }
         case _ =>
           CompletableFuture.completedFuture(mockAHCResponse(request.getUrl, 404))
       }
@@ -83,19 +83,19 @@ class DropwizardRoundTripTest extends AnyFreeSpec with Matchers with Waiters wit
     client
       .getUserByName(USERNAME)
       .call()
-      .whenComplete({ (response, t) =>
-        w { t shouldBe null }
+      .whenComplete { (response, t) =>
+        w(t shouldBe null)
         response match {
           case r: GetUserByNameClientResponse.Ok =>
             w {
               r.getValue.getUsername.get shouldBe USERNAME
               r.getValue.getPassword shouldBe Optional.empty
             }
-          case _: GetUserByNameClientResponse.BadRequest => w { fail("Got BadRequest") }
-          case _: GetUserByNameClientResponse.NotFound   => w { fail("Got NotFound") }
+          case _: GetUserByNameClientResponse.BadRequest => w(fail("Got BadRequest"))
+          case _: GetUserByNameClientResponse.NotFound   => w(fail("Got NotFound"))
         }
         w.dismiss()
-      })
+      }
     w.await(dismissals(1))
   }
 }

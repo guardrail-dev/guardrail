@@ -113,7 +113,7 @@ class BaselineSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll wit
         .andExpect(request.asyncStarted)
         .andReturn
 
-      mvcResult.getRequest.getPathInfo shouldBe ("/v2/pet/1")
+      mvcResult.getRequest.getPathInfo shouldBe "/v2/pet/1"
 
       mvc
         .perform(asyncDispatch(mvcResult))
@@ -145,14 +145,14 @@ class BaselineSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll wit
         "other-file-name.data",
         "text/plain",
         ("some " +
-            "other type").getBytes
+          "other type").getBytes
       )
       val thirdFile = new MockMultipartFile(
         "file3",
         "other-file-name.data",
         "text/plain",
         ("some " +
-            "other other type").getBytes
+          "other other type").getBytes
       )
 
       val mvcResult = mvc

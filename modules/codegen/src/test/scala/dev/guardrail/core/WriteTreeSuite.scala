@@ -16,10 +16,10 @@ class WriteTreeSuite extends AnyFunSuite with Matchers {
     val (firstLog, firstPath)   = WriteTree.unsafeWriteTreeLogged(WriteTree(path, Future.successful(Target.pure(contents)))).run
     val (secondLog, secondPath) = WriteTree.unsafeWriteTreeLogged(WriteTree(path, Future.successful(Target.pure(contents)))).run
 
-    val _1 = firstLog shouldBe (Nil)
-    val _2 = secondLog shouldBe (Nil)
+    val _1 = firstLog shouldBe Nil
+    val _2 = secondLog shouldBe Nil
 
-    val _3 = firstPath shouldBe (secondPath)
+    val _3 = firstPath shouldBe secondPath
 
     Files.delete(path)
   }

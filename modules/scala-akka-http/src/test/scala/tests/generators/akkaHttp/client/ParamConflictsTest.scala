@@ -90,13 +90,13 @@ class ParamConflictsTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Foo(conflicting_name: Option[String] = None, ConflictingName: Option[String] = None)
     """
-    val companion  = q"""
+    val companion = q"""
       object Foo {
         implicit val encodeFoo: _root_.io.circe.Encoder.AsObject[Foo] = {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()

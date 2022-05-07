@@ -22,13 +22,13 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
   override implicit val patienceConfig = PatienceConfig(1000.millis, 1000.millis)
   test("Plain text should be emitted for required parameters (raw)") {
     val route: Route = (path("foo") & extractRequestEntity & entity(as[String])) { (entity, value) =>
-      complete({
+      complete {
         if (entity.contentType == ContentTypes.`text/plain(UTF-8)` && value == "sample") {
           HttpResponse(StatusCodes.Created).withEntity(HttpEntity(ContentTypes.`text/plain(UTF-8)`, "response"))
         } else {
           StatusCodes.NotAcceptable
         }
-      })
+      }
     }
     val client: HttpRequest => Future[HttpResponse] = Route.toFunction(route)
     val fooClient                                   = FooClient.httpClient(client)
@@ -37,13 +37,13 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
 
   test("Plain text should be emitted for optional parameters (raw)") {
     val route: Route = (path("bar") & extractRequestEntity & entity(as[String])) { (entity, value) =>
-      complete({
+      complete {
         if (entity.contentType == ContentTypes.`text/plain(UTF-8)` && value == "sample") {
           HttpResponse(StatusCodes.Created).withEntity(HttpEntity(ContentTypes.`text/plain(UTF-8)`, "response"))
         } else {
           StatusCodes.NotAcceptable
         }
-      })
+      }
     }
     val client: HttpRequest => Future[HttpResponse] = Route.toFunction(route)
     val fooClient                                   = FooClient.httpClient(client)
@@ -175,6 +175,6 @@ class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues 
           .runFold(ByteString.empty) { case (acc, b) => acc ++ b }
           .map(_.utf8String)
       )
-      .futureValue shouldBe ("created")
+      .futureValue shouldBe "created"
   }
 }

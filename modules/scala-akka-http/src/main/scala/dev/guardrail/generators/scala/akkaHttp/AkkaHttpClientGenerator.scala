@@ -76,23 +76,23 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
 
           _ <- Target.log.debug(s"QS: $qsArgs")
 
-          suffix = if (path.unwrapTracker.contains("?")) {
-            Lit.String("&")
-          } else {
-            Lit.String("?")
-          }
+          suffix =
+            if (path.unwrapTracker.contains("?")) {
+              Lit.String("&")
+            } else {
+              Lit.String("?")
+            }
 
           _ <- Target.log.debug(s"QS: ${qsArgs}")
 
           result = NonEmptyList
             .fromList(qsArgs)
-            .fold(base)({
-              _.foldLeft[Term](q"$base + $suffix") {
-                case (a, LanguageParameter(_, _, paramName, argName, _)) =>
-                  q""" $a + Formatter.addArg(${Lit
+            .fold(base) {
+              _.foldLeft[Term](q"$base + $suffix") { case (a, LanguageParameter(_, _, paramName, argName, _)) =>
+                q""" $a + Formatter.addArg(${Lit
                     .String(argName.value)}, $paramName)"""
               }
-            })
+            }
         } yield result
       }
 
@@ -124,9 +124,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
           case _                              => liftTerm _
         }
 
-        val args: List[Term] = parameters.map {
-          case LanguageParameter(_, param, paramName, argName, _) =>
-            lifter(param)(paramName, argName)
+        val args: List[Term] = parameters.map { case LanguageParameter(_, param, paramName, argName, _) =>
+          lifter(param)(paramName, argName)
         }
         Some(q"List(..$args)")
       } else {
@@ -152,9 +151,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
           case x                                                                                       => liftTerm _
         }
 
-        val args: List[Term] = parameters.map {
-          case LanguageParameter(_, param, paramName, argName, _) =>
-            lifter(param)(paramName, argName)
+        val args: List[Term] = parameters.map { case LanguageParameter(_, param, paramName, argName, _) =>
+          lifter(param)(paramName, argName)
         }
         Some(q"List(..$args).flatten")
       }
@@ -172,9 +170,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
         case _                          => liftTerm _
       }
 
-      val args: List[Term] = parameters.map {
-        case LanguageParameter(_, param, paramName, argName, _) =>
-          lifter(param)(paramName, argName)
+      val args: List[Term] = parameters.map { case LanguageParameter(_, param, paramName, argName, _) =>
+        lifter(param)(paramName, argName)
       }
       q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
     }
@@ -268,35 +265,35 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
       val responseCompanionTerm =
         Term.Name(responseClsName)
       val cases = responses.value.map { resp =>
-          val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-          (resp.value, resp.headers.value) match {
-            case (None, Nil) =>
-              p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
-            case (Some((_, tpe, _)), Nil) =>
-              p"case StatusCodes.${resp.statusCodeName} => Unmarshal(resp.entity).to[${tpe}](${Term
+        val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
+        (resp.value, resp.headers.value) match {
+          case (None, Nil) =>
+            p"case StatusCodes.${resp.statusCodeName} => resp.discardEntityBytes().future.map(_ => Right($responseCompanionTerm.$responseTerm))"
+          case (Some((_, tpe, _)), Nil) =>
+            p"case StatusCodes.${resp.statusCodeName} => Unmarshal(resp.entity).to[${tpe}](${Term
                 .Name(s"$methodName${resp.statusCodeName}Decoder")}, implicitly, implicitly).map(x => Right($responseCompanionTerm.$responseTerm(x)))"
-            case (None, headers) =>
-              val (optionalVals, body) = buildHeaders(
-                headers,
-                q"$responseCompanionTerm.$responseTerm(..${headers.map(_.term)})"
-              )
-              p"""case StatusCodes.${resp.statusCodeName} =>
+          case (None, headers) =>
+            val (optionalVals, body) = buildHeaders(
+              headers,
+              q"$responseCompanionTerm.$responseTerm(..${headers.map(_.term)})"
+            )
+            p"""case StatusCodes.${resp.statusCodeName} =>
                  ..$optionalVals
                  resp.discardEntityBytes().future.map(_ => $body)
               """
-            case (Some((_, tpe, _)), headers) =>
-              val (optionalVals, body) = buildHeaders(
-                headers,
-                q"$responseCompanionTerm.$responseTerm(..${Term
+          case (Some((_, tpe, _)), headers) =>
+            val (optionalVals, body) = buildHeaders(
+              headers,
+              q"$responseCompanionTerm.$responseTerm(..${Term
                   .Name("x") :: headers.map(_.term)})"
-              )
-              p"""case StatusCodes.${resp.statusCodeName} =>
+            )
+            p"""case StatusCodes.${resp.statusCodeName} =>
                 ..$optionalVals
                 Unmarshal(resp.entity).to[${tpe}](${Term.Name(
                 s"$methodName${resp.statusCodeName}Decoder"
               )}, implicitly, implicitly).map(x => $body)"""
-          }
-        } :+ p"case _ => FastFuture.successful(Left(Right(resp)))"
+        }
+      } :+ p"case _ => FastFuture.successful(Left(Right(resp)))"
       val responseTypeRef = Type.Name(s"${methodName.capitalize}Response")
 
       val methodBody = q"""
@@ -323,9 +320,9 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
       val arglists: List[List[Term.Param]] = List(
         Some(
           (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
-                .map(_.param) ++ formArgs.map(_.param) ++ body
-                .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                .map(_.param)) :+ defaultHeaders
+            .map(_.param) ++ formArgs.map(_.param) ++ body
+            .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
+            .map(_.param)) :+ defaultHeaders
         ),
         implicitParams
       ).flatten
@@ -346,11 +343,10 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
 
       produces = operation
         .downField("produces", _.produces)
-        .map(
-          xs =>
-            NonEmptyList
-              .fromList(xs.flatMap(ContentType.unapply(_)))
-              .getOrElse(NonEmptyList.one(ApplicationJson))
+        .map(xs =>
+          NonEmptyList
+            .fromList(xs.flatMap(ContentType.unapply(_)))
+            .getOrElse(NonEmptyList.one(ApplicationJson))
         )
       consumes = operation.unwrapTracker.consumes.toList.flatMap(ContentType.unapply(_))
 
@@ -371,12 +367,14 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
       // Generate header arguments
       headerParams = generateHeaderParams(headerArgs)
 
-      tracingArgsPre = if (tracing)
-        List(LanguageParameter.fromParam(param"traceBuilder: TraceBuilder"))
-      else List.empty
-      tracingArgsPost = if (tracing)
-        List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
-      else List.empty
+      tracingArgsPre =
+        if (tracing)
+          List(LanguageParameter.fromParam(param"traceBuilder: TraceBuilder"))
+        else List.empty
+      tracingArgsPost =
+        if (tracing)
+          List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
+        else List.empty
       extraImplicits = List.empty
       renderedClientOperation <- build(
         methodName,
@@ -409,10 +407,10 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
       tracing: Boolean
   ): Target[List[List[scala.meta.Term.Param]]] = {
     val implicits = List(
-        param"implicit httpClient: HttpRequest => Future[HttpResponse]",
-        param"implicit ec: ExecutionContext",
-        param"implicit mat: Materializer"
-      ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+      param"implicit httpClient: HttpRequest => Future[HttpResponse]",
+      param"implicit ec: ExecutionContext",
+      param"implicit mat: Materializer"
+    ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
     Target.pure(
       List(
         List(formatHost(serverUrls)) ++ (if (tracing)
@@ -448,9 +446,9 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
         tracing: Boolean
     ): List[Defn] = {
       val implicits = List(
-          param"implicit ec: ExecutionContext",
-          param"implicit mat: Materializer"
-        ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+        param"implicit ec: ExecutionContext",
+        param"implicit mat: Materializer"
+      ) ++ AkkaHttpHelper.protocolImplicits(modelGeneratorType)
       val tracingParams: List[Term.Param] = if (tracing) {
         List(formatClientName(tracingName))
       } else {
@@ -465,23 +463,20 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
     }
 
     def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
-      params
-        .map({
-          _.map(_.name.value)
-            .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
-            .toList
-        })
-        .toList
+      params.map {
+        _.map(_.name.value)
+          .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
+          .toList
+      }.toList
 
-    val ctorCall: Term.New = {
+    val ctorCall: Term.New =
       q"""
           new ${Type.Name(clientName)}(...${paramsToArgs(ctorArgs)})
         """
-    }
 
     val decls: List[Defn] =
       q"""def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall""" +:
-          extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
+        extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
     Target.pure(
       StaticDefns[ScalaLanguage](
         className = clientName,
@@ -544,9 +539,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(i
     (for {
       resp <- responses.value
       tpe  <- resp.value.map(_._2).toList
-    } yield {
-      for {
-        (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces, modelGeneratorType)
-      } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
-    }).sequence
+    } yield for {
+      (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces, modelGeneratorType)
+    } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}").sequence
 }

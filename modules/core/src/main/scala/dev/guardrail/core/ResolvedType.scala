@@ -52,25 +52,23 @@ object ResolvedType {
       log.debug(s"resolve ${values.length} references") >> FlatMap[F]
         .tailRecM[Continue, Stop](
           (lazyTypes, resolvedTypes)
-        ) {
-          case (lazyTypes, resolvedTypes) =>
-            if (lazyTypes.isEmpty) {
-              (Right(resolvedTypes): Either[Continue, Stop]).pure[F]
-            } else {
-              lazyTypes
-                .partitionEitherM({
-                  case x @ (clsName, Deferred(tpeName)) =>
-                    lookupTypeName(clsName, tpeName, resolvedTypes)(_.pure[F]).map(Either.fromOption(_, x))
-                  case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
-                    lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType(_, containerTpe)).map(Either.fromOption(_, x))
-                  case x @ (clsName, DeferredMap(tpeName, containerTpe)) =>
-                    lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType(_, containerTpe)).map(Either.fromOption(_, x))
-                })
-                .map({
-                  case (newLazyTypes, newResolvedTypes) =>
-                    Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
-                })
-            }
+        ) { case (lazyTypes, resolvedTypes) =>
+          if (lazyTypes.isEmpty) {
+            (Right(resolvedTypes): Either[Continue, Stop]).pure[F]
+          } else {
+            lazyTypes
+              .partitionEitherM {
+                case x @ (clsName, Deferred(tpeName)) =>
+                  lookupTypeName(clsName, tpeName, resolvedTypes)(_.pure[F]).map(Either.fromOption(_, x))
+                case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
+                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType(_, containerTpe)).map(Either.fromOption(_, x))
+                case x @ (clsName, DeferredMap(tpeName, containerTpe)) =>
+                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType(_, containerTpe)).map(Either.fromOption(_, x))
+              }
+              .map { case (newLazyTypes, newResolvedTypes) =>
+                Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
+              }
+          }
         }
     }
 

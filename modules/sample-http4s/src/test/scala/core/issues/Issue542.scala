@@ -38,13 +38,12 @@ class Issue542Suite extends AnyFunSuite with Matchers with EitherValues with Sca
 
     client
       .run(req)
-      .use({
-        case Status.Ok(resp) =>
-          resp.status should equal(Status.Ok)
-          resp.contentType should equal(Some(`Content-Type`(MediaType.application.json)))
-          resp.contentLength should equal(Some(16))
-          jsonOf[IO, Foo].decode(resp, strict = false).rightValue
-      })
+      .use { case Status.Ok(resp) =>
+        resp.status should equal(Status.Ok)
+        resp.contentType should equal(Some(`Content-Type`(MediaType.application.json)))
+        resp.contentLength should equal(Some(16))
+        jsonOf[IO, Foo].decode(resp, strict = false).rightValue
+      }
       .unsafeRunSync()
       .value
       .value

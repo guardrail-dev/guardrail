@@ -65,8 +65,8 @@ object AsyncHttpClientClientGenerator {
   private def typeReferenceType(typeArg: Type): ClassOrInterfaceType =
     StaticJavaParser.parseClassOrInterfaceType("TypeReference").setTypeArguments(typeArg)
 
-  private def showParam(param: LanguageParameter[JavaLanguage], overrideParamName: Option[String] = None)(
-      implicit Ca: CollectionsAbstraction[JavaLanguage]
+  private def showParam(param: LanguageParameter[JavaLanguage], overrideParamName: Option[String] = None)(implicit
+      Ca: CollectionsAbstraction[JavaLanguage]
   ): Expression = {
     val paramName = overrideParamName.getOrElse(param.paramName.asString)
     new MethodCallExpr(
@@ -94,8 +94,8 @@ object AsyncHttpClientClientGenerator {
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
-  private def generateBuilderMethodCall(param: LanguageParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean)(
-      implicit Ca: CollectionsAbstraction[JavaLanguage]
+  private def generateBuilderMethodCall(param: LanguageParameter[JavaLanguage], builderMethodName: String, needsMultipart: Boolean)(implicit
+      Ca: CollectionsAbstraction[JavaLanguage]
   ): Statement = {
     import Ca._
 
@@ -357,10 +357,9 @@ object AsyncHttpClientClientGenerator {
           ("setReadTimeout", 3000),
           ("setMaxConnections", 1024),
           ("setMaxConnectionsPerHost", 1024)
-        ).foldLeft[Expression](ahcConfigBuilder)({
-          case (lastExpr, (name, arg)) =>
-            new MethodCallExpr(lastExpr, name, new NodeList[Expression](new IntegerLiteralExpr(arg.toString)))
-        }),
+        ).foldLeft[Expression](ahcConfigBuilder) { case (lastExpr, (name, arg)) =>
+          new MethodCallExpr(lastExpr, name, new NodeList[Expression](new IntegerLiteralExpr(arg.toString)))
+        },
         "build",
         new NodeList[Expression]()
       )
@@ -427,17 +426,16 @@ object AsyncHttpClientClientGenerator {
         .setBody(
           new BlockStmt(
             new NodeList(
-              List("JavaTimeModule", "Jdk8Module").map(
-                name =>
-                  new ExpressionStmt(
-                    new MethodCallExpr(
-                      new NameExpr("objectMapper"),
-                      "registerModule",
-                      new NodeList[Expression](new ObjectCreationExpr(null, StaticJavaParser.parseClassOrInterfaceType(name), new NodeList()))
-                    )
+              List("JavaTimeModule", "Jdk8Module").map(name =>
+                new ExpressionStmt(
+                  new MethodCallExpr(
+                    new NameExpr("objectMapper"),
+                    "registerModule",
+                    new NodeList[Expression](new ObjectCreationExpr(null, StaticJavaParser.parseClassOrInterfaceType(name), new NodeList()))
                   )
+                )
               ) :+
-                  new ReturnStmt(new NameExpr("objectMapper")): _*
+                new ReturnStmt(new NameExpr("objectMapper")): _*
             )
           )
         )
@@ -502,10 +500,10 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
       (
         parameters.pathParams ++
-            parameters.queryStringParams ++
-            parameters.formParams ++
-            parameters.headerParams ++
-            parameters.bodyParams
+          parameters.queryStringParams ++
+          parameters.formParams ++
+          parameters.headerParams ++
+          parameters.bodyParams
       ).filter(_.required).map(_.param).foreach(method.addParameter)
 
       val requestBuilder = new MethodCallExpr(
@@ -535,17 +533,14 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       val allProduces = operation.unwrapTracker.produces.flatMap(ContentType.unapply).toList
       val produces =
         responses.value
-          .map(
-            resp => (resp.statusCode, ResponseHelpers.getBestProduces[JavaLanguage](operation.unwrapTracker.getOperationId, allProduces, resp, _.isPlain))
-          )
+          .map(resp => (resp.statusCode, ResponseHelpers.getBestProduces[JavaLanguage](operation.unwrapTracker.getOperationId, allProduces, resp, _.isPlain)))
           .toMap
 
       val builderMethodCalls: List[(LanguageParameter[JavaLanguage], Statement)] = builderParamsMethodNames
-          .flatMap({
-            case (params, name, needsMultipart) =>
-              params.map(param => (param, generateBuilderMethodCall(param, name, needsMultipart)))
-          }) ++
-            parameters.bodyParams.flatMap(param => generateBodyMethodCall(param, consumes).map(stmt => (param, stmt)))
+        .flatMap { case (params, name, needsMultipart) =>
+          params.map(param => (param, generateBuilderMethodCall(param, name, needsMultipart)))
+        } ++
+        parameters.bodyParams.flatMap(param => generateBodyMethodCall(param, consumes).map(stmt => (param, stmt)))
 
       val callBuilderCreation = new ObjectCreationExpr(
         null,
@@ -561,21 +556,21 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
         new BlockStmt(
           new NodeList(
             new ExpressionStmt(requestBuilder) +:
-                builderMethodCalls.filter(_._1.required).map(_._2) :+
-                new ReturnStmt(callBuilderCreation): _*
+              builderMethodCalls.filter(_._1.required).map(_._2) :+
+              new ReturnStmt(callBuilderCreation): _*
           )
         )
       )
 
       val callBuilderFinalFields = List(
-          (REQUEST_BUILDER_TYPE, "builder"),
-          (httpClientFunctionType, "httpClient"),
-          (OBJECT_MAPPER_TYPE, "objectMapper")
-        ) ++ (if (tracing) Option((STRING_TYPE, "clientName")) else None)
+        (REQUEST_BUILDER_TYPE, "builder"),
+        (httpClientFunctionType, "httpClient"),
+        (OBJECT_MAPPER_TYPE, "objectMapper")
+      ) ++ (if (tracing) Option((STRING_TYPE, "clientName")) else None)
 
       val callBuilderCls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, callBuilderName)
-      callBuilderFinalFields.foreach({ case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) })
-      val callBuilderInitContentType = consumes.map({ ct =>
+      callBuilderFinalFields.foreach { case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) }
+      val callBuilderInitContentType = consumes.map { ct =>
         val ctStr = ct match {
           case TextContent(_) => s"${ct.value}; charset=utf-8"
           case _              => ct.value
@@ -587,10 +582,10 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
             new StringLiteralExpr(ctStr)
           )
         )
-      })
+      }
       val callBuilderInitAccept = {
         val acceptHeaderString = produces
-          .flatMap({ case (_, ct) => ct.map(ct => s"${ct.value}; q=1.0") })
+          .flatMap { case (_, ct) => ct.map(ct => s"${ct.value}; q=1.0") }
           .mkString(", ")
         if (acceptHeaderString.nonEmpty) {
           Option(
@@ -610,75 +605,73 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       callBuilderCls
         .addConstructor(PRIVATE)
         .setParameters(
-          callBuilderFinalFields.map({ case (tpe, name) => new Parameter(new NodeList(finalModifier), tpe, new SimpleName(name)) }).toNodeList
+          callBuilderFinalFields.map { case (tpe, name) => new Parameter(new NodeList(finalModifier), tpe, new SimpleName(name)) }.toNodeList
         )
         .setBody(
           new BlockStmt(
             (
               callBuilderFinalFields
-                .map({
-                  case (_, name) =>
-                    new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), new NameExpr(name), AssignExpr.Operator.ASSIGN)): Statement
-                }) ++ callBuilderInitContentType ++ callBuilderInitAccept
+                .map { case (_, name) =>
+                  new ExpressionStmt(new AssignExpr(new FieldAccessExpr(new ThisExpr, name), new NameExpr(name), AssignExpr.Operator.ASSIGN)): Statement
+                } ++ callBuilderInitContentType ++ callBuilderInitAccept
             ).toNodeList
           )
         )
 
       val optionalParamMethods = builderMethodCalls
         .filterNot(_._1.required)
-        .flatMap({
-          case (LanguageParameter(_, param, _, _, argType), methodCall) =>
-            val containedType = argType.containedType.unbox
+        .flatMap { case (LanguageParameter(_, param, _, _, argType), methodCall) =>
+          val containedType = argType.containedType.unbox
 
-            val optionalOverrideMethod = if (argType.isOptionalType && !containedType.isOptionalType) {
-              val methodParamName = s"optional${param.getNameAsString.capitalize}"
+          val optionalOverrideMethod = if (argType.isOptionalType && !containedType.isOptionalType) {
+            val methodParamName = s"optional${param.getNameAsString.capitalize}"
 
-              Some(
-                new MethodDeclaration(
-                  new NodeList(publicModifier),
-                  s"with${param.getNameAsString.unescapeIdentifier.capitalize}",
-                  callBuilderType,
+            Some(
+              new MethodDeclaration(
+                new NodeList(publicModifier),
+                s"with${param.getNameAsString.unescapeIdentifier.capitalize}",
+                callBuilderType,
+                List(
+                  new Parameter(new NodeList(finalModifier), argType, new SimpleName(methodParamName))
+                ).toNodeList
+              ).setBody(
+                new BlockStmt(
                   List(
-                    new Parameter(new NodeList(finalModifier), argType, new SimpleName(methodParamName))
+                    new ExpressionStmt(
+                      new NameExpr(methodParamName)
+                        .lift[Option[Any]]
+                        .foreach(
+                          new LambdaExpr(new NodeList(new Parameter(new UnknownType, param.getNameAsString)), methodCall.clone(), false).lift[Any => Unit]
+                        )
+                        .value
+                    ),
+                    new ReturnStmt(new ThisExpr)
                   ).toNodeList
-                ).setBody(
-                  new BlockStmt(
-                    List(
-                      new ExpressionStmt(
-                        new NameExpr(methodParamName)
-                          .lift[Option[Any]]
-                          .foreach(
-                            new LambdaExpr(new NodeList(new Parameter(new UnknownType, param.getNameAsString)), methodCall.clone(), false).lift[Any => Unit]
-                          )
-                          .value
-                      ),
-                      new ReturnStmt(new ThisExpr)
-                    ).toNodeList
-                  )
                 )
               )
-            } else {
-              Option.empty[MethodDeclaration]
-            }
-
-            val mainMethod = new MethodDeclaration(
-              new NodeList(publicModifier),
-              s"with${param.getNameAsString.unescapeIdentifier.capitalize}",
-              callBuilderType,
-              List(
-                new Parameter(new NodeList(finalModifier), containedType, new SimpleName(param.getNameAsString))
-              ).toNodeList
-            ).setBody(
-              new BlockStmt(
-                List(
-                  methodCall,
-                  new ReturnStmt(new ThisExpr)
-                ).toNodeList
-              )
             )
+          } else {
+            Option.empty[MethodDeclaration]
+          }
 
-            mainMethod +: optionalOverrideMethod.toList
-        })
+          val mainMethod = new MethodDeclaration(
+            new NodeList(publicModifier),
+            s"with${param.getNameAsString.unescapeIdentifier.capitalize}",
+            callBuilderType,
+            List(
+              new Parameter(new NodeList(finalModifier), containedType, new SimpleName(param.getNameAsString))
+            ).toNodeList
+          ).setBody(
+            new BlockStmt(
+              List(
+                methodCall,
+                new ReturnStmt(new ThisExpr)
+              ).toNodeList
+            )
+          )
+
+          mainMethod +: optionalOverrideMethod.toList
+        }
       optionalParamMethods.foreach(callBuilderCls.addMember)
 
       callBuilderCls
@@ -722,146 +715,145 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
                   new SwitchStmt(
                     new MethodCallExpr(new NameExpr("response"), "getStatusCode"),
                     new NodeList(
-                      responses.value.map(
-                        response =>
-                          new SwitchEntry(
-                            new NodeList(new IntegerLiteralExpr(response.statusCode.toString)),
-                            SwitchEntry.Type.BLOCK,
-                            new NodeList(response.value match {
-                              case None =>
-                                new ReturnStmt(
-                                  new ObjectCreationExpr(
-                                    null,
-                                    StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
-                                    new NodeList()
-                                  )
+                      responses.value.map(response =>
+                        new SwitchEntry(
+                          new NodeList(new IntegerLiteralExpr(response.statusCode.toString)),
+                          SwitchEntry.Type.BLOCK,
+                          new NodeList(response.value match {
+                            case None =>
+                              new ReturnStmt(
+                                new ObjectCreationExpr(
+                                  null,
+                                  StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
+                                  new NodeList()
                                 )
-                              case Some((contentType, valueType, _)) =>
-                                new TryStmt(
-                                  new BlockStmt(
-                                    new NodeList(
-                                      new ExpressionStmt(
-                                        produces
-                                          .get(response.statusCode)
-                                          .flatten
-                                          .getOrElse({
-                                            println(
-                                              s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
-                                            )
-                                            ApplicationJson
-                                          }) match {
-                                          case ApplicationJson =>
-                                            new AssignExpr(
-                                              new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                              new MethodCallExpr(
-                                                new FieldAccessExpr(new ThisExpr, "objectMapper"),
-                                                "readValue",
-                                                new NodeList[Expression](
-                                                  new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
-                                                  jacksonTypeReferenceFor(valueType)
-                                                )
-                                              ),
-                                              AssignExpr.Operator.ASSIGN
-                                            )
-
-                                          case contentType =>
-                                            val bodyGetter = valueType match {
-                                              case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
-                                              case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
-                                              case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
-                                              case _ if valueType.isNamed("String")      => "getResponseBody"
-                                              case _ =>
-                                                println(
-                                                  s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
-                                                )
-                                                "getResponseBody"
-                                            }
-                                            val bodyGetterExpr = new MethodCallExpr(
-                                              new NameExpr("response"),
-                                              bodyGetter,
-                                              bodyGetter match {
-                                                case "getResponseBody" =>
-                                                  new NodeList[Expression](
-                                                    new MethodCallExpr(
-                                                      new MethodCallExpr(
-                                                        new NameExpr("AsyncHttpClientUtils"),
-                                                        "getResponseCharset",
-                                                        new NodeList[Expression](new NameExpr("response"))
-                                                      ),
-                                                      "orElse",
-                                                      new NodeList[Expression](new FieldAccessExpr(new NameExpr("StandardCharsets"), "UTF_8"))
-                                                    )
-                                                  )
-                                                case _ => new NodeList[Expression]
-                                              }
-                                            )
-                                            new AssignExpr(
-                                              new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                              bodyGetterExpr,
-                                              AssignExpr.Operator.ASSIGN
-                                            )
-                                        }
-                                      ),
-                                      new IfStmt(
-                                        new BinaryExpr(new NameExpr("result"), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
-                                        new BlockStmt(
-                                          new NodeList(
-                                            new ThrowStmt(
-                                              new ObjectCreationExpr(
-                                                null,
-                                                MARSHALLING_EXCEPTION_TYPE,
-                                                new NodeList(new StringLiteralExpr("Failed to unmarshal response"))
-                                              )
-                                            )
-                                          )
-                                        ),
-                                        new BlockStmt(
-                                          new NodeList(
-                                            new ReturnStmt(
-                                              new ObjectCreationExpr(
-                                                null,
-                                                StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
-                                                new NodeList[Expression](new NameExpr("result"))
-                                              )
-                                            )
-                                          )
-                                        )
-                                      )
-                                    )
-                                  ),
+                              )
+                            case Some((contentType, valueType, _)) =>
+                              new TryStmt(
+                                new BlockStmt(
                                   new NodeList(
-                                    new CatchClause(
-                                      new Parameter(new NodeList(finalModifier), MARSHALLING_EXCEPTION_TYPE, new SimpleName("e")),
-                                      new BlockStmt(
-                                        new NodeList(
-                                          new ThrowStmt(new NameExpr("e"))
-                                        )
-                                      )
+                                    new ExpressionStmt(
+                                      produces
+                                        .get(response.statusCode)
+                                        .flatten
+                                        .getOrElse {
+                                          println(
+                                            s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
+                                          )
+                                          ApplicationJson
+                                        } match {
+                                        case ApplicationJson =>
+                                          new AssignExpr(
+                                            new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
+                                            new MethodCallExpr(
+                                              new FieldAccessExpr(new ThisExpr, "objectMapper"),
+                                              "readValue",
+                                              new NodeList[Expression](
+                                                new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
+                                                jacksonTypeReferenceFor(valueType)
+                                              )
+                                            ),
+                                            AssignExpr.Operator.ASSIGN
+                                          )
+
+                                        case contentType =>
+                                          val bodyGetter = valueType match {
+                                            case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
+                                            case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
+                                            case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
+                                            case _ if valueType.isNamed("String")      => "getResponseBody"
+                                            case _ =>
+                                              println(
+                                                s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
+                                              )
+                                              "getResponseBody"
+                                          }
+                                          val bodyGetterExpr = new MethodCallExpr(
+                                            new NameExpr("response"),
+                                            bodyGetter,
+                                            bodyGetter match {
+                                              case "getResponseBody" =>
+                                                new NodeList[Expression](
+                                                  new MethodCallExpr(
+                                                    new MethodCallExpr(
+                                                      new NameExpr("AsyncHttpClientUtils"),
+                                                      "getResponseCharset",
+                                                      new NodeList[Expression](new NameExpr("response"))
+                                                    ),
+                                                    "orElse",
+                                                    new NodeList[Expression](new FieldAccessExpr(new NameExpr("StandardCharsets"), "UTF_8"))
+                                                  )
+                                                )
+                                              case _ => new NodeList[Expression]
+                                            }
+                                          )
+                                          new AssignExpr(
+                                            new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
+                                            bodyGetterExpr,
+                                            AssignExpr.Operator.ASSIGN
+                                          )
+                                      }
                                     ),
-                                    new CatchClause(
-                                      new Parameter(new NodeList(finalModifier), EXCEPTION_TYPE, new SimpleName("e")),
+                                    new IfStmt(
+                                      new BinaryExpr(new NameExpr("result"), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
                                       new BlockStmt(
                                         new NodeList(
                                           new ThrowStmt(
                                             new ObjectCreationExpr(
                                               null,
                                               MARSHALLING_EXCEPTION_TYPE,
-                                              new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
+                                              new NodeList(new StringLiteralExpr("Failed to unmarshal response"))
+                                            )
+                                          )
+                                        )
+                                      ),
+                                      new BlockStmt(
+                                        new NodeList(
+                                          new ReturnStmt(
+                                            new ObjectCreationExpr(
+                                              null,
+                                              StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
+                                              new NodeList[Expression](new NameExpr("result"))
                                             )
                                           )
                                         )
                                       )
                                     )
+                                  )
+                                ),
+                                new NodeList(
+                                  new CatchClause(
+                                    new Parameter(new NodeList(finalModifier), MARSHALLING_EXCEPTION_TYPE, new SimpleName("e")),
+                                    new BlockStmt(
+                                      new NodeList(
+                                        new ThrowStmt(new NameExpr("e"))
+                                      )
+                                    )
                                   ),
-                                  null
-                                )
-                            })
-                          )
+                                  new CatchClause(
+                                    new Parameter(new NodeList(finalModifier), EXCEPTION_TYPE, new SimpleName("e")),
+                                    new BlockStmt(
+                                      new NodeList(
+                                        new ThrowStmt(
+                                          new ObjectCreationExpr(
+                                            null,
+                                            MARSHALLING_EXCEPTION_TYPE,
+                                            new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
+                                          )
+                                        )
+                                      )
+                                    )
+                                  )
+                                ),
+                                null
+                              )
+                          })
+                        )
                       ) :+ new SwitchEntry(
-                            new NodeList(),
-                            SwitchEntry.Type.BLOCK,
-                            new NodeList(new ThrowStmt(new ObjectCreationExpr(null, HTTP_ERROR_TYPE, new NodeList(new NameExpr("response")))))
-                          ): _*
+                        new NodeList(),
+                        SwitchEntry.Type.BLOCK,
+                        new NodeList(new ThrowStmt(new ObjectCreationExpr(null, HTTP_ERROR_TYPE, new NodeList(new NameExpr("response")))))
+                      ): _*
                     )
                   )
                 )
@@ -897,8 +889,8 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
         "org.asynchttpclient.request.body.multipart.InputStreamPart",
         "org.asynchttpclient.request.body.multipart.StringPart"
       ).map(safeParseRawImport) ++ List(
-            "java.util.Objects.requireNonNull"
-          ).map(safeParseRawStaticImport)).sequence
+        "java.util.Objects.requireNonNull"
+      ).map(safeParseRawStaticImport)).sequence
     }
   def getExtraImports(tracing: Boolean): Target[List[com.github.javaparser.ast.ImportDeclaration]] = Target.pure(List.empty)
   def clientClsArgs(
@@ -915,77 +907,75 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
   ): Target[List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]] = {
     val genericTypeParam = StaticJavaParser.parseClassOrInterfaceType("T")
 
-    val responseData = responses.value.map({
-      case Response(statusCodeName, valueType, _) =>
-        val responseName: String = statusCodeName.asString
-        val responseType         = StaticJavaParser.parseClassOrInterfaceType(responseName)
-        val responseLambdaName   = s"handle${responseName}"
+    val responseData = responses.value.map { case Response(statusCodeName, valueType, _) =>
+      val responseName: String = statusCodeName.asString
+      val responseType         = StaticJavaParser.parseClassOrInterfaceType(responseName)
+      val responseLambdaName   = s"handle${responseName}"
 
-        val responseInnerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, responseName);
-        responseInnerClass.addExtendedType(responseClsName)
-        val (foldMethodParamType, foldMethodApplier, foldMethodArgs) = valueType.fold(
-          (supplierType(genericTypeParam), "get", new NodeList[Expression]())
-        )({
-          vt =>
-            val finalValueType: Type = vt.unbox
+      val responseInnerClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, responseName);
+      responseInnerClass.addExtendedType(responseClsName)
+      val (foldMethodParamType, foldMethodApplier, foldMethodArgs) = valueType.fold(
+        (supplierType(genericTypeParam), "get", new NodeList[Expression]())
+      ) { vt =>
+        val finalValueType: Type = vt.unbox
 
-            responseInnerClass.addField(finalValueType, "value", PRIVATE, FINAL)
+        responseInnerClass.addField(finalValueType, "value", PRIVATE, FINAL)
 
-            val constructor = responseInnerClass.addConstructor(PUBLIC)
-            constructor.addParameter(new Parameter(new NodeList(finalModifier), finalValueType, new SimpleName("value")))
-            constructor.setBody(
-              new BlockStmt(
-                new NodeList(
-                  new ExpressionStmt(
-                    new AssignExpr(
-                      new FieldAccessExpr(new ThisExpr, "value"),
-                      new NameExpr("value"),
-                      AssignExpr.Operator.ASSIGN
-                    )
-                  )
-                )
-              )
-            )
-
-            val getValueMethod = responseInnerClass.addMethod("getValue", PUBLIC)
-            getValueMethod.setType(finalValueType)
-            getValueMethod.setBody(
-              new BlockStmt(
-                new NodeList(
-                  new ReturnStmt(new FieldAccessExpr(new ThisExpr, "value"))
-                )
-              )
-            )
-
-            (
-              functionType(vt, genericTypeParam),
-              "apply",
-              new NodeList[Expression](
-                new MethodCallExpr(new EnclosedExpr(new CastExpr(responseType, new ThisExpr)), "getValue")
-              )
-            )
-        })
-
-        val foldMethodParameter = new Parameter(new NodeList(finalModifier), foldMethodParamType, new SimpleName(responseLambdaName))
-
-        val foldMethodBranch = new IfStmt(
-          new InstanceOfExpr(new ThisExpr, responseType),
+        val constructor = responseInnerClass.addConstructor(PUBLIC)
+        constructor.addParameter(new Parameter(new NodeList(finalModifier), finalValueType, new SimpleName("value")))
+        constructor.setBody(
           new BlockStmt(
             new NodeList(
-              new ReturnStmt(
-                new MethodCallExpr(
-                  new NameExpr(responseLambdaName),
-                  foldMethodApplier,
-                  foldMethodArgs
+              new ExpressionStmt(
+                new AssignExpr(
+                  new FieldAccessExpr(new ThisExpr, "value"),
+                  new NameExpr("value"),
+                  AssignExpr.Operator.ASSIGN
                 )
               )
             )
-          ),
-          null
+          )
         )
 
-        (responseInnerClass, foldMethodParameter, foldMethodBranch)
-    })
+        val getValueMethod = responseInnerClass.addMethod("getValue", PUBLIC)
+        getValueMethod.setType(finalValueType)
+        getValueMethod.setBody(
+          new BlockStmt(
+            new NodeList(
+              new ReturnStmt(new FieldAccessExpr(new ThisExpr, "value"))
+            )
+          )
+        )
+
+        (
+          functionType(vt, genericTypeParam),
+          "apply",
+          new NodeList[Expression](
+            new MethodCallExpr(new EnclosedExpr(new CastExpr(responseType, new ThisExpr)), "getValue")
+          )
+        )
+      }
+
+      val foldMethodParameter = new Parameter(new NodeList(finalModifier), foldMethodParamType, new SimpleName(responseLambdaName))
+
+      val foldMethodBranch = new IfStmt(
+        new InstanceOfExpr(new ThisExpr, responseType),
+        new BlockStmt(
+          new NodeList(
+            new ReturnStmt(
+              new MethodCallExpr(
+                new NameExpr(responseLambdaName),
+                foldMethodApplier,
+                foldMethodArgs
+              )
+            )
+          )
+        ),
+        null
+      )
+
+      (responseInnerClass, foldMethodParameter, foldMethodBranch)
+    }
 
     val abstractResponseClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, abstractModifier), false, responseClsName)
 
@@ -1001,11 +991,11 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
 
     NonEmptyList
       .fromList(foldMethodIfBranches)
-      .foreach({ nel =>
-        nel.reduceLeft({ (prev, next) =>
+      .foreach { nel =>
+        nel.reduceLeft { (prev, next) =>
           prev.setElseStmt(next)
           next
-        })
+        }
 
         nel.last.setElseStmt(
           new BlockStmt(
@@ -1016,7 +1006,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
         )
 
         foldMethod.setBody(new BlockStmt(new NodeList(nel.head)))
-      })
+      }
 
     Target.pure(List(abstractResponseClass))
   }
@@ -1031,16 +1021,13 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       jacksonSupport <- generateJacksonSupportClass()
       (jacksonSupportImports, jacksonSupportClass) = jacksonSupport
       asyncHttpclientUtils <- asyncHttpClientUtilsSupportDef
-    } yield {
-      exceptionClasses.map({
-        case (imports, cls) =>
-          SupportDefinition[JavaLanguage](new Name(cls.getNameAsString), imports, List(cls))
-      }) ++ List(
-        SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, List(ahcSupportClass)),
-        SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, List(jacksonSupportClass)),
-        asyncHttpclientUtils
-      )
-    }
+    } yield exceptionClasses.map { case (imports, cls) =>
+      SupportDefinition[JavaLanguage](new Name(cls.getNameAsString), imports, List(cls))
+    } ++ List(
+      SupportDefinition[JavaLanguage](new Name(ahcSupportClass.getNameAsString), ahcSupportImports, List(ahcSupportClass)),
+      SupportDefinition[JavaLanguage](new Name(jacksonSupportClass.getNameAsString), jacksonSupportImports, List(jacksonSupportClass)),
+      asyncHttpclientUtils
+    )
   def buildStaticDefns(
       clientName: String,
       tracingName: Option[String],
@@ -1099,9 +1086,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       builderObjectMapperSetter <- createSetter(
         OBJECT_MAPPER_TYPE,
         "objectMapper",
-        optionalInitializer(
-          name => new MethodCallExpr(new NameExpr("JacksonSupport"), "configureObjectMapper", new NodeList[Expression](new NameExpr(name)))
-        )
+        optionalInitializer(name => new MethodCallExpr(new NameExpr("JacksonSupport"), "configureObjectMapper", new NodeList[Expression](new NameExpr(name))))
       )
     } yield {
       val clientType = StaticJavaParser.parseClassOrInterfaceType(clientName)
@@ -1109,12 +1094,10 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       val (baseUrlField, defaultBaseUrlField) = {
         val (modifiers, declarator) = serverUrl.fold(
           (new NodeList(privateModifier, finalModifier), new VariableDeclarator(URI_TYPE, "baseUrl"))
-        )(
-          _ => (new NodeList(privateModifier), new VariableDeclarator(URI_TYPE, "baseUrl", new NameExpr("DEFAULT_BASE_URL")))
-        )
+        )(_ => (new NodeList(privateModifier), new VariableDeclarator(URI_TYPE, "baseUrl", new NameExpr("DEFAULT_BASE_URL"))))
         (
           new FieldDeclaration(modifiers, declarator),
-          serverUrl.map({ serverUrl =>
+          serverUrl.map { serverUrl =>
             new FieldDeclaration(
               new NodeList(privateModifier, staticModifier, finalModifier),
               new VariableDeclarator(
@@ -1127,18 +1110,16 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
                 )
               )
             )
-          })
+          }
         )
       }
 
       val tracingFields = if (tracing) {
         val (modifiers, declarator) = tracingName.fold(
           (new NodeList(privateModifier, finalModifier), new VariableDeclarator(STRING_TYPE, "clientName"))
-        )(
-          _ => (new NodeList(privateModifier), new VariableDeclarator(STRING_TYPE, "clientName", new NameExpr("DEFAULT_CLIENT_NAME")))
-        )
+        )(_ => (new NodeList(privateModifier), new VariableDeclarator(STRING_TYPE, "clientName", new NameExpr("DEFAULT_CLIENT_NAME"))))
         val clientNameField = new FieldDeclaration(modifiers, declarator)
-        val defaultClientNameField = tracingName.map({ tracingName =>
+        val defaultClientNameField = tracingName.map { tracingName =>
           new FieldDeclaration(
             new NodeList(privateModifier, staticModifier, finalModifier),
             new VariableDeclarator(
@@ -1147,7 +1128,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
               new StringLiteralExpr(tracingName)
             )
           )
-        })
+        }
 
         defaultClientNameField.toList :+ clientNameField
       } else {
@@ -1223,11 +1204,9 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
             )
           )
 
-        case (Some(_), Some(_)) => // no params
-
+        case (Some(_), Some(_))       => // no params
         case (Some(_), _) if !tracing => // no params
-
-        case (_, _) => // Catch edge cases
+        case (_, _)                   => // Catch edge cases
       }
 
       val builderSetters = List(
@@ -1286,16 +1265,16 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       val builderClass = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, "Builder")
       sortDefinitions(
         tracingFields ++
-            builderSetters ++
-            internalGetters ++
-            defaultBaseUrlField ++
-            List(
-              baseUrlField,
-              httpClientField,
-              objectMapperField,
-              builderConstructor,
-              buildMethod
-            )
+          builderSetters ++
+          internalGetters ++
+          defaultBaseUrlField ++
+          List(
+            baseUrlField,
+            httpClientField,
+            objectMapperField,
+            builderConstructor,
+            buildMethod
+          )
       ).foreach(builderClass.addMember)
 
       val clientFields = List(
@@ -1303,10 +1282,9 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
         if (tracing) Some((STRING_TYPE, "clientName")) else None,
         Some((httpClientFunctionType, "httpClient")),
         Some((OBJECT_MAPPER_TYPE, "objectMapper"))
-      ).flatten.map({
-        case (tpe, name) =>
-          new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(tpe, name))
-      })
+      ).flatten.map { case (tpe, name) =>
+        new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(tpe, name))
+      }
 
       val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clientName)
       constructor.addParameter(new Parameter(new NodeList(finalModifier), BUILDER_TYPE, new SimpleName("builder")))
@@ -1320,16 +1298,15 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
               if (tracing) Some(("clientName", newFieldAccessExpr)) else None,
               Some(("httpClient", newMethodCallExpr)),
               Some(("objectMapper", newMethodCallExpr))
-            ).flatten.map({
-              case (name, value) =>
-                new ExpressionStmt(
-                  new AssignExpr(
-                    new FieldAccessExpr(new ThisExpr, name),
-                    value(new NameExpr("builder"), name),
-                    AssignExpr.Operator.ASSIGN
-                  )
+            ).flatten.map { case (name, value) =>
+              new ExpressionStmt(
+                new AssignExpr(
+                  new FieldAccessExpr(new ThisExpr, name),
+                  value(new NameExpr("builder"), name),
+                  AssignExpr.Operator.ASSIGN
                 )
-            }): _*
+              )
+            }: _*
           )
         )
       )
@@ -1340,9 +1317,9 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
           builderClass,
           constructor
         ) ++
-            clientCalls ++
-            clientFields ++
-            supportDefinitions
+          clientCalls ++
+          clientFields ++
+          supportDefinitions
       ).foreach(clientClass.addMember)
 
       NonEmptyList(Right(clientClass), Nil)

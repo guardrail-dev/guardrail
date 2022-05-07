@@ -36,15 +36,14 @@ class Issue121Suite extends AnyFunSuite with Matchers with EitherValues with Sca
 
     client
       .run(req)
-      .use({
-        case Status.NoContent(resp) =>
-          IO.pure({
-            resp.status should equal(Status.NoContent)
-            resp.contentType should equal(None)
-            resp.contentLength should equal(None)
-            ()
-          })
-      })
+      .use { case Status.NoContent(resp) =>
+        IO.pure {
+          resp.status should equal(Status.NoContent)
+          resp.contentType should equal(None)
+          resp.contentLength should equal(None)
+          ()
+        }
+      }
       .unsafeRunSync()
   }
 

@@ -86,12 +86,12 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     val (
       ProtocolDefinitions(
         ClassDefinition(nameCat, tpeCat, fullTypeCat, clsCat, staticDefnsCat, catParents) :: ClassDefinition(nameDog, tpeDog, _, _, _, _) :: ADT(
-              namePet,
-              tpePet,
-              fullTpePet,
-              trtPet,
-              staticDefns
-            ) :: Nil,
+          namePet,
+          tpePet,
+          fullTpePet,
+          trtPet,
+          staticDefns
+        ) :: Nil,
         _,
         _,
         _,
@@ -99,7 +99,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    )                = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val companion    = companionForStaticDefns(staticDefns)
     val companionCat = companionForStaticDefns(staticDefnsCat)
 
@@ -280,7 +280,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    )                       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
     val companionDog        = companionForStaticDefns(staticDefnsDog)
     val companionPet        = companionForStaticDefns(staticDefnsPet)
@@ -479,7 +479,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    )                       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
     val companionCat        = companionForStaticDefns(staticDefnsCat)
 
@@ -579,7 +579,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    )                   = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val companionCat    = companionForStaticDefns(staticDefnsCat)
     val companionPet    = companionForStaticDefns(staticDefnsPet)
     val companionMammal = companionForStaticDefns(staticDefnsMammal)

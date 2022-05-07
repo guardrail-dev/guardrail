@@ -17,9 +17,9 @@ object GeneratorMappings {
   }
 
   private def catchClassNotFound[A](value: => LoaderIndirection[A], error: => MissingDependency): Target[A] =
-    try {
+    try
       Target.pure(value.instance)
-    } catch {
+    catch {
       case _: _root_.java.lang.NoClassDefFoundError =>
         Target.raiseError(error)
     }
@@ -48,16 +48,16 @@ object GeneratorMappings {
 
   implicit def scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
-    xs => scalaModule.flatMap(_.extract(xs)), {
+    xs => scalaModule.flatMap(_.extract(xs)),
+    {
       case "akka-http"         => scalaModule *> catchClassNotFound(indirectAkkaHttp, MissingDependency("guardrail-scala-akka-http"))
       case "http4s"            => scalaModule *> catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
       case "http4s-v0.23"      => scalaModule *> catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
       case "http4s-v0.22"      => scalaModule *> catchClassNotFound(indirectHttp4sV0_22, MissingDependency("guardrail-scala-http4s"))
       case "akka-http-jackson" => scalaModule *> catchClassNotFound(indirectAkkaHttpJackson, MissingDependency("guardrail-scala-akka-http"))
       case "dropwizard"        => scalaModule *> catchClassNotFound(indirectScalaDropwizard, MissingDependency("guardrail-scala-dropwizard"))
-    }, {
-      _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
-    }
+    },
+    _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
   )
 
   private def indirectJavaModule = new LoaderIndirection[AbstractModule[JavaLanguage]] {
@@ -75,10 +75,12 @@ object GeneratorMappings {
 
   implicit def javaInterpreter = new CoreTermInterp[JavaLanguage](
     "dropwizard",
-    xs => javaModule.flatMap(_.extract(xs)), {
+    xs => javaModule.flatMap(_.extract(xs)),
+    {
       case "dropwizard" => javaModule *> catchClassNotFound(indirectJavaDropwizard, MissingDependency("guardrail-java-dropwizard"))
       case "spring-mvc" => javaModule *> catchClassNotFound(indirectSpringMvc, MissingDependency("guardrail-java-spring-mvc"))
-    }, { str =>
+    },
+    { str =>
       Try(StaticJavaParser.parseImport(s"import ${str};")) match {
         case Success(value) => Right(value)
         case Failure(t)     => Left(UnparseableArgument("import", t.getMessage))

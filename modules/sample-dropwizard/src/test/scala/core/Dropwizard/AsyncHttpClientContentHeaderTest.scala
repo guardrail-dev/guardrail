@@ -35,7 +35,8 @@ class AsyncHttpClientContentHeaderTest extends AnyFreeSpec with Matchers with Wi
         .fold(
           { body =>
             body shouldBe MOCK_RESPONSE_BODY; ()
-          }, { () =>
+          },
+          { () =>
             fail("Should have gotten 2xx response"); ()
           }
         )
@@ -58,12 +59,15 @@ class AsyncHttpClientContentHeaderTest extends AnyFreeSpec with Matchers with Wi
         .call()
         .toCompletableFuture
         .get()
-        .fold({
-          case MOCK_RESPONSE_BODY => ()
-          case other              => fail(s"Unexpected response: ${other}")
-        }, { () =>
-          fail("Should have gotten 201 response"); ()
-        })
+        .fold(
+          {
+            case MOCK_RESPONSE_BODY => ()
+            case other              => fail(s"Unexpected response: ${other}")
+          },
+          { () =>
+            fail("Should have gotten 201 response"); ()
+          }
+        )
     }
   }
 }

@@ -40,12 +40,12 @@ class JavaVavrCollectionsGenerator private extends CollectionsLibTerms[JavaLangu
 
   override def liftVectorType(value: Type, customTpe: Option[Type]): Target[Type] =
     customTpe
-      .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("io.vavr.collection.Vector").map(identity))({
+      .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("io.vavr.collection.Vector").map(identity)) {
         case t: ClassOrInterfaceType =>
           Target.pure(t)
         case x =>
           Target.raiseUserError(s"Unsure how to map $x")
-      })
+      }
       .map(_.setTypeArguments(new NodeList(value)))
 
   override def liftVectorTerm(value: Node): Target[Node] =
@@ -65,12 +65,12 @@ class JavaVavrCollectionsGenerator private extends CollectionsLibTerms[JavaLangu
 
   override def liftMapType(value: Type, customTpe: Option[Type]): Target[Type] =
     customTpe
-      .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("io.vavr.collection.Map").map(identity))({
+      .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("io.vavr.collection.Map").map(identity)) {
         case t: ClassOrInterfaceType =>
           Target.pure(t)
         case x =>
           Target.raiseUserError(s"Unsure how to map $x")
-      })
+      }
       .map(_.setTypeArguments(STRING_TYPE, value))
 
   override def emptyMap(): Target[Node] =

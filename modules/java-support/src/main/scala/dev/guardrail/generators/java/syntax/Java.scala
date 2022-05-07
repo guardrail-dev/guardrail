@@ -49,8 +49,8 @@ package object syntax {
     // Heuristicly guess if the type could be reasonably used as a text/plain body
     def isPlain: Boolean =
       tpe.isPrimitiveType || tpe.isNamed("BigInteger") || tpe.isNamed("BigDecimal") || tpe.isNamed("String") || tpe.isNamed("OffsetDateTime") || tpe.isNamed(
-          "LocalDate"
-        )
+        "LocalDate"
+      )
 
     @deprecated("Just use Type#asString", "0.0.0")
     def name: Option[String] = Option(tpe.asString)
@@ -76,34 +76,32 @@ package object syntax {
       val problems     = t.getProblems().asScala.toVector
       val msgSeparator = if (problems.length > 1) "\n" else " "
       val msgs = problems
-        .map(
-          problem =>
-            problem.getCause.asScala
-              .flatMap({
-                case cause: com.github.javaparser.ParseException =>
-                  val tokenImage = cause.tokenImage.toVector
-                  val expected   = Option(cause.expectedTokenSequences).map(_.toVector.flatMap(_.toVector)).orEmpty.flatMap(idx => tokenImage.get(idx))
-                  for {
-                    token       <- Option(cause.currentToken)
-                    nextToken   <- Option(token.next)
-                    image       <- Option(nextToken.image)
-                    beginColumn <- Option(nextToken.beginColumn)
-                  } yield s"""Unexpected "${image}" at character ${beginColumn} (valid: ${expected.mkString(", ")})"""
-                case _ => Option.empty
-              })
-              .getOrElse(problem.getMessage())
+        .map(problem =>
+          problem.getCause.asScala
+            .flatMap {
+              case cause: com.github.javaparser.ParseException =>
+                val tokenImage = cause.tokenImage.toVector
+                val expected   = Option(cause.expectedTokenSequences).map(_.toVector.flatMap(_.toVector)).orEmpty.flatMap(idx => tokenImage.get(idx))
+                for {
+                  token       <- Option(cause.currentToken)
+                  nextToken   <- Option(token.next)
+                  image       <- Option(nextToken.image)
+                  beginColumn <- Option(nextToken.beginColumn)
+                } yield s"""Unexpected "${image}" at character ${beginColumn} (valid: ${expected.mkString(", ")})"""
+              case _ => Option.empty
+            }
+            .getOrElse(problem.getMessage())
         )
       val msg = msgs match {
         case Vector()    => "\n" + t.getMessage()
         case Vector(msg) => msg
         case rest =>
           rest.zipWithIndex
-            .map({
-              case (msg, idx) =>
-                s"""Problem ${idx + 1}:
+            .map { case (msg, idx) =>
+              s"""Problem ${idx + 1}:
                   |  ${msg.trim.split("\n").mkString("\n  ")}
                   |""".stripMargin
-            })
+            }
             .mkString("\n")
       }
       s"${prefix}:${msgSeparator}${msg}"
@@ -252,40 +250,39 @@ package object syntax {
 
   implicit class RichJavaString(private val s: String) extends AnyVal {
     def escapeInvalidCharacters: String =
-      s.map({
-          case '`'  => "_backtick_"
-          case '~'  => "_tilde_"
-          case '!'  => "_bang_"
-          case '@'  => "_at_"
-          case '#'  => "_pound_"
-          case '%'  => "_percent_"
-          case '^'  => "_caret_"
-          case '&'  => "_ampersand_"
-          case '*'  => "_asterisk_"
-          case '('  => "_open_paren_"
-          case ')'  => "_close_paren_"
-          case '-'  => "_"
-          case '+'  => "_plus_"
-          case '='  => "_equals_"
-          case '|'  => "_pipe_"
-          case ':'  => "_colon_"
-          case ';'  => "_semicolon_"
-          case '"'  => "_double_quote_"
-          case '\'' => "_single_quote_"
-          case ','  => "_comma_"
-          case '.'  => "_dot_"
-          case '?'  => "_question_"
-          case '\\' => "_backslash_"
-          case '/'  => "_slash_"
-          case '['  => "_open_square_brace_"
-          case ']'  => "_close_square_brace_"
-          case '{'  => "_open_curly_brace_"
-          case '}'  => "_close_curly_brace_"
-          case '<'  => "_less_than_"
-          case '>'  => "_greater_than_"
-          case c    => c.toString
-        })
-        .mkString
+      s.map {
+        case '`'  => "_backtick_"
+        case '~'  => "_tilde_"
+        case '!'  => "_bang_"
+        case '@'  => "_at_"
+        case '#'  => "_pound_"
+        case '%'  => "_percent_"
+        case '^'  => "_caret_"
+        case '&'  => "_ampersand_"
+        case '*'  => "_asterisk_"
+        case '('  => "_open_paren_"
+        case ')'  => "_close_paren_"
+        case '-'  => "_"
+        case '+'  => "_plus_"
+        case '='  => "_equals_"
+        case '|'  => "_pipe_"
+        case ':'  => "_colon_"
+        case ';'  => "_semicolon_"
+        case '"'  => "_double_quote_"
+        case '\'' => "_single_quote_"
+        case ','  => "_comma_"
+        case '.'  => "_dot_"
+        case '?'  => "_question_"
+        case '\\' => "_backslash_"
+        case '/'  => "_slash_"
+        case '['  => "_open_square_brace_"
+        case ']'  => "_close_square_brace_"
+        case '{'  => "_open_curly_brace_"
+        case '}'  => "_close_curly_brace_"
+        case '<'  => "_less_than_"
+        case '>'  => "_greater_than_"
+        case c    => c.toString
+      }.mkString
         .replaceAll("^_+", "")
         .replaceAll("_+$", "")
 
@@ -359,15 +356,14 @@ package object syntax {
           .orElse(cu.getInterfaceByName(className).asScala)
           .fold(
             Target.raiseUserError[SupportDefinition[JavaLanguage]](s"Unable to find class ${className} in parsed string")
-          )(
-            clsDef =>
-              Target.pure(
-                SupportDefinition[JavaLanguage](
-                  new Name(className),
-                  cu.getImports.toList,
-                  List(clsDef)
-                )
+          )(clsDef =>
+            Target.pure(
+              SupportDefinition[JavaLanguage](
+                new Name(className),
+                cu.getImports.toList,
+                List(clsDef)
               )
+            )
           )
     }
 

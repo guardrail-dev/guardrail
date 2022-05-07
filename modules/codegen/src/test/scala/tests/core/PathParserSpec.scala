@@ -34,12 +34,11 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
     ("/{foo}.json", q""" host + basePath + "/" + Formatter.addPath(foo) + ".json" """),
     ("/{foo}/{bar}.json", q""" host + basePath + "/" + Formatter.addPath(foo) + "/" + Formatter.addPath(bar) + ".json" """),
     ("/{foo_bar}/{bar_baz}.json", q""" host + basePath + "/" + Formatter.addPath(fooBar) + "/" + Formatter.addPath(barBaz) + ".json" """)
-  ).foreach {
-    case (str, expected) =>
-      test(s"Client $str") {
-        val gen = Target.unsafeExtract(generateUrlPathParams(Tracker(str), args))
-        gen.toString shouldBe expected.toString
-      }
+  ).foreach { case (str, expected) =>
+    test(s"Client $str") {
+      val gen = Target.unsafeExtract(generateUrlPathParams(Tracker(str), args))
+      gen.toString shouldBe expected.toString
+    }
   }
 
   List[(String, Term)](
@@ -47,26 +46,37 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
     ("foo", q""" path("foo") """),
     ("foo/", q""" pathPrefix("foo") & pathEndOrSingleSlash """),
     ("{foo}", q""" path(IntNumber) """),
-    ("{foo}.json", q""" path(new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
-      .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """),
-    ("{foo}/{bar}.json", q""" path(IntNumber / new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
-      .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """),
-    ("{foo_bar}/{bar_baz}.json", q""" path(IntNumber / new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
-      .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """),
+    (
+      "{foo}.json",
+      q""" path(new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
+          .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """
+    ),
+    (
+      "{foo}/{bar}.json",
+      q""" path(IntNumber / new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
+          .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """
+    ),
+    (
+      "{foo_bar}/{bar_baz}.json",
+      q""" path(IntNumber / new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
+          .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """
+    ),
     ("foo?abort=1", q""" path("foo") & parameter("abort").require(_ == "1") """),
-    ("{foo}.json?abort=1", q""" path(new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
-      .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) & parameter("abort").require(_ == "1") """),
+    (
+      "{foo}.json?abort=1",
+      q""" path(new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
+          .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) & parameter("abort").require(_ == "1") """
+    ),
     ("?", q""" pathEnd """),
     ("?a", q""" pathEnd & parameter("a").require(_ == "") """),
     ("?=", q""" pathEnd & parameter("").require(_ == "") """),
     ("?=b", q""" pathEnd & parameter("").require(_ == "b") """)
-  ).foreach {
-    case (str, expected) =>
-      test(s"Server ${str}") {
-        val NonEmptyList((gen, _), _) =
-          Target.unsafeExtract(AkkaHttpServerGenerator.generateUrlPathExtractors(Tracker(str), args, CirceModelGenerator.V012))
-        gen.toString shouldBe ((expected.toString))
-      }
+  ).foreach { case (str, expected) =>
+    test(s"Server ${str}") {
+      val NonEmptyList((gen, _), _) =
+        Target.unsafeExtract(AkkaHttpServerGenerator.generateUrlPathExtractors(Tracker(str), args, CirceModelGenerator.V012))
+      gen.toString shouldBe (expected.toString)
+    }
   }
 
   test("individual extractor components") {
@@ -80,14 +90,11 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
     plainNEString.parseOnly("foo/").either.value shouldBe "foo"
     plainNEString.parseOnly("").either.isLeft shouldBe true
     stringSegment.parseOnly("").either.isLeft shouldBe true
-    stringSegment.parseOnly("foo").either.value should matchPattern {
-      case (None, Lit.String("foo")) =>
+    stringSegment.parseOnly("foo").either.value should matchPattern { case (None, Lit.String("foo")) =>
     }
-    segments.parseOnly("foo").either.value should matchPattern {
-      case (None, Lit.String("foo")) :: Nil =>
+    segments.parseOnly("foo").either.value should matchPattern { case (None, Lit.String("foo")) :: Nil =>
     }
-    segments.parseOnly("foo/bar").either.value should matchPattern {
-      case (None, Lit.String("foo")) :: (None, Lit.String("bar")) :: Nil =>
+    segments.parseOnly("foo/bar").either.value should matchPattern { case (None, Lit.String("foo")) :: (None, Lit.String("bar")) :: Nil =>
     }
     qsValueOnly.parseOnly("").either.isLeft shouldBe true
     qsValueOnly.parseOnly("a=b").either.isLeft shouldBe true
@@ -110,11 +117,9 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
       .either
       .value
       .value should matchStructure(q""" parameter("a").require(_ == "b") & parameter("c").require(_ == "d") """)
-    pattern.parseOnly("").either.value should matchPattern {
-      case (Nil, (false, None)) =>
+    pattern.parseOnly("").either.value should matchPattern { case (Nil, (false, None)) =>
     }
-    pattern.parseOnly("?").either.value should matchPattern {
-      case (Nil, (false, None)) =>
+    pattern.parseOnly("?").either.value should matchPattern { case (Nil, (false, None)) =>
     }
   }
 }

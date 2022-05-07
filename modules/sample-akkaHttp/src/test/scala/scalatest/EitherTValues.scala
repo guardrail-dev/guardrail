@@ -14,13 +14,15 @@ trait EitherTValues {
 
   class EitherTValuable[F[_]: Functor, L, R](eitherT: EitherT[F, L, R]) {
     def leftValue(implicit pos: source.Position): F[L] =
-      eitherT.fold(identity, { _ =>
-        throw new TestFailedException((_: StackDepthException) => Option.empty[String], Option.empty[Throwable], pos)
-      })
+      eitherT.fold(
+        identity,
+        _ => throw new TestFailedException((_: StackDepthException) => Option.empty[String], Option.empty[Throwable], pos)
+      )
 
     def rightValue(implicit pos: source.Position): F[R] =
-      eitherT.fold({ _ =>
-        throw new TestFailedException((_: StackDepthException) => Option.empty[String], Option.empty[Throwable], pos)
-      }, identity)
+      eitherT.fold(
+        _ => throw new TestFailedException((_: StackDepthException) => Option.empty[String], Option.empty[Throwable], pos),
+        identity
+      )
   }
 }

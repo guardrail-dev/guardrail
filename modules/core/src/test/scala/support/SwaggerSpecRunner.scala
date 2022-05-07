@@ -51,36 +51,33 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues
   )(context: Context, framework: Framework[L, Target], targets: NonEmptyList[CodegenTarget]): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
     import framework._
     targets
-      .map(
-        target =>
-          Common
-            .prepareDefinitions[L, Target](
-              target,
-              context,
-              Tracker(swagger),
-              dtoPackage,
-              supportPackage
-            )
-            .valueOr({ err =>
-              throw new Exception(err.toString)
-            })
+      .map(target =>
+        Common
+          .prepareDefinitions[L, Target](
+            target,
+            context,
+            Tracker(swagger),
+            dtoPackage,
+            supportPackage
+          )
+          .valueOr { err =>
+            throw new Exception(err.toString)
+          }
       )
-      .foldLeft[(ProtocolDefinitions[L], Clients[L], Servers[L])]((ProtocolDefinitions(Nil, Nil, Nil, Nil, None), Clients(Nil, Nil), Servers(Nil, Nil)))(
-        {
-          case ((proto, clients, servers), (generatedProto, generatedDefs)) =>
-            val newProto =
-              if ((proto.elems ++ proto.packageObjectContents ++ proto.packageObjectImports ++ proto.protocolImports ++ proto.implicitsObject.toList).nonEmpty) {
-                proto
-              } else {
-                generatedProto
-              }
-            (
-              newProto,
-              Clients(clients.clients ++ generatedDefs.clients, (clients.supportDefinitions ++ generatedDefs.supportDefinitions).distinct),
-              Servers(servers.servers ++ generatedDefs.servers, (servers.supportDefinitions ++ generatedDefs.supportDefinitions).distinct)
-            )
-        }
-      )
+      .foldLeft[(ProtocolDefinitions[L], Clients[L], Servers[L])]((ProtocolDefinitions(Nil, Nil, Nil, Nil, None), Clients(Nil, Nil), Servers(Nil, Nil))) {
+        case ((proto, clients, servers), (generatedProto, generatedDefs)) =>
+          val newProto =
+            if ((proto.elems ++ proto.packageObjectContents ++ proto.packageObjectImports ++ proto.protocolImports ++ proto.implicitsObject.toList).nonEmpty) {
+              proto
+            } else {
+              generatedProto
+            }
+          (
+            newProto,
+            Clients(clients.clients ++ generatedDefs.clients, (clients.supportDefinitions ++ generatedDefs.supportDefinitions).distinct),
+            Servers(servers.servers ++ generatedDefs.servers, (servers.supportDefinitions ++ generatedDefs.supportDefinitions).distinct)
+          )
+      }
   }
 
   def runInvalidSwaggerSpec[L <: LA](

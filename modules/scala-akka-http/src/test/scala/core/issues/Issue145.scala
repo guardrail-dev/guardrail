@@ -52,7 +52,7 @@ class Issue145 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
     it("should generate right companion object") {
-      val cmp       = companionForStaticDefns(staticDefnsPet)
+      val cmp = companionForStaticDefns(staticDefnsPet)
       val companion = q"""
         object Pet {
           implicit val encodePet: _root_.io.circe.Encoder.AsObject[Pet] = {

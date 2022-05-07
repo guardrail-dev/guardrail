@@ -39,82 +39,78 @@ object ServerGenerator {
     for {
       extraImports       <- getExtraImports(context.tracing, supportPackage)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      servers <- groupedRoutes.traverse {
-        case (className, unsortedRoutes) =>
-          val routes = unsortedRoutes
-            .groupBy(_.path.unwrapTracker.indexOf('{'))
-            .view
-            .mapValues(_.sortBy(r => (r.path.unwrapTracker, r.method)))
-            .toList
-            .sortBy(_._1)
-            .flatMap(_._2)
-          for {
-            resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
-            handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
+      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+        val routes = unsortedRoutes
+          .groupBy(_.path.unwrapTracker.indexOf('{'))
+          .view
+          .mapValues(_.sortBy(r => (r.path.unwrapTracker, r.method)))
+          .toList
+          .sortBy(_._1)
+          .flatMap(_._2)
+        for {
+          resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
+          handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
 
-            responseServerPair <- routes.traverse {
-              case route @ RouteMeta(path, method, operation, securityRequirements) =>
-                for {
-                  operationId           <- getOperationId(operation)
-                  responses             <- Responses.getResponses(operationId, operation, protocolElems)
-                  responseClsName       <- formatTypeName(operationId, Some("Response"))
-                  responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
-                  methodName            <- formatMethodName(operationId)
-                  parameters            <- route.getParameters[L, F](protocolElems)
-                  customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
-                  tracingField          <- buildTracingFields(operation, className, context.tracing)
-                } yield (
-                  responseDefinitions,
-                  GenerateRouteMeta(operationId, methodName, responseClsName, customExtractionField, tracingField, route, parameters, responses)
-                )
-            }
-            (responseDefinitions, serverOperations) = responseServerPair.unzip
-            securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
-              case Nil => SecurityExposure.Undefined
-              case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
-            }
-            renderedRoutes <- generateRoutes(
-              context.tracing,
-              resourceName,
-              handlerName,
-              basePath,
-              serverOperations,
-              protocolElems,
-              securitySchemes,
-              securityExposure,
-              context.authImplementation
+          responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
+            for {
+              operationId           <- getOperationId(operation)
+              responses             <- Responses.getResponses(operationId, operation, protocolElems)
+              responseClsName       <- formatTypeName(operationId, Some("Response"))
+              responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              methodName            <- formatMethodName(operationId)
+              parameters            <- route.getParameters[L, F](protocolElems)
+              customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
+              tracingField          <- buildTracingFields(operation, className, context.tracing)
+            } yield (
+              responseDefinitions,
+              GenerateRouteMeta(operationId, methodName, responseClsName, customExtractionField, tracingField, route, parameters, responses)
             )
-            handlerSrc <- renderHandler(
-              handlerName,
-              renderedRoutes.methodSigs,
-              renderedRoutes.handlerDefinitions,
-              responseDefinitions.flatten,
-              context.customExtraction,
-              context.authImplementation,
-              securityExposure
-            )
-            extraRouteParams <- getExtraRouteParams(
-              resourceName,
-              context.customExtraction,
-              context.tracing,
-              context.authImplementation,
-              securityExposure
-            )
-            classSrc <- renderClass(
-              resourceName,
-              handlerName,
-              renderedRoutes.classAnnotations,
-              renderedRoutes.routes,
-              extraRouteParams,
-              responseDefinitions.flatten,
-              renderedRoutes.supportDefinitions,
-              renderedRoutes.securitySchemesDefinitions,
-              context.customExtraction,
-              context.authImplementation
-            )
-          } yield {
-            Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)
           }
+          (responseDefinitions, serverOperations) = responseServerPair.unzip
+          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+            case Nil => SecurityExposure.Undefined
+            case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
+          }
+          renderedRoutes <- generateRoutes(
+            context.tracing,
+            resourceName,
+            handlerName,
+            basePath,
+            serverOperations,
+            protocolElems,
+            securitySchemes,
+            securityExposure,
+            context.authImplementation
+          )
+          handlerSrc <- renderHandler(
+            handlerName,
+            renderedRoutes.methodSigs,
+            renderedRoutes.handlerDefinitions,
+            responseDefinitions.flatten,
+            context.customExtraction,
+            context.authImplementation,
+            securityExposure
+          )
+          extraRouteParams <- getExtraRouteParams(
+            resourceName,
+            context.customExtraction,
+            context.tracing,
+            context.authImplementation,
+            securityExposure
+          )
+          classSrc <- renderClass(
+            resourceName,
+            handlerName,
+            renderedRoutes.classAnnotations,
+            renderedRoutes.routes,
+            extraRouteParams,
+            responseDefinitions.flatten,
+            renderedRoutes.supportDefinitions,
+            renderedRoutes.securitySchemesDefinitions,
+            context.customExtraction,
+            context.authImplementation
+          )
+        } yield Server(className, frameworkImports ++ extraImports, handlerSrc, classSrc)
       }
     } yield Servers[L](servers, supportDefinitions)
   }

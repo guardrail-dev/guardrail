@@ -38,12 +38,12 @@ class JavaCollectionsGenerator private extends CollectionsLibTerms[JavaLanguage,
 
   def liftVectorType(value: Type, customTpe: Option[Type]): Target[Type] =
     customTpe
-      .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.List").map(identity))({
+      .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.List").map(identity)) {
         case t: ClassOrInterfaceType =>
           Target.pure(t)
         case x =>
           Target.raiseUserError(s"Unsure how to map $x")
-      })
+      }
       .map(_.setTypeArguments(new NodeList(value)))
 
   def liftVectorTerm(value: Node): Target[Node] =
@@ -66,12 +66,12 @@ class JavaCollectionsGenerator private extends CollectionsLibTerms[JavaLanguage,
 
   def liftMapType(value: Type, customTpe: Option[Type]): Target[Type] =
     customTpe
-      .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.Map").map(identity))({
+      .fold[Target[ClassOrInterfaceType]](safeParseClassOrInterfaceType("java.util.Map").map(identity)) {
         case t: ClassOrInterfaceType =>
           Target.pure(t)
         case x =>
           Target.raiseUserError(s"Unsure how to map $x")
-      })
+      }
       .map(_.setTypeArguments(STRING_TYPE, value))
 
   def emptyMap(): Target[Node] =

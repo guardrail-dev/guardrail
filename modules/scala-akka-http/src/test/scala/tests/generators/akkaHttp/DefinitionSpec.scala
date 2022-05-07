@@ -77,13 +77,13 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class First(a: Option[Int] = None)
     """
-    val companion  = q"""
+    val companion = q"""
       object First {
         implicit val encodeFirst: _root_.io.circe.Encoder.AsObject[First] = {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
@@ -102,7 +102,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: EnumDefinition(_, _, _, _, cls, staticDefns) :: _, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -110,7 +110,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       override def toString: String = value.toString
     }
     """
-    val companion  = q"""
+    val companion = q"""
     object Third {
       object members {
         case object V1 extends Third("v1")
@@ -138,13 +138,13 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Fifth(aBCD: Option[Int] = None, bCDE: Option[Int] = None)
     """
-    val companion  = q"""
+    val companion = q"""
       object Fifth {
         implicit val encodeFifth: _root_.io.circe.Encoder.AsObject[Fifth] = {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
@@ -163,13 +163,13 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
       case class Sixth(defval: Int = 1, defvalOpt: Option[Long] = Option(2L))
     """
-    val companion  = q"""
+    val companion = q"""
       object Sixth {
         implicit val encodeSixth: _root_.io.circe.Encoder.AsObject[Sixth] = {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()

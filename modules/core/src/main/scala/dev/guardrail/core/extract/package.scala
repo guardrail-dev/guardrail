@@ -9,13 +9,13 @@ package object extract {
   private def extractWithFallback[F: VendorExtension.VendorExtensible, T: Extractable](v: F, name: String, fallbackName: String): Option[T] = {
     val ve = VendorExtension(v)
     ve.extract[T](name)
-      .orElse({
+      .orElse {
         val value = ve.extract[T](fallbackName)
         if (value.isDefined) {
           println(s"WARNING: Deprecated vendor extension '${fallbackName}'; please migrate to use '${name}' instead")
         }
         value
-      })
+      }
   }
 
   def CustomTypeName[F: VendorExtension.VendorExtensible](v: F, vendorPrefixes: List[String]): Option[String] =

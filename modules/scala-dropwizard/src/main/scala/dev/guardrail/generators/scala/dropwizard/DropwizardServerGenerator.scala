@@ -39,9 +39,8 @@ object DropwizardServerGenerator {
 class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]) extends ServerTerms[ScalaLanguage, Target] {
   override def MonadF: Monad[Target] = Target.targetInstances
 
-  private val buildTermSelect: NonEmptyList[String] => Term.Ref = {
-    case NonEmptyList(head, tail) =>
-      tail.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(head))(Term.Select.apply _)
+  private val buildTermSelect: NonEmptyList[String] => Term.Ref = { case NonEmptyList(head, tail) =>
+    tail.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(head))(Term.Select.apply _)
   }
 
   private val PLAIN_TYPES =
@@ -80,66 +79,62 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
     )
 
     private def handleDefaultValue(defaultValue: Option[Term])(param: Term.Param): Term.Param = param.copy(
-      mods = defaultValue
-          .flatMap({ dv =>
-            val defaultStr = dv match {
-              case s @ Lit.String(_) => Some(s)
-              case Lit.Boolean(b)    => Some(Lit.String(b.toString))
-              case Lit.Byte(b)       => Some(Lit.String(b.toString))
-              case Lit.Char(c)       => Some(Lit.String(c.toString))
-              case Lit.Short(s)      => Some(Lit.String(s.toString))
-              case Lit.Int(i)        => Some(Lit.String(i.toString))
-              case Lit.Long(l)       => Some(Lit.String(l.toString))
-              case Lit.Float(f)      => Some(Lit.String(f))
-              case Lit.Double(d)     => Some(Lit.String(d))
-              case _                 => None
-            }
-            defaultStr.map(s => Mod.Annot(Init(Type.Name("DefaultValue"), Name.Anonymous(), List(List(s)))))
-          })
-          .toList ++ param.mods,
+      mods = defaultValue.flatMap { dv =>
+        val defaultStr = dv match {
+          case s @ Lit.String(_) => Some(s)
+          case Lit.Boolean(b)    => Some(Lit.String(b.toString))
+          case Lit.Byte(b)       => Some(Lit.String(b.toString))
+          case Lit.Char(c)       => Some(Lit.String(c.toString))
+          case Lit.Short(s)      => Some(Lit.String(s.toString))
+          case Lit.Int(i)        => Some(Lit.String(i.toString))
+          case Lit.Long(l)       => Some(Lit.String(l.toString))
+          case Lit.Float(f)      => Some(Lit.String(f))
+          case Lit.Double(d)     => Some(Lit.String(d))
+          case _                 => None
+        }
+        defaultStr.map(s => Mod.Annot(Init(Type.Name("DefaultValue"), Name.Anonymous(), List(List(s)))))
+      }.toList ++ param.mods,
       default = None
     )
 
     private def addValidation(param: Term.Param): Term.Param = param.copy(
       mods = List(mod"@(NotNull @param @field)") ++
-            param.decltpe
-              .flatMap({
-                case Type.Select(Term.Select(q"java", q"time"), Type.Name(_))                     => Some(mod"@UnwrapValidatedValue")
-                case Type.Select(Term.Select(q"GuardrailJerseySupport", q"Jsr310"), Type.Name(_)) => Some(mod"@UnwrapValidatedValue")
-                case _                                                                            => None
-              })
-              .toList ++ param.mods
+        param.decltpe.flatMap {
+          case Type.Select(Term.Select(q"java", q"time"), Type.Name(_))                     => Some(mod"@UnwrapValidatedValue")
+          case Type.Select(Term.Select(q"GuardrailJerseySupport", q"Jsr310"), Type.Name(_)) => Some(mod"@UnwrapValidatedValue")
+          case _                                                                            => None
+        }.toList ++ param.mods
     )
 
     private def transformJsr310Param(param: Term.Param): Term.Param = param.copy(
-      decltpe = param.decltpe.map({ tpe =>
+      decltpe = param.decltpe.map { tpe =>
         val (unwrapped, rewrap) = unwrapContainer(tpe)
         rewrap(unwrapped match {
           case Type.Select(Term.Select(q"java", q"time"), Type.Name(jsr310Type)) =>
             Type.Select(Term.Select(q"GuardrailJerseySupport", q"Jsr310"), Type.Name(s"${jsr310Type}Param"))
           case decltpe => decltpe
         })
-      })
+      }
     )
 
     def stripOptionFromCollections(param: Term.Param): Term.Param = param.copy(
-      decltpe = param.decltpe.map({
+      decltpe = param.decltpe.map {
         case Type.Apply(t"Option", List(Type.Apply(containerType, innerTypes))) if CONTAINER_TYPES.contains(containerType.toString) =>
           t"$containerType[..$innerTypes]"
         case other => other
-      })
+      }
     )
 
     def replaceFileParam(in: Option[String], isFile: Boolean)(param: Term.Param): Term.Param =
       if (!in.contains("body") && isFile)
         param.copy(
-          decltpe = param.decltpe.map({ tpe =>
+          decltpe = param.decltpe.map { tpe =>
             val (unwrapped, rewrap) = unwrapContainer(tpe)
             unwrapped match {
               case t"java.io.InputStream" => rewrap(t"java.io.File")
               case other                  => rewrap(other)
             }
-          })
+          }
         )
       else param
 
@@ -270,7 +265,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       protocolElems: List[StrictProtocolElems[ScalaLanguage]]
   ): Target[List[Defn]] = {
     val responseClsType = Type.Name(responseClsName)
-    val responseInstances: List[(Defn, Defn)] = responses.value.map({ response =>
+    val responseInstances: List[(Defn, Defn)] = responses.value.map { response =>
       val responseClsSubType = Type.Name(s"$responseClsName${response.statusCodeName}")
       val responseClsSubTerm = Term.Name(s"$responseClsName${response.statusCodeName}")
       val statusCodeTerm     = Lit.Int(response.statusCode)
@@ -279,14 +274,13 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
           q"case object $responseClsSubTerm extends $responseClsType($statusCodeTerm)",
           q"def ${response.statusCodeName}: $responseClsType = $responseClsSubTerm"
         )
-      )({
-        case (contentType, valueType, _) =>
-          (
-            q"case class $responseClsSubType(value: $valueType) extends $responseClsType($statusCodeTerm)",
-            q"def ${response.statusCodeName}(value: $valueType): $responseClsType = $responseClsSubTerm(value)"
-          )
-      })
-    })
+      ) { case (contentType, valueType, _) =>
+        (
+          q"case class $responseClsSubType(value: $valueType) extends $responseClsType($statusCodeTerm)",
+          q"def ${response.statusCodeName}(value: $valueType): $responseClsType = $responseClsSubTerm(value)"
+        )
+      }
+    }
     Target.pure(
       List(
         q"""sealed abstract class ${Type.Name(responseClsName)}(val statusCode: Int) extends Product with Serializable""",
@@ -316,9 +310,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
 
     val resourceNameTerm = Term.Name(resourceName)
 
-    val (routeMethods, handlerMethodSigs) = routes
-      .map({
-        case GenerateRouteMeta(
+    val (routeMethods, handlerMethodSigs) = routes.map {
+      case GenerateRouteMeta(
             operationId,
             methodName,
             responseClsName,
@@ -327,78 +320,78 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
             RouteMeta(path, method, operation, _),
             parameters,
             responses
-            ) =>
-          val pathSuffix     = ResponseHelpers.splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
-          val pathAnnotation = Option(pathSuffix).filter(_.nonEmpty).filterNot(_ == "/").map(p => mod"@Path(${Lit.String(p)})")
+          ) =>
+        val pathSuffix     = ResponseHelpers.splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
+        val pathAnnotation = Option(pathSuffix).filter(_.nonEmpty).filterNot(_ == "/").map(p => mod"@Path(${Lit.String(p)})")
 
-          val httpMethodAnnotation = Mod.Annot(Init(Type.Name(method.name()), Name.Anonymous(), List.empty))
+        val httpMethodAnnotation = Mod.Annot(Init(Type.Name(method.name()), Name.Anonymous(), List.empty))
 
-          val allConsumes        = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
-          val consumes           = ResponseHelpers.getBestConsumes(operation, allConsumes, parameters)
-          val consumesAnnotation = consumes.map(c => mod"@Consumes(Array(..${List(toJaxRsAnnotationName(c))}))")
+        val allConsumes        = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
+        val consumes           = ResponseHelpers.getBestConsumes(operation, allConsumes, parameters)
+        val consumesAnnotation = consumes.map(c => mod"@Consumes(Array(..${List(toJaxRsAnnotationName(c))}))")
 
-          def isTypePlain(tpe: Type): Boolean =
-            tpe match {
-              case Type.Name(name) if PLAIN_TYPES.contains(name)                 => true
-              case Type.Select(_, Type.Name(name)) if PLAIN_TYPES.contains(name) => true
-              case _                                                             => false
-            }
+        def isTypePlain(tpe: Type): Boolean =
+          tpe match {
+            case Type.Name(name) if PLAIN_TYPES.contains(name)                 => true
+            case Type.Select(_, Type.Name(name)) if PLAIN_TYPES.contains(name) => true
+            case _                                                             => false
+          }
 
-          val allProduces = operation.downField("produces", _.produces).map(_.flatMap(ContentType.unapply)).unwrapTracker
-          val producesAnnotation = NonEmptyList
-            .fromList(
-              responses.value
-                .flatMap(ResponseHelpers.getBestProduces[ScalaLanguage](operationId, allProduces, _, isTypePlain))
-                .distinct
-                .map(toJaxRsAnnotationName)
-            )
-            .map(producesTerms => mod"@Produces(Array(..${producesTerms.toList}))")
+        val allProduces = operation.downField("produces", _.produces).map(_.flatMap(ContentType.unapply)).unwrapTracker
+        val producesAnnotation = NonEmptyList
+          .fromList(
+            responses.value
+              .flatMap(ResponseHelpers.getBestProduces[ScalaLanguage](operationId, allProduces, _, isTypePlain))
+              .distinct
+              .map(toJaxRsAnnotationName)
+          )
+          .map(producesTerms => mod"@Produces(Array(..${producesTerms.toList}))")
 
-          val methodAnnotations = pathAnnotation.toList ++ List(httpMethodAnnotation) ++ consumesAnnotation ++ producesAnnotation
+        val methodAnnotations = pathAnnotation.toList ++ List(httpMethodAnnotation) ++ consumesAnnotation ++ producesAnnotation
 
-          val formParamAnnot = if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam"
-          val methodParams =
-            parameters.pathParams.map(paramTransformers.transform(_, Some("PathParam"))) ++
-                parameters.headerParams.map(paramTransformers.transform(_, Some("HeaderParam"))) ++
-                parameters.queryStringParams.map(paramTransformers.transform(_, Some("QueryParam"))) ++
-                parameters.formParams.map(paramTransformers.transform(_, Some(formParamAnnot))) ++
-                parameters.bodyParams.filter(_ => parameters.formParams.isEmpty).map(paramTransformers.transform(_, None)) ++
-                List(param"@Suspended asyncResponse: AsyncResponse")
+        val formParamAnnot = if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam"
+        val methodParams =
+          parameters.pathParams.map(paramTransformers.transform(_, Some("PathParam"))) ++
+            parameters.headerParams.map(paramTransformers.transform(_, Some("HeaderParam"))) ++
+            parameters.queryStringParams.map(paramTransformers.transform(_, Some("QueryParam"))) ++
+            parameters.formParams.map(paramTransformers.transform(_, Some(formParamAnnot))) ++
+            parameters.bodyParams.filter(_ => parameters.formParams.isEmpty).map(paramTransformers.transform(_, None)) ++
+            List(param"@Suspended asyncResponse: AsyncResponse")
 
-          val handlerParams = (
-            parameters.pathParams.map(_.param) ++
-                parameters.headerParams.map(_.param) ++
-                parameters.queryStringParams.map(_.param) ++
-                parameters.formParams.map(param => paramTransformers.replaceFileParam(param.in, param.isFile)(param.param)) ++
-                parameters.bodyParams.filter(_ => parameters.formParams.isEmpty).map(_.param)
-          ).map(paramTransformers.stripOptionFromCollections).map(_.copy(default = None))
+        val handlerParams = (
+          parameters.pathParams.map(_.param) ++
+            parameters.headerParams.map(_.param) ++
+            parameters.queryStringParams.map(_.param) ++
+            parameters.formParams.map(param => paramTransformers.replaceFileParam(param.in, param.isFile)(param.param)) ++
+            parameters.bodyParams.filter(_ => parameters.formParams.isEmpty).map(_.param)
+        ).map(paramTransformers.stripOptionFromCollections).map(_.copy(default = None))
 
-          val handlerArgs = handlerParams.map({ param =>
-            val nameTerm = Term.Name(param.name.value)
-            param.decltpe.fold[Term](nameTerm)({
-              case Type.Select(Term.Select(q"java", q"time"), _)                              => q"$nameTerm.get"
-              case Type.Apply(_, List(Type.Select(Term.Select(q"java", q"time"), _)))         => q"$nameTerm.map(_.get)"
-              case Type.Apply(t"Map", List(_, Type.Select(Term.Select(q"java", q"time"), _))) => q"$nameTerm.mapValues(_.get)"
-              case _                                                                          => nameTerm
-            })
-          })
+        val handlerArgs = handlerParams.map { param =>
+          val nameTerm = Term.Name(param.name.value)
+          param.decltpe.fold[Term](nameTerm) {
+            case Type.Select(Term.Select(q"java", q"time"), _)                              => q"$nameTerm.get"
+            case Type.Apply(_, List(Type.Select(Term.Select(q"java", q"time"), _)))         => q"$nameTerm.map(_.get)"
+            case Type.Apply(t"Map", List(_, Type.Select(Term.Select(q"java", q"time"), _))) => q"$nameTerm.mapValues(_.get)"
+            case _                                                                          => nameTerm
+          }
+        }
 
-          val responseCases = responses.value.map({ response =>
-            val responseClsSubName = s"$responseClsName${response.statusCodeName}"
-            val responseClsSubTerm = Term.Name(responseClsSubName)
-            response.value.fold(
-              p"case $resourceNameTerm.$responseClsSubTerm => responseBuilder.build()"
-            )({ _ =>
-              p"case ${Pat.Extract(Term.Select(resourceNameTerm, responseClsSubTerm), List(p"value"))} => responseBuilder.entity(value).build()"
-            })
-          })
+        val responseCases = responses.value.map { response =>
+          val responseClsSubName = s"$responseClsName${response.statusCodeName}"
+          val responseClsSubTerm = Term.Name(responseClsSubName)
+          response.value.fold(
+            p"case $resourceNameTerm.$responseClsSubTerm => responseBuilder.build()"
+          ) { _ =>
+            p"case ${Pat.Extract(Term.Select(resourceNameTerm, responseClsSubTerm), List(p"value"))} => responseBuilder.entity(value).build()"
+          }
+        }
 
-          val methodNameTerm  = Term.Name(methodName)
-          val responseClsTerm = Term.Select(resourceNameTerm, Term.Name(responseClsName))
-          val responseClsType = Type.Name(responseClsName)
-          val respondParam    = param"respond: ${Type.Singleton(responseClsTerm)}"
+        val methodNameTerm  = Term.Name(methodName)
+        val responseClsTerm = Term.Select(resourceNameTerm, Term.Name(responseClsName))
+        val responseClsType = Type.Name(responseClsName)
+        val respondParam    = param"respond: ${Type.Singleton(responseClsTerm)}"
 
-          val routeMethod = q"""
+        val routeMethod = q"""
            ..$methodAnnotations
            def ${Term.Name(methodName)}(..$methodParams): Unit =
              this.handler.$methodNameTerm($responseClsTerm)(..$handlerArgs).onComplete({
@@ -412,12 +405,11 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
              })
          """
 
-          val handlerRetTypeParam = t"$resourceNameTerm.$responseClsType"
-          val handlerMethodSig    = q"def $methodNameTerm($respondParam)(..$handlerParams): scala.concurrent.Future[$handlerRetTypeParam]"
+        val handlerRetTypeParam = t"$resourceNameTerm.$responseClsType"
+        val handlerMethodSig    = q"def $methodNameTerm($respondParam)(..$handlerParams): scala.concurrent.Future[$handlerRetTypeParam]"
 
-          (routeMethod: Stat, handlerMethodSig)
-      })
-      .unzip
+        (routeMethod: Stat, handlerMethodSig)
+    }.unzip
 
     val classPathAnnotation = mod"@Path(${Lit.String(fullPathPrefix)})"
 
@@ -445,13 +437,15 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[ScalaL
       securityExposure: SecurityExposure
   ): Target[List[Term.Param]] =
     for {
-      customExtraction <- if (customExtraction) {
-        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
-      } else Target.pure(List.empty)
+      customExtraction <-
+        if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
 
-      tracing <- if (tracing) {
-        Target.raiseUserError(s"Tracing is not yet supported by this framework")
-      } else Target.pure(List.empty)
+      tracing <-
+        if (tracing) {
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
+        } else Target.pure(List.empty)
     } yield (customExtraction ::: tracing)
 
   override def renderClass(

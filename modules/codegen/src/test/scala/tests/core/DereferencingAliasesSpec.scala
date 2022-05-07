@@ -142,7 +142,7 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
       ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       Clients(Client(_, clientName, _, clientStaticDefns, clientCls, _) :: _, Nil),
       _
-    )             = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp       = companionForStaticDefns(staticDefns)
     val clientCmp = companionForStaticDefns(clientStaticDefns)
 
@@ -209,7 +209,7 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
       ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       Clients(Client(_, clientName, _, clientStaticDefns, clientCls, _) :: _, Nil),
       _
-    )             = runSwaggerSpec(openAPI)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(openAPI)(Context.empty, AkkaHttp)
     val cmp       = companionForStaticDefns(staticDefns)
     val clientCmp = companionForStaticDefns(clientStaticDefns)
 

@@ -74,21 +74,21 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
 
   "Jackson can't build discriminators out of" - {
     "date types" in {
-      intercept[NoSuchElementException] { discriminatorExpression("2010-04-01T00:00:00Z", "string", Some("date-time")).value }
-      intercept[NoSuchElementException] { discriminatorExpression("2010-04-01", "string", Some("date")).value }
+      intercept[NoSuchElementException](discriminatorExpression("2010-04-01T00:00:00Z", "string", Some("date-time")).value)
+      intercept[NoSuchElementException](discriminatorExpression("2010-04-01", "string", Some("date")).value)
     }
 
     "arbitrary numeric types" in {
-      intercept[NoSuchElementException] { discriminatorExpression("3424", "integer", Some("foobaz")).value }
-      intercept[NoSuchElementException] { discriminatorExpression("3424.3123", "number", Some("foobaz")).value }
+      intercept[NoSuchElementException](discriminatorExpression("3424", "integer", Some("foobaz")).value)
+      intercept[NoSuchElementException](discriminatorExpression("3424.3123", "number", Some("foobaz")).value)
     }
 
     "random types" in {
-      intercept[NoSuchElementException] { discriminatorExpression("asdsd", "foobaz").value }
+      intercept[NoSuchElementException](discriminatorExpression("asdsd", "foobaz").value)
     }
 
     "non-matching string types" in {
-      intercept[NoSuchElementException] { discriminatorExpression("asdasd", "integer", Some("int32")).value }
+      intercept[NoSuchElementException](discriminatorExpression("asdasd", "integer", Some("int32")).value)
     }
   }
 }

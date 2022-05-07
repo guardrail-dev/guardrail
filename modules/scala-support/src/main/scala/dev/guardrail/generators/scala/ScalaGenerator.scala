@@ -25,12 +25,15 @@ object ScalaGenerator {
 
 class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
   private def sourceToBytes(path: Path, source: Source): WriteTree =
-    WriteTree(path, Future {
-      Target.pure((GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8))
-    })
+    WriteTree(
+      path,
+      Future {
+        Target.pure((GENERATED_CODE_COMMENT + source.syntax).getBytes(StandardCharsets.UTF_8))
+      }
+    )
 
-  private val buildTermSelect: NonEmptyList[String] => Term.Ref = {
-    case NonEmptyList(start, rest) => rest.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(start))(Term.Select.apply _)
+  private val buildTermSelect: NonEmptyList[String] => Term.Ref = { case NonEmptyList(start, rest) =>
+    rest.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(start))(Term.Select.apply _)
   }
 
   // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are
@@ -38,7 +41,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
   private val matchImplicit: PartialFunction[Stat, Defn.Val] = {
     case x: Defn.Val if (x match { case q"implicit val $_: $_ = $_" => true; case _ => false }) => x
   }
-  private val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse({ case _ => false })
+  private val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse { case _ => false }
 
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
@@ -86,10 +89,13 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
     Target.pure(
       tpe.unwrapTracker
         .parse[Type]
-        .fold({ err =>
-          println(s"Warning: Unparsable x-scala-type: ${tpe.unwrapTracker} $err (${tpe.showHistory})")
-          None
-        }, Option.apply _)
+        .fold(
+          { err =>
+            println(s"Warning: Unparsable x-scala-type: ${tpe.unwrapTracker} $err (${tpe.showHistory})")
+            None
+          },
+          Option.apply _
+        )
     )
   override def parseTypeName(tpe: String): Target[Option[scala.meta.Type.Name]] = Target.pure(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)))
   override def pureTermName(tpe: String): Target[scala.meta.Term.Name] =
@@ -127,10 +133,9 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
     Target.pure(result)
   }
   override def selectTerm(termNames: NonEmptyList[String]): Target[scala.meta.Term] = {
-    val result = termNames.tail.foldLeft[Term](Term.Name(termNames.head))({
-      case (current, next) =>
-        Term.Select(current, Term.Name(next))
-    })
+    val result = termNames.tail.foldLeft[Term](Term.Name(termNames.head)) { case (current, next) =>
+      Term.Select(current, Term.Name(next))
+    }
     Target.pure(result)
   }
   override def alterMethodParameterName(param: scala.meta.Term.Param, name: scala.meta.Term.Name): Target[scala.meta.Term.Param] =
@@ -186,7 +191,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       customImports: List[scala.meta.Import]
   ): Target[Option[WriteTree]] = {
     val pkg: Term.Ref = buildTermSelect(pkgName)
-    val implicits     = source"""
+    val implicits = source"""
           package $pkg
 
           ..$jsonImports
@@ -288,7 +293,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
     val pkg: Term.Ref            = buildTermSelect(pkgName)
     val implicitsRef: Term.Ref   = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
     val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildTermSelect(("_root_" :: pkgName) :+ name.value)}._")
-    val frameworkImplicitsFile   = source"""
+    val frameworkImplicitsFile = source"""
           package $pkg
 
           ..$jsonImports
@@ -313,7 +318,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       frameworkDefinitions: List[scala.meta.Defn],
       frameworkDefinitionsName: scala.meta.Term.Name
   ): Target[WriteTree] = {
-    val pkg: Term.Ref            = buildTermSelect(pkgName)
+    val pkg: Term.Ref = buildTermSelect(pkgName)
     val frameworkDefinitionsFile = source"""
           package $pkg
 
@@ -335,27 +340,24 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       extraTypes: List[scala.meta.Stat]
   ): Target[Option[WriteTree]] = {
     val pkgImplicitsImport = q"import ${buildTermSelect("_root_" :: pkgComponents)}.Implicits._"
-    dtoComponents.traverse({
-      case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
-        for {
-          dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))
-          dtoPkg = dtoRestNel.init.foldLeft[Term.Ref](Term.Name(dtoHead))({
-            case (acc, next) =>
-              Term.Select(acc, Term.Name(next))
-          })
-          companion       = Term.Name(s"${dtoRestNel.last}$$")
-          (_, statements) = packageObjectContents.partition(partitionImplicits)
-          implicits       = packageObjectContents.collect(matchImplicit)
-          mirroredImplicits <- implicits.traverse { stat =>
-            stat.pats match {
-              case List(Pat.Var(mirror)) => Target.pure(stat.copy(rhs = q"$companion.$mirror"))
-              case other                 => Target.raiseUserError(s"Attempt to mirror implicits failed, expected List(Pat.Var(...)), got ${other}")
-            }
+    dtoComponents.traverse { case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
+      for {
+        dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))
+        dtoPkg = dtoRestNel.init.foldLeft[Term.Ref](Term.Name(dtoHead)) { case (acc, next) =>
+          Term.Select(acc, Term.Name(next))
+        }
+        companion       = Term.Name(s"${dtoRestNel.last}$$")
+        (_, statements) = packageObjectContents.partition(partitionImplicits)
+        implicits       = packageObjectContents.collect(matchImplicit)
+        mirroredImplicits <- implicits.traverse { stat =>
+          stat.pats match {
+            case List(Pat.Var(mirror)) => Target.pure(stat.copy(rhs = q"$companion.$mirror"))
+            case other                 => Target.raiseUserError(s"Attempt to mirror implicits failed, expected List(Pat.Var(...)), got ${other}")
           }
-        } yield {
-          sourceToBytes(
-            dtoPackagePath.resolve("package.scala"),
-            source"""
+        }
+      } yield sourceToBytes(
+        dtoPackagePath.resolve("package.scala"),
+        source"""
             package $dtoPkg
 
             ..${customImports ++ packageObjectImports ++ protocolImports :+ pkgImplicitsImport}
@@ -368,9 +370,8 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
               ..${(mirroredImplicits ++ statements ++ extraTypes).toList}
             }
             """
-          )
-        }
-    })
+      )
+    }
   }
 
   override def writeProtocolDefinition(
@@ -452,7 +453,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
     Target.pure(
       List(
         sourceToBytes(
-          resolveFile(pkgPath)(pkg :+ (s"$clientName.scala")),
+          resolveFile(pkgPath)(pkg :+ s"$clientName.scala"),
           source"""
             package ${buildTermSelect(pkgName ++ pkg)}
             import ${buildTermSelect(("_root_" :: pkgName) :+ "Implicits")}._

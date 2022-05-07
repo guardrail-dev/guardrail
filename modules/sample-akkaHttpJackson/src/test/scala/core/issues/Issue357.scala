@@ -72,7 +72,10 @@ class Issue357Suite extends AnyFunSpec with TestImplicits with Matchers with Eit
             val _ = assert(status === StatusCodes.NoContent)
           }
 
-          Put(Uri("/\"qfoo\"").withQuery(Uri.Query("query" -> "\"qbar\"")), Multipart.FormData(Multipart.FormData.BodyPart("form", "\"qbaz\""))) ~> route ~> check {
+          Put(
+            Uri("/\"qfoo\"").withQuery(Uri.Query("query" -> "\"qbar\"")),
+            Multipart.FormData(Multipart.FormData.BodyPart("form", "\"qbaz\""))
+          ) ~> route ~> check {
             val _ = assert(status === StatusCodes.NoContent)
           }
         }
@@ -110,22 +113,21 @@ class Issue357Suite extends AnyFunSpec with TestImplicits with Matchers with Eit
     }
 
     def strictResponse[A](method: HttpMethod, extract: A => Option[String])(implicit um: FromEntityUnmarshaller[A]): HttpRequest => Future[HttpResponse] =
-      response[A](method, { x =>
-        Future.successful(extract(x))
-      })
+      response[A](
+        method,
+        x => Future.successful(extract(x))
+      )
 
     def response[A](method: HttpMethod, extract: A => Future[Option[String]])(implicit um: FromEntityUnmarshaller[A]): HttpRequest => Future[HttpResponse] = {
       case HttpRequest(`method`, uri, headers, entity, protocol) =>
         for {
           entity <- Unmarshal(entity).to[A]
           res    <- extract(entity)
-        } yield {
-          (uri.path, uri.query().get("query"), res) match {
-            case (pathRE("1234"), Some("2345"), Some("3456"))             => HttpResponse(204)
-            case (pathRE("foo"), Some("bar"), Some("baz"))                => HttpResponse(204)
-            case (pathRE("\"qfoo\""), Some("\"qbar\""), Some("\"qbaz\"")) => HttpResponse(204)
-            case _                                                        => HttpResponse(400)
-          }
+        } yield (uri.path, uri.query().get("query"), res) match {
+          case (pathRE("1234"), Some("2345"), Some("3456"))             => HttpResponse(204)
+          case (pathRE("foo"), Some("bar"), Some("baz"))                => HttpResponse(204)
+          case (pathRE("\"qfoo\""), Some("\"qbar\""), Some("\"qbaz\"")) => HttpResponse(204)
+          case _                                                        => HttpResponse(400)
         }
       case ex => failTest(s"Unknown: ${ex}")
     }

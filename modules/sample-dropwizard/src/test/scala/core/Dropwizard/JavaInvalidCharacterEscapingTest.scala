@@ -77,11 +77,9 @@ class JavaInvalidCharacterEscapingTest extends AnyFreeSpec with Matchers {
 
     val client   = new InvalidCharactersClient.Builder(new URI("http://localhost:1234")).withHttpClient(httpClient).build()
     val response = client.getFoo("firstarg", "secondarg", "thirdarg", "fourtharg").call().toCompletableFuture.get()
-    response.fold(
-      { invChar =>
-        invChar.getCloseSquareBraceMoo mustBe "foo"
-        invChar.getSomeEnumAsteriskCaret mustBe invalidCharacters.client.dropwizard.definitions.InvalidCharactersEnum.WEIRD_AT
-      }
-    )
+    response.fold { invChar =>
+      invChar.getCloseSquareBraceMoo mustBe "foo"
+      invChar.getSomeEnumAsteriskCaret mustBe invalidCharacters.client.dropwizard.definitions.InvalidCharactersEnum.WEIRD_AT
+    }
   }
 }

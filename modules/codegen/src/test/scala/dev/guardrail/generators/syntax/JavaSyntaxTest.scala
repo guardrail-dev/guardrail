@@ -26,9 +26,9 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
 
   "Reserved word escaper should" - {
     "Escape reserved words" in {
-      TEST_RESERVED_WORDS.foreach({ word =>
+      TEST_RESERVED_WORDS.foreach { word =>
         word.escapeReservedWord shouldBe (word + "_")
-      })
+      }
     }
 
     "Not escape non-reserved words" in {
@@ -40,17 +40,17 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
         "cheese",
         "blah-moo",
         "aasdad2"
-      ).foreach({ word =>
+      ).foreach { word =>
         word.escapeReservedWord shouldBe word
-      })
+      }
     }
   }
 
   "Identifier escaper should" - {
     "Escape identifiers that are reserved words" in {
-      TEST_RESERVED_WORDS.foreach({ word =>
+      TEST_RESERVED_WORDS.foreach { word =>
         word.escapeIdentifier shouldBe (word + "_")
-      })
+      }
     }
 
     "Escape identifiers that start with a number" in {
@@ -58,9 +58,9 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
         "2",
         "3foo",
         "4-bar"
-      ).foreach({ word =>
+      ).foreach { word =>
         word.escapeIdentifier shouldBe ("_" + word)
-      })
+      }
     }
 
     "Not escape identifiers that don't start with numbers" in {
@@ -69,16 +69,16 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
         "foo",
         "bar-baz",
         "quux"
-      ).foreach({ word =>
+      ).foreach { word =>
         word.escapeIdentifier shouldBe word
-      })
+      }
     }
 
     "Escape properly with a bunch of random stuff thrown at it" in {
       new Random().alphanumeric
         .grouped(20)
         .take(500)
-        .foreach({ wordChars =>
+        .foreach { wordChars =>
           val word    = wordChars.mkString
           val escaped = word.escapeIdentifier
           if ("^[0-9]".r.findFirstMatchIn(word).isDefined) {
@@ -86,7 +86,7 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
           } else {
             escaped shouldBe word
           }
-        })
+        }
     }
   }
 
@@ -105,9 +105,8 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
   }
 
   "Reserved method names should be escaped" in {
-    TEST_PARAMETER_NAMES.foreach({
-      case (name, escapedName) =>
-        getterMethodNameForParameter(name) shouldBe escapedName
-    })
+    TEST_PARAMETER_NAMES.foreach { case (name, escapedName) =>
+      getterMethodNameForParameter(name) shouldBe escapedName
+    }
   }
 }

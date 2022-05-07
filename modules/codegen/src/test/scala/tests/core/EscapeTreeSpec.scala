@@ -20,10 +20,9 @@ class EscapeTreeSpec extends AnyFunSuite with Matchers {
       "`dashy-param`: Option[Long] = None"
     ),
     (Type.Name("dashy-class"), "`dashy-class`")
-  ).foreach {
-    case (x, y) =>
-      test(s"${x.structure} should be escaped as ${y}") {
-        x.syntax shouldEqual (y)
-      }
+  ).foreach { case (x, y) =>
+    test(s"${x.structure} should be escaped as ${y}") {
+      x.syntax shouldEqual y
+    }
   }
 }

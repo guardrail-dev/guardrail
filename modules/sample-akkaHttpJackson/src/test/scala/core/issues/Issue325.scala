@@ -133,28 +133,26 @@ class Issue325Suite extends AnyFunSuite with TestImplicits with Matchers with Ei
           sreq     <- req.toStrict(Duration(5, SECONDS))
           chunks   <- Unmarshaller.multipartFormDataUnmarshaller.apply(sreq.entity)
           elements <- chunks.parts.runFold(List.empty[Multipart.FormData.BodyPart])(_ :+ _)
-          res <- elements.groupBy(_.name).toList.traverse {
-            case (name, chunks) =>
-              for {
-                chunks <- chunks.traverse[Future, Multipart.FormData.BodyPart.Strict](_.toStrict(Duration(5, SECONDS)))
-              } yield p(name, chunks)
+          res <- elements.groupBy(_.name).toList.traverse { case (name, chunks) =>
+            for {
+              chunks <- chunks.traverse[Future, Multipart.FormData.BodyPart.Strict](_.toStrict(Duration(5, SECONDS)))
+            } yield p(name, chunks)
           }
-        } yield {
+        } yield
           if (res.forall(_ == true)) {
             HttpResponse(200)
           } else {
             HttpResponse(500)
           }
-        }
     }
 
     Client
       .httpClient(
-        expectResponse({
+        expectResponse {
           case ("foo", chunks) if chunks.length == 1 && chunks.forall(_.entity.data.utf8String == "foo") => true
           case ("bar", chunks) if chunks.length == 1 && chunks.forall(_.entity.data.utf8String == "5")   => true
           case _                                                                                         => false
-        }),
+        },
         "http://localhost:80"
       )
       .testMultipleContentTypes("foo", 5)

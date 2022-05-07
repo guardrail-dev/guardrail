@@ -140,7 +140,7 @@ class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ???
       def getFrameworkImplicits(): dev.guardrail.Target[Option[
         (dev.guardrail.generators.scala.ScalaLanguage#TermName, dev.guardrail.generators.scala.ScalaLanguage#ObjectDefinition)
-      ]]                                                                                                                         = ???
+      ]] = ???
       def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]] = ???
       def lookupStatusCode(key: String): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)]      = ???
       def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type]            = Target.pure(t"io.circe.Json")
@@ -161,7 +161,7 @@ class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val definition = q"""
       case class BigObject(v1: Option[Int] = None, v2: Option[Int] = None, v3: Option[Int] = None, v4: Option[Int] = None, v5: Option[Int] = None, v6: Option[Int] = None, v7: Option[Int] = None, v8: Option[Int] = None, v9: Option[Int] = None, v10: Option[Int] = None, v11: Option[Int] = None, v12: Option[Int] = None, v13: Option[Int] = None, v14: Option[Int] = None, v15: Option[Int] = None, v16: Option[Int] = None, v17: Option[Int] = None, v18: Option[Int] = None, v19: Option[Int] = None, v20: Option[Int] = None, v21: Option[Int] = None, v22: Option[Int] = None, v23: Option[Int] = None, v24: Option[Int] = None, v25: Option[Int] = None, v26: Option[Int] = None, v27: Option[Int] = None, v28: Option[Int] = None, v29: Option[Int] = None, v30: Option[Int] = None)
     """
-    val companion  = q"""
+    val companion = q"""
       object BigObject {
         implicit val encodeBigObject: _root_.io.circe.Encoder.AsObject[BigObject] = {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()

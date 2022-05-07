@@ -48,19 +48,19 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet): Future[PetResource.AddPetResponse] =
         body match {
           case sdefs.Pet(
-              `id`,
-              Some(sdefs.Category(`categoryId`, `categoryName`)),
-              `name`,
-              `photoUrls`,
-              None,
-              Some(sdefs.PetStatus.Pending)
+                `id`,
+                Some(sdefs.Category(`categoryId`, `categoryName`)),
+                `name`,
+                `photoUrls`,
+                None,
+                Some(sdefs.PetStatus.Pending)
               ) =>
             Future.successful(respond.Created)
           case _ => failTest("Parameters didn't match")
         }
       def deletePet(
           respond: PetResource.DeletePetResponse.type
-      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
@@ -103,7 +103,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def findPetsByStatusEnum(
           respond: PetResource.FindPetsByStatusEnumResponse.type
       )(_status: sdefs.PetStatus): Future[PetResource.FindPetsByStatusEnumResponse] =
-        Future.successful(petStatus.fold(Vector.empty[sdefs.Pet])({ value =>
+        Future.successful(petStatus.fold(Vector.empty[sdefs.Pet]) { value =>
           if (_status.value == value) {
             Vector(
               sdefs.Pet(
@@ -118,12 +118,12 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
           } else {
             failTest("Parameters didn't match!")
           }
-        }))
+        })
 
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
           respond: PetResource.DeletePetResponse.type
-      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
@@ -171,7 +171,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
           respond: PetResource.DeletePetResponse.type
-      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
@@ -239,13 +239,14 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
 
     val result = petClient.deletePet(petId, Some(true), Some(cdefs.PetStatus.Pending), Some(apiKey)).value.futureValue
     result
-      .fold({ err =>
-        failTest(err.toString)
-      }, {
-        case DeletePetResponse.OK         => ()
-        case DeletePetResponse.BadRequest => ()
-        case DeletePetResponse.NotFound   => ()
-      })
+      .fold(
+        err => failTest(err.toString),
+        {
+          case DeletePetResponse.OK         => ()
+          case DeletePetResponse.BadRequest => ()
+          case DeletePetResponse.NotFound   => ()
+        }
+      )
   }
 
   test("round-trip: File uploads") {
@@ -255,7 +256,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
           respond: PetResource.DeletePetResponse.type
-      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
@@ -274,12 +275,11 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
           customValue: examples.support.PositiveLong,
           customOptionalValue: Option[examples.support.PositiveLong]
       ) = {
-        val f1Length = file.flatMap({
-          case (f, _, _) =>
-            if (f.exists) {
-              Some(f.length)
-            } else None
-        })
+        val f1Length = file.flatMap { case (f, _, _) =>
+          if (f.exists) {
+            Some(f.length)
+          } else None
+        }
         val f2Length = if (file2._1.exists) {
           Some(file2._1.length)
         } else None
@@ -311,10 +311,11 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       .value
       .futureValue
     result
-      .fold({ err =>
-        failTest(err.toString)
-      }, {
-        case UploadFileResponse.OK(resp) => assert(resp.code.exists(_ == 2), "Unexpected number of file uploads!")
-      })
+      .fold(
+        err => failTest(err.toString),
+        { case UploadFileResponse.OK(resp) =>
+          assert(resp.code.exists(_ == 2), "Unexpected number of file uploads!")
+        }
+      )
   }
 }

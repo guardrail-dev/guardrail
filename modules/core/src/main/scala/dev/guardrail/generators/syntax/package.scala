@@ -49,8 +49,8 @@ package object syntax extends SpecializedSyntax {
   implicit class RichString(private val s: String) extends AnyVal {
     private def splitParts(s: String): List[String] =
       BOUNDARY_SPLITTERS
-        .foldLeft(SPLIT_DELIMITERS.split(s))(
-          (last, splitter) => last.flatMap(part => splitter.replaceAllIn(part, m => quoteReplacement(m.group(1) + "-" + m.group(2))).split("-"))
+        .foldLeft(SPLIT_DELIMITERS.split(s))((last, splitter) =>
+          last.flatMap(part => splitter.replaceAllIn(part, m => quoteReplacement(m.group(1) + "-" + m.group(2))).split("-"))
         )
         .map(_.toLowerCase(Locale.US))
         .toList
@@ -60,9 +60,7 @@ package object syntax extends SpecializedSyntax {
     def toCamelCase: String =
       NonEmptyList
         .fromList(splitParts(s))
-        .fold("")(
-          parts => parts.head + parts.tail.map(_.capitalize).mkString
-        )
+        .fold("")(parts => parts.head + parts.tail.map(_.capitalize).mkString)
 
     def toSnakeCase: String = splitParts(s).mkString("_")
 

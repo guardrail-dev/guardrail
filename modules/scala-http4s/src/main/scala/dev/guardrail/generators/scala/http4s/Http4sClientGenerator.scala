@@ -73,23 +73,23 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
 
           _ <- Target.log.debug(s"QS: ${qsArgs}")
 
-          suffix = if (path.unwrapTracker.contains("?")) {
-            Lit.String("&")
-          } else {
-            Lit.String("?")
-          }
+          suffix =
+            if (path.unwrapTracker.contains("?")) {
+              Lit.String("&")
+            } else {
+              Lit.String("?")
+            }
 
           _ <- Target.log.debug(s"QS: ${qsArgs}")
 
           result = NonEmptyList
             .fromList(qsArgs.toList)
-            .fold(base)({
-              _.foldLeft[Term](q"${base} + ${suffix}") {
-                case (a, LanguageParameter(_, _, paramName, argName, _)) =>
-                  q""" $a + Formatter.addArg(${Lit
+            .fold(base) {
+              _.foldLeft[Term](q"${base} + ${suffix}") { case (a, LanguageParameter(_, _, paramName, argName, _)) =>
+                q""" $a + Formatter.addArg(${Lit
                     .String(argName.value)}, ${paramName})"""
               }
-            })
+            }
         } yield q"Uri.unsafeFromString(${result})"
       }
 
@@ -110,22 +110,19 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
           q"Some(Part.formData[F](${tName.toLit}, Formatter.show($tParamName)))"
 
         val lifter: Term.Param => (Term, RawParameterName) => Term = {
-          {
-            case param"$_: Option[fs2.Stream[F,Byte]]" =>
-              liftOptionFileTerm _
-            case param"$_: Option[fs2.Stream[F,Byte]] = $_" =>
-              liftOptionFileTerm _
-            case param"$_: fs2.Stream[F,Byte]"      => liftFileTerm _
-            case param"$_: fs2.Stream[F,Byte] = $_" => liftFileTerm _
-            case param"$_: Option[$_]"              => liftOptionTerm _
-            case param"$_: Option[$_] = $_"         => liftOptionTerm _
-            case _                                  => liftTerm _
-          }
+          case param"$_: Option[fs2.Stream[F,Byte]]" =>
+            liftOptionFileTerm _
+          case param"$_: Option[fs2.Stream[F,Byte]] = $_" =>
+            liftOptionFileTerm _
+          case param"$_: fs2.Stream[F,Byte]"      => liftFileTerm _
+          case param"$_: fs2.Stream[F,Byte] = $_" => liftFileTerm _
+          case param"$_: Option[$_]"              => liftOptionTerm _
+          case param"$_: Option[$_] = $_"         => liftOptionTerm _
+          case _                                  => liftTerm _
         }
 
-        val args: List[Term] = parameters.map {
-          case LanguageParameter(_, param, paramName, argName, _) =>
-            lifter(param)(paramName, argName)
+        val args: List[Term] = parameters.map { case LanguageParameter(_, param, paramName, argName, _) =>
+          lifter(param)(paramName, argName)
         }
         Some(q"List(..$args)")
       } else {
@@ -151,9 +148,8 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
           case _                                                                                       => liftTerm _
         }
 
-        val args: List[Term] = parameters.map {
-          case LanguageParameter(_, param, paramName, argName, _) =>
-            lifter(param)(paramName, argName)
+        val args: List[Term] = parameters.map { case LanguageParameter(_, param, paramName, argName, _) =>
+          lifter(param)(paramName, argName)
         }
         Some(q"List(..$args)")
       }
@@ -171,9 +167,8 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
         case _                          => liftTerm _
       }
 
-      val args: List[Term] = parameters.map {
-        case LanguageParameter(_, param, paramName, argName, _) =>
-          lifter(param)(paramName, argName)
+      val args: List[Term] = parameters.map { case LanguageParameter(_, param, paramName, argName, _) =>
+        lifter(param)(paramName, argName)
       }
       q"List[Option[Header.ToRaw]](..$args).flatten"
     }
@@ -214,18 +209,20 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
           }
         }
 
-        (tracingExpr, httpClientName) = if (tracing)
-          (List(q"""val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)"""), q"tracingHttpClient")
-        else
-          (List(), q"httpClient")
+        (tracingExpr, httpClientName) =
+          if (tracing)
+            (List(q"""val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)"""), q"tracingHttpClient")
+          else
+            (List(), q"httpClient")
         multipartExpr = formDataParams
           .filter(_ => formDataNeedsMultipart)
           .map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
-        headersExpr = if (formDataNeedsMultipart) {
-          List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)")
-        } else {
-          List(q"val allHeaders = headers ++ $headerParams")
-        }
+        headersExpr =
+          if (formDataNeedsMultipart) {
+            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)")
+          } else {
+            List(q"val allHeaders = headers ++ $headerParams")
+          }
         methodExpr = q"Method.${Term.Name(httpMethod.toString.toUpperCase)}"
         reqBinding = q"req"
         req        = q"Request[F](method = ${methodExpr}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
@@ -249,7 +246,7 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
         responseCompanionTerm = Term.Name(responseClsName)
         isGeneric             = ResponseADTHelper.isDefinitionGeneric(responses)
         baseResponseTypeRef   = Type.Name(responseClsName)
-        cases <- responses.value.traverse[Target, Case]({ resp =>
+        cases <- responses.value.traverse[Target, Case] { resp =>
           val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
           val statusCode   = Term.Select(p"_root_.org.http4s.Status", resp.statusCodeName)
           (resp.value, resp.headers.value) match {
@@ -280,55 +277,51 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
 
               }
           }
-        })
+        }
         // Get the response type
-        unexpectedCase = if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
-        else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
+        unexpectedCase =
+          if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
+          else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
         responseTypeRef = if (isGeneric) t"cats.effect.Resource[F, $baseResponseTypeRef[F]]" else t"F[$baseResponseTypeRef]"
-        executeReqExpr = if (isGeneric) List(q"""$httpClientName.run(${reqBinding}).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
-        else List(q"""$httpClientName.run(${reqBinding}).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
+        executeReqExpr =
+          if (isGeneric) List(q"""$httpClientName.run(${reqBinding}).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
+          else List(q"""$httpClientName.run(${reqBinding}).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
         methodBody: Term = q"""
             {
               ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
             }
             """
 
-        formParams = formArgs.map(
-          scalaParam =>
-            scalaParam.param.copy(
-              decltpe =
-                (
-                  if (scalaParam.isFile) {
-                    if (scalaParam.required) {
-                      Some(t"(String, Stream[F, Byte])")
-                    } else {
-                      Some(t"Option[(String, Stream[F, Byte])]")
-                    }
-                  } else {
-                    scalaParam.param.decltpe
-                  }
-                )
-            )
+        formParams = formArgs.map(scalaParam =>
+          scalaParam.param.copy(
+            decltpe = if (scalaParam.isFile) {
+              if (scalaParam.required) {
+                Some(t"(String, Stream[F, Byte])")
+              } else {
+                Some(t"Option[(String, Stream[F, Byte])]")
+              }
+            } else {
+              scalaParam.param.decltpe
+            }
+          )
         )
 
         arglists: List[List[Term.Param]] = List(
           Some(
             (tracingArgsPre.map(_.param) ++ pathArgs.map(_.param) ++ qsArgs
-                  .map(_.param) ++ formParams ++ body
-                  .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
-                  .map(_.param)) :+ defaultHeaders
+              .map(_.param) ++ formParams ++ body
+              .map(_.param) ++ headerArgs.map(_.param) ++ tracingArgsPost
+              .map(_.param)) :+ defaultHeaders
           ),
           implicitParams
         ).flatten
-      } yield {
-        RenderedClientOperation[ScalaLanguage](
-          q"""
+      } yield RenderedClientOperation[ScalaLanguage](
+        q"""
               def ${Term
             .Name(methodName)}(...${arglists}): $responseTypeRef = $methodBody
             """,
-          generateCodecs(methodName, body, responses, produces, consumes)
-        )
-      }
+        generateCodecs(methodName, body, responses, produces, consumes)
+      )
 
     Target.log.function("generateClientOperation")(for {
       // Placeholder for when more functions get logging
@@ -354,12 +347,14 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
       // Generate header arguments
       headerParams = generateHeaderParams(headerArgs)
 
-      tracingArgsPre = if (tracing)
-        List(LanguageParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
-      else List.empty
-      tracingArgsPost = if (tracing)
-        List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
-      else List.empty
+      tracingArgsPre =
+        if (tracing)
+          List(LanguageParameter.fromParam(param"traceBuilder: TraceBuilder[F]"))
+        else List.empty
+      tracingArgsPost =
+        if (tracing)
+          List(LanguageParameter.fromParam(param"methodName: String = ${Lit.String(methodName.toDashedCase)}"))
+        else List.empty
       extraImplicits = List.empty
 
       renderedClientOperation <- build(
@@ -439,24 +434,21 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
     }
 
     def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
-      params
-        .map({
-          _.map(_.name.value)
-            .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
-            .toList
-        })
-        .toList
+      params.map {
+        _.map(_.name.value)
+          .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
+          .toList
+      }.toList
 
-    val ctorCall: Term.New = {
+    val ctorCall: Term.New =
       q"""
           new ${Type
-        .Apply(Type.Name(clientName), List(Type.Name("F")))}(...${paramsToArgs(ctorArgs)})
+          .Apply(Type.Name(clientName), List(Type.Name("F")))}(...${paramsToArgs(ctorArgs)})
         """
-    }
 
     val decls: List[Defn] =
       q"""def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), List(Type.Name("F")))} = ${ctorCall}""" +:
-          extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
+        extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
     Target.pure(
       StaticDefns[ScalaLanguage](
         className = clientName,
@@ -513,9 +505,8 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
     generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
 
   def generateEncoders(methodName: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
-    bodyArgs.toList.flatMap {
-      case LanguageParameter(_, _, _, _, argType) =>
-        List(q"private[this] val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${ResponseADTHelper.generateEncoder(argType, consumes)}")
+    bodyArgs.toList.flatMap { case LanguageParameter(_, _, _, _, argType) =>
+      List(q"private[this] val ${Pat.Var(Term.Name(s"${methodName}Encoder"))} = ${ResponseADTHelper.generateEncoder(argType, consumes)}")
     }
 
   def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
@@ -523,7 +514,7 @@ class Http4sClientGenerator(implicit Cl: CollectionsLibTerms[ScalaLanguage, Targ
       resp <- responses.value
       tpe  <- resp.value.map(_._2)
     } yield {
-      val contentTypes = resp.value.map(_._1).map(List(_)).getOrElse(produces) //for OpenAPI 3.x we should take ContentType from the response
+      val contentTypes = resp.value.map(_._1).map(List(_)).getOrElse(produces) // for OpenAPI 3.x we should take ContentType from the response
       q"private[this] val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${ResponseADTHelper.generateDecoder(tpe, contentTypes)}"
     }
 }

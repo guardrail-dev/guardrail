@@ -25,10 +25,10 @@ object SecurityRequirements {
     for {
       convertedReqs <- NonEmptyList.fromList(
         requirements.toList
-          .flatMap({ requirement =>
+          .flatMap { requirement =>
             val nameAndScopes: Tracker[List[(String, List[String])]] = requirement.forceConvince.map(_.map(_.asScala.toList).value)
             nameAndScopes.map(reqs => NonEmptyMap.fromMap(TreeMap(reqs: _*))).indexedDistribute
-          })
+          }
       )
     } yield SecurityRequirements(convertedReqs, optional, location)
   }

@@ -7,14 +7,14 @@ import dev.guardrail.terms.framework._
 import scala.meta._
 
 object AkkaHttpGenerator {
-  def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(
-      implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]
+  def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(implicit
+      Cl: CollectionsLibTerms[ScalaLanguage, Target]
   ): FrameworkTerms[ScalaLanguage, Target] =
     new AkkaHttpGenerator(akkaHttpVersion, modelGeneratorType)
 }
 
-class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(
-    implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]
+class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(implicit
+    Cl: CollectionsLibTerms[ScalaLanguage, Target]
 ) extends FrameworkTerms[ScalaLanguage, Target] {
   override implicit def MonadF                  = Target.targetInstances
   override def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
@@ -48,9 +48,9 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
         q"import java.util.concurrent.atomic.AtomicReference",
         q"import scala.util.{Failure, Success}"
       ) ++ (modelGeneratorType match {
-            case _: CirceModelGenerator => List(q"import io.circe.Decoder")
-            case JacksonModelGenerator  => List()
-          })
+        case _: CirceModelGenerator => List(q"import io.circe.Decoder")
+        case JacksonModelGenerator  => List()
+      })
     )
 
   override def getFrameworkImplicits() = {
@@ -407,10 +407,15 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
       case "411" => Target.pure((411, q"LengthRequired"))
       case "412" => Target.pure((412, q"PreconditionFailed"))
       case "413" =>
-        Target.pure((413, akkaHttpVersion match {
-          case AkkaHttpVersion.V10_1 => q"RequestEntityTooLarge"
-          case AkkaHttpVersion.V10_2 => q"PayloadTooLarge"
-        }))
+        Target.pure(
+          (
+            413,
+            akkaHttpVersion match {
+              case AkkaHttpVersion.V10_1 => q"RequestEntityTooLarge"
+              case AkkaHttpVersion.V10_2 => q"PayloadTooLarge"
+            }
+          )
+        )
       case "414" => Target.pure((414, q"RequestUriTooLong"))
       case "415" => Target.pure((415, q"UnsupportedMediaType"))
       case "416" => Target.pure((416, q"RequestedRangeNotSatisfiable"))

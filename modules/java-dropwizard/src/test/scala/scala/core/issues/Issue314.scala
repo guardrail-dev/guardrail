@@ -38,22 +38,31 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
   describe("Java") {
 
     it("should be possible to define an arbitrary class name") {
-      verify(s"""
+      verify(
+        s"""
            |      x-java-package: users
            |      x-java-class-prefix: hello
-             """.stripMargin, "Hello")
+             """.stripMargin,
+        "Hello"
+      )
     }
 
     it("should use the last component of a package name as a class name") {
-      verify(s"""
+      verify(
+        s"""
            |      x-java-package: users
-           """.stripMargin, "Users")
+           """.stripMargin,
+        "Users"
+      )
     }
 
     it("should fallback to tags in order to determine class name") {
-      verify(s"""
+      verify(
+        s"""
            |      tags: [hello]
-         """.stripMargin, "Hello")
+         """.stripMargin,
+        "Hello"
+      )
     }
 
     it("should be possible to override a class name") {

@@ -42,10 +42,13 @@ class Http4sNativeAuthenticationTest extends AnyFunSuite with Matchers with Eith
         IO(respond.Ok(authContext.toString() + body))
     })
 
-    val authMiddleware = BasicAuth[IO, AuthContext]("http4s tests", {
-      case BasicCredentials("good", "login", _) => Option(authResult).pure[IO]
-      case _                                    => Option.empty[AuthContext].pure[IO]
-    })
+    val authMiddleware = BasicAuth[IO, AuthContext](
+      "http4s tests",
+      {
+        case BasicCredentials("good", "login", _) => Option(authResult).pure[IO]
+        case _                                    => Option.empty[AuthContext].pure[IO]
+      }
+    )
 
     authMiddleware(server)
   }

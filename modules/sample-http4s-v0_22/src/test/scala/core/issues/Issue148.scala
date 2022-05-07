@@ -9,10 +9,10 @@ import org.scalatest.matchers.should.Matchers
 
 /** Changes
   *
-  * - Server request body validation
-  * - Client responses
-  *   - No content vs Partial content vs Invalid content
-  * - Polymorphic discriminator error messages
+  *   - Server request body validation
+  *   - Client responses
+  *     - No content vs Partial content vs Invalid content
+  *   - Polymorphic discriminator error messages
   */
 class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
@@ -41,12 +41,12 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
     def failedResponseBody(req: Request[IO]): String =
       client
         .run(req)
-        .use({
+        .use {
           case Status.BadRequest(resp) =>
             resp.as[String]
           case Status.UnprocessableEntity(resp) =>
             resp.as[String]
-        })
+        }
         .unsafeRunSync()
 
     def makeJsonRequest(body: String): Request[IO] =

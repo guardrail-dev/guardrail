@@ -28,7 +28,7 @@ class NullableTest extends AnyFunSuite with Matchers with EitherValues {
   test("Nullability should be implemented correctly for optional") {
     val json = defaultObj.asJson
     getKey(json, "optional") should equal(None)
-    json.asObject.get.keys should not contain ("optional")
+    json.asObject.get.keys should not contain "optional"
     json.as[TestObject].value should equal(defaultObj)
 
     val obj2  = defaultObj.copy(optional = Presence.Present(constant))
@@ -57,7 +57,7 @@ class NullableTest extends AnyFunSuite with Matchers with EitherValues {
   test("Nullability should be implemented correctly for optional nullable") {
     val json = defaultObj.asJson
     getKey(json, "optional-nullable") should equal(None)
-    json.asObject.get.keys should not contain ("optional-nullable")
+    json.asObject.get.keys should not contain "optional-nullable"
     json.as[TestObject].value should equal(defaultObj)
 
     val objPresent  = defaultObj.copy(optionalNullable = Presence.Present(None))
