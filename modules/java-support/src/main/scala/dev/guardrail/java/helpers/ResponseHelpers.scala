@@ -20,12 +20,12 @@ object ResponseHelpers {
         Some(UrlencodedFormData)
       }
     } else {
-      parameters.bodyParams.map({ bodyParam =>
+      parameters.bodyParams.map { bodyParam =>
         CONSUMES_PRIORITY
           .collectFirstSome(ct => contentTypes.find(_ == ct))
-          .orElse(contentTypes.collectFirst({ case tc: TextContent => tc }))
-          .orElse(contentTypes.collectFirst({ case bc: BinaryContent => bc }))
-          .getOrElse({
+          .orElse(contentTypes.collectFirst { case tc: TextContent => tc })
+          .orElse(contentTypes.collectFirst { case bc: BinaryContent => bc })
+          .getOrElse {
             val fallback =
               bodyParam.rawType match {
                 case LiteralRawType(Some("object"), _) => ApplicationJson
@@ -33,8 +33,8 @@ object ResponseHelpers {
               }
             println(s"WARNING: no supported body param type at ${operation.showHistory}; falling back to $fallback")
             fallback
-          })
-      })
+          }
+      }
     }
 
   def getBestProduces[L <: LA](
@@ -45,19 +45,19 @@ object ResponseHelpers {
   ): Option[ContentType] =
     response.value
       .map(_._2)
-      .flatMap({ valueType =>
+      .flatMap { valueType =>
         PRODUCES_PRIORITY
           .collectFirstSome(ct => contentTypes.find(_ == ct))
-          .orElse(contentTypes.collectFirst({ case tc: TextContent => tc }))
-          .orElse(contentTypes.collectFirst({ case bc: BinaryContent => bc }))
-          .orElse({
+          .orElse(contentTypes.collectFirst { case tc: TextContent => tc })
+          .orElse(contentTypes.collectFirst { case bc: BinaryContent => bc })
+          .orElse {
             val fallback = if (fallbackIsString(valueType)) TextPlain else ApplicationJson
             println(
               s"WARNING: no supported body param type for operation '$operationId', response code ${response.statusCode}; falling back to ${fallback.value}"
             )
             Option(fallback)
-          })
-      })
+          }
+      }
 
   def removeEmpty(s: String): Option[String]       = Option(s.trim).filter(_.nonEmpty)
   def splitPathComponents(s: String): List[String] = s.split("/").flatMap(removeEmpty).toList

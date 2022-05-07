@@ -17,9 +17,9 @@ import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, ProtocolTerms, 
 
 object JavaModule extends AbstractModule[JavaLanguage] {
   private def catchClassNotFound[A](value: => A, error: => MissingDependency): Target[A] =
-    try {
+    try
       Target.pure(value)
-    } catch {
+    catch {
       case _: java.lang.NoClassDefFoundError =>
         Target.raiseError(error)
     }

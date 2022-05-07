@@ -41,9 +41,7 @@ class AkkaHttpFullTracerTest
     log(s"Expecting all requests to have ${traceHeaderKey} header, otherwise 400.")
     for {
       traceValue <- headerValueByName(traceHeaderKey)
-    } yield {
-      traceBuilder(traceValue)
-    }
+    } yield traceBuilder(traceValue)
   }
 
   def traceBuilder(parentValue: String)(implicit ec: ExecutionContext): TraceBuilder = {
@@ -86,7 +84,8 @@ class AkkaHttpFullTracerTest
             addressesClient
               .getAddress(traceBuilder, "addressId")
               .fold(
-                _ => respond.NotFound, {
+                _ => respond.NotFound,
+                {
                   case GetAddressResponse.OK(address) => respond.OK(sdefs.User("1234", sdefs.UserAddress(address.line1, address.line2, address.line3)))
                   case GetAddressResponse.NotFound    => respond.NotFound
                 }

@@ -18,14 +18,13 @@ import org.http4s.{ Charset, HttpRoutes, MediaType }
 class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
   import org.http4s.implicits._
   test("Plain text should be emitted for required parameters (raw)") {
-    val route: HttpRoutes[IO] = HttpRoutes.of {
-      case req @ POST -> Root / "foo" =>
-        if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
-          for {
-            value <- req.as[String]
-            resp  <- if (value == "sample") Created("response") else NotAcceptable()
-          } yield resp
-        } else NotAcceptable()
+    val route: HttpRoutes[IO] = HttpRoutes.of { case req @ POST -> Root / "foo" =>
+      if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
+        for {
+          value <- req.as[String]
+          resp  <- if (value == "sample") Created("response") else NotAcceptable()
+        } yield resp
+      } else NotAcceptable()
     }
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)
@@ -33,14 +32,13 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
   }
 
   test("Plain text should be emitted for optional parameters (raw)") {
-    val route: HttpRoutes[IO] = HttpRoutes.of {
-      case req @ POST -> Root / "bar" =>
-        if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
-          for {
-            value <- req.as[String]
-            resp  <- if (value == "sample") Created("response") else NotAcceptable()
-          } yield resp
-        } else NotAcceptable()
+    val route: HttpRoutes[IO] = HttpRoutes.of { case req @ POST -> Root / "bar" =>
+      if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
+        for {
+          value <- req.as[String]
+          resp  <- if (value == "sample") Created("response") else NotAcceptable()
+        } yield resp
+      } else NotAcceptable()
     }
     val client: Client[IO] = Client.fromHttpApp(route.orNotFound)
     val fooClient          = FooClient.httpClient(client)

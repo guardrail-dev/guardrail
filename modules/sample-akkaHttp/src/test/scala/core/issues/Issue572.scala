@@ -11,7 +11,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 class Issue572 extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   test("akka-http server can propagate headers to responses") {
     import issues.issue572.server.akkaHttp.{ Handler, Resource }
-    import issues.issue572.server.akkaHttp.definitions.{ Foo }
+    import issues.issue572.server.akkaHttp.definitions.Foo
     val route = Resource.routes(new Handler {
       override def getFoo(respond: Resource.GetFooResponse.type)(): scala.concurrent.Future[Resource.GetFooResponse] =
         Future.successful(respond.OK(Foo(Some("success")), "requiredHeader", Some("optionalHeader")))
@@ -38,7 +38,7 @@ class Issue572 extends AnyFunSuite with Matchers with EitherValues with ScalaFut
 
   test("akka-http server correctly propagates only required header") {
     import issues.issue572.server.akkaHttp.{ Handler, Resource }
-    import issues.issue572.server.akkaHttp.definitions.{ Foo }
+    import issues.issue572.server.akkaHttp.definitions.Foo
     val route = Resource.routes(new Handler {
       override def getFoo(respond: Resource.GetFooResponse.type)(): scala.concurrent.Future[Resource.GetFooResponse] =
         Future.successful(respond.OK(Foo(Some("success")), "requiredHeader", None))

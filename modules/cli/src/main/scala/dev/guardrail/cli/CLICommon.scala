@@ -92,73 +92,72 @@ trait CLICommon extends GuardrailRunner {
     val start: From = (List.empty[Args], args.toList)
     import Target.log.debug
     Target.log.function("parseArgs") {
-      FlatMap[Target].tailRecM[From, To](start)({
-        case pair @ (sofars, rest) =>
-          val empty = sofars
-            .filter(_.defaults)
-            .reverse
-            .headOption
-            .getOrElse(defaultArgs)
-            .copy(defaults = false)
-          def Continue(x: From): Target[Either[From, To]] = Target.pure(Either.left(x))
-          def Return(x: To): Target[Either[From, To]]     = Target.pure(Either.right(x))
-          def Bail(x: Error): Target[Either[From, To]]    = Target.raiseError(x)
-          for {
-            _ <- debug(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
-            step <- pair match {
-              case (already, Nil) =>
-                debug("Finished") >> Return(already)
-              case (Nil, xs @ (_ :: _)) => Continue((empty :: Nil, xs))
-              case (sofar :: already, "--defaults" :: xs) =>
-                Continue((empty.copy(defaults = true) :: sofar :: already, xs))
-              case (sofar :: already, "--client" :: xs) =>
-                Continue((empty :: sofar :: already, xs))
-              case (sofar :: already, "--server" :: xs) =>
-                Continue((empty.copy(kind = CodegenTarget.Server) :: sofar :: already, xs))
-              case (sofar :: already, "--models" :: xs) =>
-                Continue((empty.copy(kind = CodegenTarget.Models) :: sofar :: already, xs))
-              case (sofar :: already, "--framework" :: value :: xs) =>
-                Continue((sofar.copyContext(framework = Some(value)) :: already, xs))
-              case (sofar :: already, "--help" :: xs) =>
-                Continue((sofar.copy(printHelp = true) :: already, List.empty))
-              case (sofar :: already, "--specPath" :: value :: xs) =>
-                Continue((sofar.copy(specPath = Option(expandTilde(value))) :: already, xs))
-              case (sofar :: already, "--tracing" :: xs) =>
-                Continue((sofar.copyContext(tracing = true) :: already, xs))
-              case (sofar :: already, "--outputPath" :: value :: xs) =>
-                Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
-              case (sofar :: already, "--packageName" :: value :: xs) =>
-                Continue((sofar.copy(packageName = Option(value.trim.split('.').toList)) :: already, xs))
-              case (sofar :: already, "--dtoPackage" :: value :: xs) =>
-                Continue((sofar.copy(dtoPackage = value.trim.split('.').toList) :: already, xs))
-              case (sofar :: already, "--import" :: value :: xs) =>
-                Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
-              case (sofar :: already, "--module" :: value :: xs) =>
-                Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
-              case (sofar :: already, "--custom-extraction" :: xs) =>
-                Continue((sofar.copyContext(customExtraction = true) :: already, xs))
-              case (sofar :: already, "--package-from-tags" :: xs) =>
-                Continue((sofar.copyContext(tagsBehaviour = Context.PackageFromTags) :: already, xs))
-              case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
-                for {
-                  propertyRequirement <- parseOptionalProperty(arg, value)
-                  res                 <- Continue((sofar.copyPropertyRequirement(encoder = propertyRequirement) :: already, xs))
-                } yield res
-              case (sofar :: already, (arg @ "--optional-decode-as") :: value :: xs) =>
-                for {
-                  propertyRequirement <- parseOptionalProperty(arg, value)
-                  res                 <- Continue((sofar.copyPropertyRequirement(decoder = propertyRequirement) :: already, xs))
-                } yield res
-              case (sofar :: already, (arg @ "--auth-implementation") :: value :: xs) =>
-                for {
-                  auth <- parseAuthImplementation(arg, value)
-                  res  <- Continue((sofar.copyContext(authImplementation = auth) :: already, xs))
-                } yield res
-              case (_, unknown) =>
-                debug("Unknown argument") >> Bail(UnknownArguments(unknown))
-            }
-          } yield step
-      })
+      FlatMap[Target].tailRecM[From, To](start) { case pair @ (sofars, rest) =>
+        val empty = sofars
+          .filter(_.defaults)
+          .reverse
+          .headOption
+          .getOrElse(defaultArgs)
+          .copy(defaults = false)
+        def Continue(x: From): Target[Either[From, To]] = Target.pure(Either.left(x))
+        def Return(x: To): Target[Either[From, To]]     = Target.pure(Either.right(x))
+        def Bail(x: Error): Target[Either[From, To]]    = Target.raiseError(x)
+        for {
+          _ <- debug(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
+          step <- pair match {
+            case (already, Nil) =>
+              debug("Finished") >> Return(already)
+            case (Nil, xs @ (_ :: _)) => Continue((empty :: Nil, xs))
+            case (sofar :: already, "--defaults" :: xs) =>
+              Continue((empty.copy(defaults = true) :: sofar :: already, xs))
+            case (sofar :: already, "--client" :: xs) =>
+              Continue((empty :: sofar :: already, xs))
+            case (sofar :: already, "--server" :: xs) =>
+              Continue((empty.copy(kind = CodegenTarget.Server) :: sofar :: already, xs))
+            case (sofar :: already, "--models" :: xs) =>
+              Continue((empty.copy(kind = CodegenTarget.Models) :: sofar :: already, xs))
+            case (sofar :: already, "--framework" :: value :: xs) =>
+              Continue((sofar.copyContext(framework = Some(value)) :: already, xs))
+            case (sofar :: already, "--help" :: xs) =>
+              Continue((sofar.copy(printHelp = true) :: already, List.empty))
+            case (sofar :: already, "--specPath" :: value :: xs) =>
+              Continue((sofar.copy(specPath = Option(expandTilde(value))) :: already, xs))
+            case (sofar :: already, "--tracing" :: xs) =>
+              Continue((sofar.copyContext(tracing = true) :: already, xs))
+            case (sofar :: already, "--outputPath" :: value :: xs) =>
+              Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
+            case (sofar :: already, "--packageName" :: value :: xs) =>
+              Continue((sofar.copy(packageName = Option(value.trim.split('.').toList)) :: already, xs))
+            case (sofar :: already, "--dtoPackage" :: value :: xs) =>
+              Continue((sofar.copy(dtoPackage = value.trim.split('.').toList) :: already, xs))
+            case (sofar :: already, "--import" :: value :: xs) =>
+              Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
+            case (sofar :: already, "--module" :: value :: xs) =>
+              Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
+            case (sofar :: already, "--custom-extraction" :: xs) =>
+              Continue((sofar.copyContext(customExtraction = true) :: already, xs))
+            case (sofar :: already, "--package-from-tags" :: xs) =>
+              Continue((sofar.copyContext(tagsBehaviour = Context.PackageFromTags) :: already, xs))
+            case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
+              for {
+                propertyRequirement <- parseOptionalProperty(arg, value)
+                res                 <- Continue((sofar.copyPropertyRequirement(encoder = propertyRequirement) :: already, xs))
+              } yield res
+            case (sofar :: already, (arg @ "--optional-decode-as") :: value :: xs) =>
+              for {
+                propertyRequirement <- parseOptionalProperty(arg, value)
+                res                 <- Continue((sofar.copyPropertyRequirement(decoder = propertyRequirement) :: already, xs))
+              } yield res
+            case (sofar :: already, (arg @ "--auth-implementation") :: value :: xs) =>
+              for {
+                auth <- parseAuthImplementation(arg, value)
+                res  <- Continue((sofar.copyContext(authImplementation = auth) :: already, xs))
+              } yield res
+            case (_, unknown) =>
+              debug("Unknown argument") >> Bail(UnknownArguments(unknown))
+          }
+        } yield step
+      }
     }
   }
 
@@ -179,9 +178,9 @@ trait CLICommon extends GuardrailRunner {
       .getOrElse(LogLevels.Warning)
 
     val result = coreArgs
-      .flatMap({ args =>
+      .flatMap { args =>
         guardrailRunner(args.map(language -> _).toMap)
-      })
+      }
 
     val fallback = List.empty[Path]
     import CLICommon.unsafePrintHelp

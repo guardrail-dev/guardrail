@@ -15,17 +15,16 @@ import scala.concurrent.Future
 
 /** Changes
   *
-  * - Required String form param should accept empty string
-  * - Option String for param should accept emtpy string
+  *   - Required String form param should accept empty string
+  *   - Option String for param should accept emtpy string
   */
 class Issue405 extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
 
   implicit val rejectionHandler: RejectionHandler = RejectionHandler
     .newBuilder()
-    .handle {
-      case rej =>
-        complete(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, s"Request failed with $rej")))
+    .handle { case rej =>
+      complete(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, s"Request failed with $rej")))
     }
     .result()
 

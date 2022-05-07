@@ -15,25 +15,25 @@ case object FileDifferent extends WriteTreeState
 case object FileIdentical extends WriteTreeState
 case class WriteTree(path: Path, contents: Future[Target[Array[Byte]]])
 object WriteTree {
-  val writeTreeLogged: WriteTree => Target[Writer[List[String], Path]] = {
-    case WriteTree(path, dataF) =>
-      val _ = Files.createDirectories(path.getParent)
-      Await
-        .result(dataF, Duration.Inf)
-        .map { data =>
-          for {
-            writeState <- if (Files.exists(path)) {
+  val writeTreeLogged: WriteTree => Target[Writer[List[String], Path]] = { case WriteTree(path, dataF) =>
+    val _ = Files.createDirectories(path.getParent)
+    Await
+      .result(dataF, Duration.Inf)
+      .map { data =>
+        for {
+          writeState <-
+            if (Files.exists(path)) {
               val exists: Array[Byte] = Files.readAllBytes(path)
               val diffIdx: Option[Int] =
                 exists
                   .zip(data)
                   .zipWithIndex
-                  .find({ case ((a, b), _) => a != b })
+                  .find { case ((a, b), _) => a != b }
                   .map(_._2)
                   .orElse(Some(Math.max(exists.length, data.length)))
                   .filterNot(Function.const(data.length == exists.length))
 
-              diffIdx.fold[Writer[List[String], WriteTreeState]](Writer.value(FileIdentical))({ diffIdx =>
+              diffIdx.fold[Writer[List[String], WriteTreeState]](Writer.value(FileIdentical)) { diffIdx =>
                 val existSample = new String(exists, UTF_8)
                   .slice(Math.max(diffIdx - 10, diffIdx), Math.max(diffIdx - 10, diffIdx) + 50)
                   .replace("\n", "\\n")
@@ -48,21 +48,20 @@ object WriteTree {
                 |  Existing file: $existSample
                 |  New file     : $newSample
                 |""".stripMargin)) >> Writer.value(FileDifferent)
-              })
+              }
             } else Writer.value[List[String], WriteTreeState](FileAbsent)
-          } yield writeState match {
-            case FileAbsent    => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            case FileDifferent => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            case FileIdentical => path
-          }
+        } yield writeState match {
+          case FileAbsent    => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+          case FileDifferent => Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+          case FileIdentical => path
         }
+      }
   }
 
   val writeTree: WriteTree => Target[Path] =
-    writeTreeLogged(_).map {
-      case WriterT((lines, path)) =>
-        lines.foreach(System.err.println(_))
-        path
+    writeTreeLogged(_).map { case WriterT((lines, path)) =>
+      lines.foreach(System.err.println(_))
+      path
     }
 
   val unsafeWriteTreeLogged: WriteTree => Writer[List[String], Path] =

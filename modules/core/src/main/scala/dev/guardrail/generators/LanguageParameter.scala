@@ -50,8 +50,8 @@ object LanguageParameter {
 
   def fromParameter[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(
-      implicit Fw: FrameworkTerms[L, F],
+  )(implicit
+      Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
@@ -95,77 +95,76 @@ object LanguageParameter {
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
       param
-        .refine[F[(core.ResolvedType[L], Boolean)]]({ case r: Parameter if r.isRef => r })(
-          r =>
-            for {
-              name <- getRefParameterRef(r)
-              required = r.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
-            } yield (core.Deferred(name.unwrapTracker), required)
+        .refine[F[(core.ResolvedType[L], Boolean)]] { case r: Parameter if r.isRef => r }(r =>
+          for {
+            name <- getRefParameterRef(r)
+            required = r.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
+          } yield (core.Deferred(name.unwrapTracker), required)
         )
-        .orRefine({ case r: Parameter if paramHasRefSchema(r) => r })(
-          r =>
-            for {
-              ref <- getSimpleRef(r.downField("schema", _.getSchema))
-              required = r.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
-            } yield (core.Deferred(ref), required)
+        .orRefine { case r: Parameter if paramHasRefSchema(r) => r }(r =>
+          for {
+            ref <- getSimpleRef(r.downField("schema", _.getSchema))
+            required = r.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
+          } yield (core.Deferred(ref), required)
         )
-        .orRefine({ case x: Parameter if x.isInBody => x })(
-          param =>
-            for {
-              schema   <- getBodyParameterSchema(param)
-              resolved <- SwaggerUtil.modelMetaType[L, F](schema)
-              required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
-            } yield (resolved, required)
+        .orRefine { case x: Parameter if x.isInBody => x }(param =>
+          for {
+            schema   <- getBodyParameterSchema(param)
+            resolved <- SwaggerUtil.modelMetaType[L, F](schema)
+            required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
+          } yield (resolved, required)
         )
-        .orRefine({ case x: Parameter if x.isInHeader => x })(x => resolveParam(x, getHeaderParameterType))
-        .orRefine({ case x: Parameter if x.isInPath => x })(x => resolveParam(x, getPathParameterType))
-        .orRefine({ case x: Parameter if x.isInQuery => x })(x => resolveParam(x, getQueryParameterType))
-        .orRefine({ case x: Parameter if x.isInCookies => x })(x => resolveParam(x, getCookieParameterType))
-        .orRefine({ case x: Parameter if x.isInFormData => x })(x => resolveParam(x, getFormParameterType))
+        .orRefine { case x: Parameter if x.isInHeader => x }(x => resolveParam(x, getHeaderParameterType))
+        .orRefine { case x: Parameter if x.isInPath => x }(x => resolveParam(x, getPathParameterType))
+        .orRefine { case x: Parameter if x.isInQuery => x }(x => resolveParam(x, getQueryParameterType))
+        .orRefine { case x: Parameter if x.isInCookies => x }(x => resolveParam(x, getCookieParameterType))
+        .orRefine { case x: Parameter if x.isInFormData => x }(x => resolveParam(x, getFormParameterType))
         .orRefineFallback(fallbackParameterHandler)
     }
 
-    log.function(s"fromParameter")(for {
-      _                                                                 <- log.debug(parameter.unwrapTracker.showNotNull)
-      (meta, required)                                                  <- paramMeta(parameter)
-      core.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
+    log.function(s"fromParameter")(
+      for {
+        _                                                                 <- log.debug(parameter.unwrapTracker.showNotNull)
+        (meta, required)                                                  <- paramMeta(parameter)
+        core.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
 
-      declType <- if (!required) {
-        liftOptionalType(paramType)
-      } else {
-        paramType.pure[F]
-      }
+        declType <-
+          if (!required) {
+            liftOptionalType(paramType)
+          } else {
+            paramType.pure[F]
+          }
 
-      enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(_.pure[F])) { tpe =>
-        protocolElems
-          .flatTraverse({
-            case x @ EnumDefinition(_, _tpeName, _, _, _, _) =>
-              for {
-                areEqual <- typeNamesEqual(tpe, _tpeName)
-              } yield if (areEqual) List(x) else List.empty[EnumDefinition[L]]
-            case _ => List.empty[EnumDefinition[L]].pure[F]
-          })
-          .flatMap(_.headOption.fold[F[Option[L#Term]]](baseDefaultValue.traverse(_.pure[F])) { x =>
-            baseDefaultValue.traverse(lookupEnumDefaultValue(tpe, _, x.elems).flatMap(widenTermSelect))
-          })
-      })
+        enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(_.pure[F])) { tpe =>
+          protocolElems
+            .flatTraverse {
+              case x @ EnumDefinition(_, _tpeName, _, _, _, _) =>
+                for {
+                  areEqual <- typeNamesEqual(tpe, _tpeName)
+                } yield if (areEqual) List(x) else List.empty[EnumDefinition[L]]
+              case _ => List.empty[EnumDefinition[L]].pure[F]
+            }
+            .flatMap(_.headOption.fold[F[Option[L#Term]]](baseDefaultValue.traverse(_.pure[F])) { x =>
+              baseDefaultValue.traverse(lookupEnumDefaultValue(tpe, _, x.elems).flatMap(widenTermSelect))
+            })
+        })
 
-      defaultValue <- if (!required) {
-        (enumDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
-      } else {
-        enumDefaultValue.pure[F]
-      }
+        defaultValue <-
+          if (!required) {
+            (enumDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
+          } else {
+            enumDefaultValue.pure[F]
+          }
 
-      name <- getParameterName(parameter)
+        name <- getParameterName(parameter)
 
-      paramName     <- formatMethodArgName(name)
-      paramTermName <- pureTermName(paramName)
-      param         <- pureMethodParameter(paramTermName, declType, defaultValue)
+        paramName     <- formatMethodArgName(name)
+        paramTermName <- pureTermName(paramName)
+        param         <- pureMethodParameter(paramTermName, declType, defaultValue)
 
-      ftpe       <- fileType(None)
-      isFileType <- typesEqual(paramType, ftpe)
-    } yield {
-      new LanguageParameter[L](
+        ftpe       <- fileType(None)
+        isFileType <- typesEqual(paramType, ftpe)
+      } yield new LanguageParameter[L](
         parameter.downField("in", _.getIn()).unwrapTracker,
         param,
         paramTermName,
@@ -176,13 +175,13 @@ object LanguageParameter {
         FileHashAlgorithm(parameter),
         isFileType
       )
-    })
+    )
   }
 
   def fromParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]
-  )(
-      implicit Fw: FrameworkTerms[L, F],
+  )(implicit
+      Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F]
@@ -215,8 +214,7 @@ object LanguageParameter {
     } yield result
   }
 
-  /**
-    * Create method parameters from Swagger's Path parameters list. Use Option for non-required parameters.
+  /** Create method parameters from Swagger's Path parameters list. Use Option for non-required parameters.
     * @param params
     * @return
     */

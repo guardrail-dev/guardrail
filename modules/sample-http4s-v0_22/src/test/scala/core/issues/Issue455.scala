@@ -23,7 +23,7 @@ class Issue455Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       import issues.issue455.server.http4sV022.Resource.BooResponse
       import issues.issue455.server.http4sV022.definitions.RecursiveData
       new Resource[IO].routes(new Handler[IO] {
-        val recData                                                              = RecursiveData(3, "three", Some(RecursiveData(2, "two", Some(RecursiveData(1, "one", None)))))
+        val recData = RecursiveData(3, "three", Some(RecursiveData(2, "two", Some(RecursiveData(1, "one", None)))))
         def boo(respond: BooResponse.type)(body: RecursiveData): IO[BooResponse] = IO.pure(respond.Ok(recData))
       })
     }

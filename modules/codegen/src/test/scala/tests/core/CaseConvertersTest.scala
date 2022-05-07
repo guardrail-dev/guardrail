@@ -40,26 +40,26 @@ class CaseConvertersTest extends AnyFreeSpec with Matchers {
   import CaseConvertersTest._
 
   "Pascal case converter should work" in {
-    TEST_CASES.foreach({ testCase =>
+    TEST_CASES.foreach { testCase =>
       withClue(testCase)(testCase.raw.toPascalCase shouldBe testCase.expectedPascal)
-    })
+    }
   }
 
   "Camel case converter should work" in {
-    TEST_CASES.foreach({ testCase =>
+    TEST_CASES.foreach { testCase =>
       withClue(testCase)(testCase.raw.toCamelCase shouldBe testCase.expectedCamel)
-    })
+    }
   }
 
   "Snake case converter should work" in {
-    TEST_CASES.foreach({ testCase =>
+    TEST_CASES.foreach { testCase =>
       withClue(testCase)(testCase.raw.toSnakeCase shouldBe testCase.expectedSnake)
-    })
+    }
   }
 
   "Dashed case converter should work" in {
-    TEST_CASES.foreach({ testCase =>
+    TEST_CASES.foreach { testCase =>
       withClue(testCase)(testCase.raw.toDashedCase shouldBe testCase.expectedDashed)
-    })
+    }
   }
 }

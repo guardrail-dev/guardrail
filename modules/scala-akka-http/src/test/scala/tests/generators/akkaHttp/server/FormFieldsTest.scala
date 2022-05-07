@@ -51,7 +51,7 @@ class FormFieldsServerTest extends AnyFunSuite with Matchers with SwaggerSpecRun
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
     ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
 
-    val handler  = q"""
+    val handler = q"""
       trait Handler {
         def putFoo(respond: Resource.PutFooResponse.type)(foo: String, bar: Long, baz: (File, Option[String], ContentType, String)): scala.concurrent.Future[Resource.PutFooResponse]
         def putFooMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): File

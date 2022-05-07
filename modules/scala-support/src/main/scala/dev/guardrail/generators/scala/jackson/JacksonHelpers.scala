@@ -14,8 +14,8 @@ object JacksonHelpers {
       discriminatorName: String,
       discriminatorValue: String,
       discriminatorTpe: ReifiedRawType
-  )(litBigInteger: String => Target[L#Term], litBigDecimal: String => Target[L#Term], fallback: String => Target[L#Term])(
-      implicit Lt: LanguageTerms[L, Target]
+  )(litBigInteger: String => Target[L#Term], litBigDecimal: String => Target[L#Term], fallback: String => Target[L#Term])(implicit
+      Lt: LanguageTerms[L, Target]
   ): Target[L#Term] = {
     import Lt._
 

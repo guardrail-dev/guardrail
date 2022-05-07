@@ -52,9 +52,9 @@ class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerS
       .asClassOrInterfaceDeclaration()
       .getMembers
       .asScala
-      .collectFirst({
+      .collectFirst {
         case method: MethodDeclaration if method.getNameAsString == "foo" => method
-      })
+      }
       .value
       .getAnnotationByName("Produces")
       .asScala
@@ -94,5 +94,5 @@ class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerS
     annotationArrayValues.find(_.toString == "MediaType.APPLICATION.JSON") mustNot be(None)
     annotationArrayValues.find(_.toString == "MediaType.TEXT_PLAIN") mustNot be(None)
   }
- */
+   */
 }

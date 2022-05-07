@@ -37,16 +37,16 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     val formContentTypes = Set[ContentType](MultipartFormData, UrlencodedFormData)
     // FIXME: Just taking the head here isn't super great
     def unifyEntries: List[(String, Tracker[MediaType])] => Option[Tracker[Schema[_]]] =
-      _.flatMap({
+      _.flatMap {
         case (ContentType(contentType), mediaType) =>
           mediaType
-            .refine[Option[Tracker[Schema[_]]]]({ case mt @ MediaType(None, _, _) if contentType == TextPlain => mt })(
-              x => Option(Tracker.cloneHistory(x, new StringSchema()))
+            .refine[Option[Tracker[Schema[_]]]] { case mt @ MediaType(None, _, _) if contentType == TextPlain => mt }(x =>
+              Option(Tracker.cloneHistory(x, new StringSchema()))
             )
-            .orRefine({ case mt @ MediaType(schema, _, _) if !formContentTypes.contains(contentType) => schema })(_.indexedDistribute)
+            .orRefine { case mt @ MediaType(schema, _, _) if !formContentTypes.contains(contentType) => schema }(_.indexedDistribute)
             .orRefineFallback(_ => None)
         case _ => None
-      }).headOption
+      }.headOption
     for {
       schema <- unifyEntries(fields.value)
       tpe    <- schema.downField("type", _.getType()).indexedDistribute // TODO: Why is this here?
@@ -128,48 +128,46 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     type HashCode            = Int
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
-    val contentTypes: List[ContentType] = fields.value.collect({ case (ContentType(ct), _) => ct })
+    val contentTypes: List[ContentType] = fields.value.collect { case (ContentType(ct), _) => ct }
     val ((maxCount, instances), ps) = fields.value
-      .flatMap({
-        case (_, mt) =>
-          for {
-            mtSchema <- mt.downField("schema", _.getSchema()).indexedCosequence.toList
-            requiredFields = mtSchema.downField("required", _.getRequired).unwrapTracker.toSet
-            (name, schema) <- mtSchema.downField("properties", _.getProperties()).indexedCosequence.value
-          } yield {
-            val p = new Parameter
+      .flatMap { case (_, mt) =>
+        for {
+          mtSchema <- mt.downField("schema", _.getSchema()).indexedCosequence.toList
+          requiredFields = mtSchema.downField("required", _.getRequired).unwrapTracker.toSet
+          (name, schema) <- mtSchema.downField("properties", _.getProperties()).indexedCosequence.value
+        } yield {
+          val p = new Parameter
 
-            if (schema.downField("format", _.getFormat).unwrapTracker.contains("binary")) {
-              schema.unwrapTracker.setType("file")
-              schema.unwrapTracker.setFormat(null)
-            }
-
-            p.setName(name)
-            p.setIn("formData")
-            p.setSchema(schema.unwrapTracker)
-
-            val isRequired: Boolean = if (requiredFields.nonEmpty) {
-              requiredFields.contains(name)
-            } else {
-              required.unwrapTracker.getOrElse(false)
-            }
-
-            p.setRequired(isRequired)
-            p.setExtensions(schema.unwrapTracker.getExtensions)
-
-            if (schema.downField("type", _.getType()).indexedCosequence.exists(_.unwrapTracker == "file") && contentTypes.contains(UrlencodedFormData)) {
-              p.setRequired(false)
-            }
-
-            Tracker.cloneHistory(mt, p)
+          if (schema.downField("format", _.getFormat).unwrapTracker.contains("binary")) {
+            schema.unwrapTracker.setType("file")
+            schema.unwrapTracker.setFormat(null)
           }
-      })
+
+          p.setName(name)
+          p.setIn("formData")
+          p.setSchema(schema.unwrapTracker)
+
+          val isRequired: Boolean = if (requiredFields.nonEmpty) {
+            requiredFields.contains(name)
+          } else {
+            required.unwrapTracker.getOrElse(false)
+          }
+
+          p.setRequired(isRequired)
+          p.setExtensions(schema.unwrapTracker.getExtensions)
+
+          if (schema.downField("type", _.getType()).indexedCosequence.exists(_.unwrapTracker == "file") && contentTypes.contains(UrlencodedFormData)) {
+            p.setRequired(false)
+          }
+
+          Tracker.cloneHistory(mt, p)
+        }
+      }
       .traverse[State[ParameterCountState, *], Tracker[Parameter]] { p =>
-        State[ParameterCountState, Tracker[Parameter]]({
-          case (maxCount, instances) =>
-            val updated = instances.updated(p.unwrapTracker.hashCode, instances.getOrElse(p.unwrapTracker.hashCode, 0) + 1)
-            ((Math.max(maxCount, updated.values.foldLeft(0)(Math.max)), updated), p)
-        })
+        State[ParameterCountState, Tracker[Parameter]] { case (maxCount, instances) =>
+          val updated = instances.updated(p.unwrapTracker.hashCode, instances.getOrElse(p.unwrapTracker.hashCode, 0) + 1)
+          ((Math.max(maxCount, updated.values.foldLeft(0)(Math.max)), updated), p)
+        }
       }
       .runEmpty
       .value
@@ -185,12 +183,12 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     }
   }
 
-  private val parameters: List[Tracker[Parameter]] = {
+  private val parameters: List[Tracker[Parameter]] =
     operation.downField("parameters", _.getParameters()).indexedDistribute ++
       operation
         .downField("requestBody", _.getRequestBody())
         .map(_.toList)
-        .flatExtract({ requestBody =>
+        .flatExtract { requestBody =>
           val content  = requestBody.downField("content", _.getContent()).indexedCosequence
           val required = requestBody.downField("required", _.getRequired())
 
@@ -203,8 +201,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
           val params    = extractParamsFromRequestBody(content, required)
           val primitive = extractPrimitiveFromRequestBody(content, required)
           refParam.toList ++ params ++ primitive.toList
-        })
-  }
+        }
 
   def getParameters[L <: LA, F[_]](
       protocolElems: List[StrictProtocolElems[L]]

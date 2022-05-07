@@ -59,11 +59,11 @@ class DropwizardScalaJsr310Test extends AnyFreeSpec with Matchers with OptionVal
 
     handler match {
       case Defn.Trait(
-          _,
-          Type.Name("Handler"),
-          _,
-          _,
-          Template(_, _, _, List(defn: Decl.Def))
+            _,
+            Type.Name("Handler"),
+            _,
+            _,
+            Template(_, _, _, List(defn: Decl.Def))
           ) =>
         val List(
           List(_),
@@ -75,16 +75,12 @@ class DropwizardScalaJsr310Test extends AnyFreeSpec with Matchers with OptionVal
         ) = defn.paramss
     }
 
-    val resourceDefns = server
-      .collectFirst({
-        case Defn.Class(_, t"Resource", _, _, Template(_, _, _, defns)) => defns
-      })
-      .value
-    val doFooParamss = resourceDefns
-      .collectFirst({
-        case Defn.Def(_, Term.Name("doFoo"), _, paramss, _, _) => paramss
-      })
-      .value
+    val resourceDefns = server.collectFirst { case Defn.Class(_, t"Resource", _, _, Template(_, _, _, defns)) =>
+      defns
+    }.value
+    val doFooParamss = resourceDefns.collectFirst { case Defn.Def(_, Term.Name("doFoo"), _, paramss, _, _) =>
+      paramss
+    }.value
 
     val List(
       List(

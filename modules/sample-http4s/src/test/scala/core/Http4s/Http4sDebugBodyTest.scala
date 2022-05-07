@@ -42,8 +42,8 @@ class Http4sDebugBodyTest extends AnyFunSuite with Matchers with EitherValues wi
 
   test("should fail with a helpful error message") {
     val invalidJson = Json.obj(
-      ("invalidSomething1") -> Json.fromInt(1),
-      ("something2")        -> Json.fromString("something")
+      "invalidSomething1" -> Json.fromInt(1),
+      "something2"        -> Json.fromString("something")
     )
     val request        = sendRequest(server, invalidJson)
     val actualResponse = request.use(_.pure[IO]).unsafeRunSync()
@@ -58,15 +58,15 @@ class Http4sDebugBodyTest extends AnyFunSuite with Matchers with EitherValues wi
     val expectedErrorMessage =
       "The request body was invalid. Attempt to decode value on failed cursor: DownField(something1)"
 
-    actualErrorMessages should (have length (1))
+    actualErrorMessages should (have length 1)
     actualErrorMessages.head should equal(expectedErrorMessage)
     actualResponse.status should equal(Status.UnprocessableEntity)
   }
 
   test("should succeed when body is valid") {
     val validJson = Json.obj(
-      ("something1") -> Json.fromInt(1),
-      ("something2") -> Json.fromString("something")
+      "something1" -> Json.fromInt(1),
+      "something2" -> Json.fromString("something")
     )
     val request        = sendRequest(server, validJson)
     val actualResponse = request.use(_.pure[IO]).unsafeRunSync()

@@ -2,8 +2,7 @@ package dev.guardrail.terms.protocol
 
 sealed trait PropertyRequirement
 
-/**
-  * Types that are represented as Option[T]
+/** Types that are represented as Option[T]
   */
 object PropertyRequirement {
   case object Required         extends PropertyRequirement

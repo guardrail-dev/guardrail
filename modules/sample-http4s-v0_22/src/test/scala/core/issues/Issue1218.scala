@@ -47,10 +47,9 @@ class Issue1218Suite extends AnyFunSuite with Matchers with EitherValues with Sc
       cases =>
         val theirs = new QueryParamDecoderMatcher[A](key) {}
 
-        cases.foreach {
-          case (label, values) =>
-            val params = Map(key -> values)
-            ours.unapply(params) should contain theSameElementsAs (theirs.unapplySeq(params))
+        cases.foreach { case (label, values) =>
+          val params = Map(key -> values)
+          ours.unapply(params) should contain theSameElementsAs (theirs.unapplySeq(params))
         }
     }
   }
@@ -63,12 +62,13 @@ class Issue1218Suite extends AnyFunSuite with Matchers with EitherValues with Sc
       cases =>
         val theirs = new OptionalMultiQueryParamDecoderMatcher[A](key) {}
 
-        cases.foreach {
-          case (label, values) =>
-            val params = Map(key -> values)
-            ours.unapply(params) should contain theSameElementsAs (theirs.unapply(params).collectFirst {
-              case cats.data.Validated.Valid(value) => Option(value).filter(_.nonEmpty)
-            })
+        cases.foreach { case (label, values) =>
+          val params = Map(key -> values)
+          ours.unapply(params) should contain theSameElementsAs theirs
+            .unapply(params)
+            .collectFirst { case cats.data.Validated.Valid(value) =>
+              Option(value).filter(_.nonEmpty)
+            }
         }
     }
   }

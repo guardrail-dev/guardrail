@@ -44,7 +44,7 @@ class Http4sGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, T
       )
     )
   def getFrameworkImplicits() =
-    Target.pure({
+    Target.pure {
       val defn = q"""
           object Http4sImplicits {
             import scala.util.Try
@@ -77,7 +77,7 @@ class Http4sGenerator private (implicit Cl: CollectionsLibTerms[ScalaLanguage, T
           }
         """
       Some((q"Http4sImplicits", defn))
-    })
+    }
 
   def getFrameworkDefinitions(tracing: Boolean) =
     Target.pure(List.empty)

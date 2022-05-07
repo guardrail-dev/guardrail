@@ -44,7 +44,7 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     test(s"$version - Ensure routes are generated") {
       val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
 
-      val handler  = q"""
+      val handler = q"""
       trait StoreHandler[F[_]] {
 
         def getRoot(respond: StoreResource.GetRootResponse.type)(): F[StoreResource.GetRootResponse]

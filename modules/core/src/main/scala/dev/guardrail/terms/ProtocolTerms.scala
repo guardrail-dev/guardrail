@@ -216,7 +216,7 @@ abstract class ProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, 
           discriminator: Discriminator[L],
           parents: List[SuperClass[L]] = Nil,
           children: List[String] = Nil
-      )                                                                                             = newRenderSealedTrait(className, params, discriminator, parents, children)
+      ) = newRenderSealedTrait(className, params, discriminator, parents, children)
       def encodeADT(clsName: String, discriminator: Discriminator[L], children: List[String] = Nil) = newEncodeADT(clsName, discriminator, children)
       def decodeADT(clsName: String, discriminator: Discriminator[L], children: List[String] = Nil) = newDecodeADT(clsName, discriminator, children)
       def renderADTStaticDefns(clsName: String, discriminator: Discriminator[L], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]) =
@@ -233,7 +233,7 @@ abstract class ProtocolTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, 
           accessors: List[L#TermName],
           encoder: Option[L#Definition],
           decoder: Option[L#Definition]
-      ): F[StaticDefns[L]]                                 = newRenderStaticDefns(clsName, tpe, members, accessors, encoder, decoder)
+      ): F[StaticDefns[L]] = newRenderStaticDefns(clsName, tpe, members, accessors, encoder, decoder)
       def buildAccessor(clsName: String, termName: String) = newBuildAccessor(clsName, termName)
     }
   }

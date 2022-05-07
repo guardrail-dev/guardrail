@@ -44,12 +44,12 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet): IO[sdefs.pet.PetResource.AddPetResponse] =
         body match {
           case sdefs.definitions.Pet(
-              `id`,
-              Some(sdefs.definitions.Category(`categoryId`, `categoryName`)),
-              `name`,
-              `photoUrls`,
-              None,
-              Some(sdefs.definitions.PetStatus.Pending)
+                `id`,
+                Some(sdefs.definitions.Category(`categoryId`, `categoryName`)),
+                `name`,
+                `photoUrls`,
+                None,
+                Some(sdefs.definitions.PetStatus.Pending)
               ) =>
             IO.pure(respond.Created)
           case _ => throw new TestFailedException("Parameters didn't match", 11)
@@ -57,11 +57,11 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       def deletePet(
           respond: DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                 = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                       = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                    = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus) = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                          = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                             = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                               = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
       )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
@@ -100,32 +100,31 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       def findPetsByStatusEnum(
           respond: FindPetsByStatusEnumResponse.type
       )(_status: sdefs.definitions.PetStatus): IO[sdefs.pet.PetResource.FindPetsByStatusEnumResponse] =
-        IO.pure(petStatus.fold(Vector.empty[sdefs.definitions.Pet])({ value =>
-            if (_status.value == value) {
-              Vector(
-                sdefs.definitions.Pet(
-                  id = id,
-                  category = Some(sdefs.definitions.Category(categoryId, categoryName)),
-                  name = name,
-                  photoUrls = photoUrls,
-                  tags = None,
-                  status = sdefs.definitions.PetStatus.from(value)
-                )
+        IO.pure(petStatus.fold(Vector.empty[sdefs.definitions.Pet]) { value =>
+          if (_status.value == value) {
+            Vector(
+              sdefs.definitions.Pet(
+                id = id,
+                category = Some(sdefs.definitions.Category(categoryId, categoryName)),
+                name = name,
+                photoUrls = photoUrls,
+                tags = None,
+                status = sdefs.definitions.PetStatus.from(value)
               )
-            } else {
-              throw new TestFailedException("Parameters didn't match", 11)
-            }
-          }))
-          .map(respond.Ok)
+            )
+          } else {
+            throw new TestFailedException("Parameters didn't match", 11)
+          }
+        }).map(respond.Ok)
 
       def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
       def deletePet(
           respond: DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                 = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                       = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String]) = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])       = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
       )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
@@ -173,10 +172,10 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       def deletePet(
           respond: DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                       = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus) = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                          = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                             = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                               = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
       )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
@@ -238,9 +237,9 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
 
     val result = petClient.deletePet(petId, Some(true), Some(cdefs.definitions.PetStatus.Pending), Some(apiKey)).attempt.unsafeRunSync()
     result.left
-      .foreach({ err =>
+      .foreach { err =>
         throw new TestFailedException(err.toString, 11)
-      })
+      }
   }
 
   test("round-trip: File uploads") {
@@ -251,11 +250,11 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       def deletePet(
           respond: DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                                 = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                                       = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Iterable[String])                    = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus) = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Iterable[String])                          = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                             = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                               = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
       )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
@@ -274,13 +273,15 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
           f1Content <- file.fold(IO.pure(Vector.empty[Byte]))(_.compile.toVector)
           f1Length = if (f1Content.nonEmpty) Some(f1Content.length) else None
           f2Content <- file2.compile.toVector
-          f2Length = if (f2Content.nonEmpty) {
-            Some(f2Content.length)
-          } else None
+          f2Length =
+            if (f2Content.nonEmpty) {
+              Some(f2Content.length)
+            } else None
           f3Content <- file3.compile.toVector
-          f3Length = if (f3Content.nonEmpty) {
-            Some(f3Content.length)
-          } else None
+          f3Length =
+            if (f3Content.nonEmpty) {
+              Some(f3Content.length)
+            } else None
 
           hash = printHexBinary(MessageDigest.getInstance("SHA-256").digest(f3Content.toArray)).toLowerCase(US)
           _    = assert(hash == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "Empty file hash does not match")
@@ -307,10 +308,9 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       .unsafeRunSync
     result
       .fold(
-        { err =>
-          throw new TestFailedException(err.toString, 11)
-        }, {
-          case cdefs.pet.UploadFileResponse.Ok(value) => assert(value.code.contains(0), "Unexpected number of file uploads!")
+        err => throw new TestFailedException(err.toString, 11),
+        { case cdefs.pet.UploadFileResponse.Ok(value) =>
+          assert(value.code.contains(0), "Unexpected number of file uploads!")
         }
       )
   }

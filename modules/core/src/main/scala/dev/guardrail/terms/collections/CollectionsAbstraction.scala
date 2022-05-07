@@ -34,8 +34,8 @@ trait MonadF[L <: LA, F[_]] {
   def liftType(tpe: L#Type): L#Type
   def isType(tpe: L#Type): Boolean
   def pure[From <: L#Expression, A](fa: TermHolder[L, From, A]): TermHolder[L, L#Apply, F[A]]
-  def filter[From <: L#Expression, A, Func <: L#Expression](f: TermHolder[L, Func, A => Boolean])(fa: TermHolder[L, From, F[A]])(
-      implicit clsA: ClassTag[A]
+  def filter[From <: L#Expression, A, Func <: L#Expression](f: TermHolder[L, Func, A => Boolean])(fa: TermHolder[L, From, F[A]])(implicit
+      clsA: ClassTag[A]
   ): TermHolder[L, L#Apply, F[A]]
   def foreach[From <: L#Expression, A, Func <: L#Expression](f: TermHolder[L, Func, A => Unit])(fa: TermHolder[L, From, F[A]]): TermHolder[L, L#Apply, Unit]
   def map[From <: L#Expression, A, B, Func <: L#Expression](f: TermHolder[L, Func, A => B])(fa: TermHolder[L, From, F[A]]): TermHolder[L, L#Apply, F[B]]

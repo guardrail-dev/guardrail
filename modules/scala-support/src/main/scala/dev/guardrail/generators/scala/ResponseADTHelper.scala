@@ -19,31 +19,28 @@ object ResponseADTHelper {
     val responseSuperTerm     = Term.Name(responseClsName)
     val responseSuperTemplate = Init(if (isGeneric) Type.Apply(responseSuperType, extraTypes) else responseSuperType, Name(""), List.empty)
 
-    val (terms, foldPair) = responses.value
-      .map({
-        case Response(statusCodeName, valueType, headers) =>
-          val responseTerm = Term.Name(s"${statusCodeName.value}")
-          val responseName = Type.Name(s"${statusCodeName.value}")
+    val (terms, foldPair) = responses.value.map { case Response(statusCodeName, valueType, headers) =>
+      val responseTerm = Term.Name(s"${statusCodeName.value}")
+      val responseName = Type.Name(s"${statusCodeName.value}")
 
-          val foldHandleName = Term.Name(s"handle${statusCodeName.value}")
+      val foldHandleName = Term.Name(s"handle${statusCodeName.value}")
 
-          val allParams = valueType.map(tpe => (tpe, q"value")).toList ++ headers.value.map(h => (h.tpe, h.term))
-          allParams match {
-            case Nil if !isGeneric =>
-              val foldParameter = param"${foldHandleName}: => A"
-              val foldCase      = p"case ${responseSuperTerm}.${responseTerm} => ${foldHandleName}"
-              (q"case object $responseTerm extends $responseSuperTemplate", (foldParameter, foldCase))
-            case _ =>
-              val responseCaseType = if (isGeneric) t"$responseSuperTerm.$responseName[F]" else t"$responseSuperTerm.$responseName"
-              val foldParameter    = param"${foldHandleName}: (..${allParams.map(_._1)}) => A"
-              val foldCase         = p"case x: $responseCaseType => ${foldHandleName}(..${allParams.map(t => q"x.${t._2}")})"
-              (
-                q"case class  $responseName[..$extraTypeParams](..${allParams.map(t => param"${t._2}: ${t._1}")}) extends $responseSuperTemplate",
-                (foldParameter, foldCase)
-              )
-          }
-      })
-      .unzip
+      val allParams = valueType.map(tpe => (tpe, q"value")).toList ++ headers.value.map(h => (h.tpe, h.term))
+      allParams match {
+        case Nil if !isGeneric =>
+          val foldParameter = param"${foldHandleName}: => A"
+          val foldCase      = p"case ${responseSuperTerm}.${responseTerm} => ${foldHandleName}"
+          (q"case object $responseTerm extends $responseSuperTemplate", (foldParameter, foldCase))
+        case _ =>
+          val responseCaseType = if (isGeneric) t"$responseSuperTerm.$responseName[F]" else t"$responseSuperTerm.$responseName"
+          val foldParameter    = param"${foldHandleName}: (..${allParams.map(_._1)}) => A"
+          val foldCase         = p"case x: $responseCaseType => ${foldHandleName}(..${allParams.map(t => q"x.${t._2}")})"
+          (
+            q"case class  $responseName[..$extraTypeParams](..${allParams.map(t => param"${t._2}: ${t._1}")}) extends $responseSuperTemplate",
+            (foldParameter, foldCase)
+          )
+      }
+    }.unzip
 
     val (foldParams, foldCases) = foldPair.unzip
 
@@ -79,7 +76,7 @@ object ResponseADTHelper {
                     }
                   }
                 """
-        case _             => q"EntityDecoder[F, $tpe]"
+        case _ => q"EntityDecoder[F, $tpe]"
       }
 
   def generateEncoder(tpe: Type, produces: Seq[ContentType]): Term =
@@ -92,7 +89,7 @@ object ResponseADTHelper {
                     a.fold[Entity[F]](Entity.empty)(e => EntityEncoder[F, String].toEntity(e.toString))
                   }
                 """
-        case _             => q"EntityEncoder[F, $tpe]"
+        case _ => q"EntityEncoder[F, $tpe]"
       }
 
   def generateEntityResponseGenerator(term: Term.Ref): Term =
@@ -105,12 +102,11 @@ object ResponseADTHelper {
 
   def isDefinitionGeneric(responses: Responses[ScalaLanguage]): Boolean =
     responses.value.exists { response =>
-      response.value.exists {
-        case (_, tpe, _) =>
-          tpe match {
-            case t"fs2.Stream[F,Byte]" => true
-            case _                     => false
-          }
+      response.value.exists { case (_, tpe, _) =>
+        tpe match {
+          case t"fs2.Stream[F,Byte]" => true
+          case _                     => false
+        }
       }
     }
 
@@ -118,5 +114,5 @@ object ResponseADTHelper {
     consumesOrProduces.contains(ApplicationJson) ||
       consumesOrProduces.exists(ct => ct.value.startsWith("application/") && ct.value.endsWith("+json")) ||
       consumesOrProduces.isEmpty ||
-      consumesOrProduces.contains(AnyContentType) //guardrial converts missing contentTypes to */* what should be converted to JSON according OpenAPI
+      consumesOrProduces.contains(AnyContentType) // guardrial converts missing contentTypes to */* what should be converted to JSON according OpenAPI
 }

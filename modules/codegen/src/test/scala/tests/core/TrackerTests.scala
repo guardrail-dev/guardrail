@@ -84,7 +84,7 @@ Tracker should:
               .downField("child1", _.child1)
               .cotraverse(_.downField("grandchild", _.grandchild).indexedCosequence)
               .zipWithIndex
-              .foreach({ case (x, i) => x.foreach(x => assert(pattern(i) === x.showHistory)) })
+              .foreach { case (x, i) => x.foreach(x => assert(pattern(i) === x.showHistory)) }
           }
         }
 
@@ -95,7 +95,7 @@ Tracker should:
               .downField("child2", _.child2)
               .indexedCosequence
               .value
-              .foreach({ case (k, v) => assert(pattern(k) === v.showHistory) })
+              .foreach { case (k, v) => assert(pattern(k) === v.showHistory) }
           }
         }
       }
@@ -107,22 +107,22 @@ Tracker should:
           val p: Parent = new Child1(Some(g))
           assert(
             Tracker(p)
-              .refine({ case x: Child1 => x })(_.downField("grandchild", _.grandchild))
+              .refine { case x: Child1 => x }(_.downField("grandchild", _.grandchild))
               .toOption
               .flatMap(_.unwrapTracker) === Some(g)
           )
         }
         "variance" in {
-          assert(Tracker(new Child2).refine({ case x: Parent => x })(identity _).isRight)
+          assert(Tracker(new Child2).refine { case x: Parent => x }(identity _).isRight)
         }
       }
       "partialRefine" in {
         val p: Parent = new Child2
         assert(
           Tracker(p)
-            .refine[Boolean]({ case x: Child1 => x })(_ => ???)
-            .orRefine({ case x: Child2 => x })(_ => true)
-            .orRefine({ case x: Grandchild1 => x })(_ => ???)
+            .refine[Boolean] { case x: Child1 => x }(_ => ???)
+            .orRefine { case x: Child2 => x }(_ => true)
+            .orRefine { case x: Grandchild1 => x }(_ => ???)
             .getOrElse(???)
         )
       }

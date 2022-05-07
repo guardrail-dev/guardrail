@@ -56,7 +56,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
   class ShowStructuredLogger(desiredLevel: LogLevel) extends Show[StructuredLogger] {
     def show(value: StructuredLogger): String =
       value.entries
-        .foldLeft((Chain.empty[(LogLevel, NonEmptyChain[String], String)], Chain.empty[String]))({
+        .foldLeft((Chain.empty[(LogLevel, NonEmptyChain[String], String)], Chain.empty[String])) {
           case ((acc, newHistory), StructuredLoggerPop) =>
             (acc, newHistory.initLast.fold[Chain[String]](Chain.empty)(_._1))
           case ((acc, newHistory), StructuredLoggerPush(name)) =>
@@ -65,36 +65,33 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
             (acc, Chain.empty)
           case ((acc, newHistory), StructuredLogBlock(lines)) =>
             val newAcc: Chain[(LogLevel, NonEmptyChain[String], String)] = acc ++ lines
-                    .filter(_._1 >= desiredLevel)
-                    .map({
-                      case (level, message) =>
-                        (level, NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>")), message)
-                    })
-            (newAcc, newHistory)
-        })
-        ._1
-        .foldLeft((Chain.empty[String], Chain.empty[String]))({
-          case ((lastHistory, messages), (level, history, message)) =>
-            val showFullHistory = true
-            def makePrefix(history: Vector[String]): String =
-              history.foldLeft("  ") {
-                case (a, b) =>
-                  (if (showFullHistory) {
-                     a
-                   } else {
-                     (" " * a.length)
-                   }) + " " + b
+              .filter(_._1 >= desiredLevel)
+              .map { case (level, message) =>
+                (level, NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>")), message)
               }
+            (newAcc, newHistory)
+        }
+        ._1
+        .foldLeft((Chain.empty[String], Chain.empty[String])) { case ((lastHistory, messages), (level, history, message)) =>
+          val showFullHistory = true
+          def makePrefix(history: Vector[String]): String =
+            history.foldLeft("  ") { case (a, b) =>
+              (if (showFullHistory) {
+                 a
+               } else {
+                 (" " * a.length)
+               }) + " " + b
+            }
 
-            val historyVec         = history.toChain.toVector
-            val commonPrefixLength = historyVec.length - lastHistory.toVector.zip(historyVec).takeWhile(((_: String) == (_: String)).tupled).length
-            val histories = if (!showFullHistory) {
-              (1 until commonPrefixLength).map(i => s"${level.show} ${makePrefix(historyVec.take(i))}")
-            } else Nil
-            val prefix    = s"${level.show} ${makePrefix(historyVec)}: "
-            val formatted = (message.linesIterator.take(1).map(prefix + _) ++ message.linesIterator.drop(1).map((" " * prefix.length) + _)).mkString("\n")
-            (history.toChain, (messages ++ Chain.fromSeq(histories)) ++ Chain(formatted))
-        })
+          val historyVec         = history.toChain.toVector
+          val commonPrefixLength = historyVec.length - lastHistory.toVector.zip(historyVec).takeWhile(((_: String) == (_: String)).tupled).length
+          val histories = if (!showFullHistory) {
+            (1 until commonPrefixLength).map(i => s"${level.show} ${makePrefix(historyVec.take(i))}")
+          } else Nil
+          val prefix    = s"${level.show} ${makePrefix(historyVec)}: "
+          val formatted = (message.linesIterator.take(1).map(prefix + _) ++ message.linesIterator.drop(1).map((" " * prefix.length) + _)).mkString("\n")
+          (history.toChain, (messages ++ Chain.fromSeq(histories)) ++ Chain(formatted))
+        }
         ._2
         .toVector
         .mkString("\n")

@@ -18,23 +18,21 @@ object Discriminator {
         .downField("discriminator", _.getDiscriminator)
         .indexedDistribute
         .flatMap(x => x.downField("propertyName", _.getPropertyName()).indexedDistribute.map((x, _)))
-        .traverse {
-          case (x, Tracker(_, propertyName)) =>
-            val possibleMappings = x
-              .downField("mapping", _.getMapping())
-              .indexedDistribute
-              .value
-              .flatMap({
-                case (k, s) if s.unwrapTracker.startsWith("#/") => s.map(_.split("/").lastOption.filter(_.nonEmpty)).indexedDistribute.map((k, _))
-                case (k, s)                                     => Option((k, s))
-              })
-              .toList
-            for {
-              mapping <- possibleMappings.flatTraverse({
-                case (key, name) =>
-                  parseType(name).map(_.map(tpe => (key, RandomType(name.unwrapTracker, tpe))).toList)
-              })
-            } yield Discriminator[L](propertyName, mapping.toMap)
+        .traverse { case (x, Tracker(_, propertyName)) =>
+          val possibleMappings = x
+            .downField("mapping", _.getMapping())
+            .indexedDistribute
+            .value
+            .flatMap {
+              case (k, s) if s.unwrapTracker.startsWith("#/") => s.map(_.split("/").lastOption.filter(_.nonEmpty)).indexedDistribute.map((k, _))
+              case (k, s)                                     => Option((k, s))
+            }
+            .toList
+          for {
+            mapping <- possibleMappings.flatTraverse { case (key, name) =>
+              parseType(name).map(_.map(tpe => (key, RandomType(name.unwrapTracker, tpe))).toList)
+            }
+          } yield Discriminator[L](propertyName, mapping.toMap)
         }
     }
 }

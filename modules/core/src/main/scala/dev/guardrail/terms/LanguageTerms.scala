@@ -389,7 +389,7 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
           frameworkImplicitNames: List[L#TermName],
           dtoComponents: Option[NonEmptyList[String]],
           server: Server[L]
-      )                                                                                            = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, server)
+      ) = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, server)
       def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) = newWrapToObject(name, imports, definitions)
     }
   }

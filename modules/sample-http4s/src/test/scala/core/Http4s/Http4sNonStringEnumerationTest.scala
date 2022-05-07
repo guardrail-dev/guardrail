@@ -97,16 +97,15 @@ class Http4sNonStringEnumerationTest extends AnyFunSuite with Matchers with Eith
     val expectedBody     = cdefs.IntEnum.IntEnum3
     val expectedResponse = cdefs.StringEnum.ILikeSpaces
 
-    val httpService = HttpRoutes.of[IO] {
-      case req @ Method.POST -> Root / "foo" / intEnum :? LongParamMatcher(longEnum) :? StringParamMatcher(stringEnum) =>
-        for {
-          body <- req.as[Json]
-          _    <- cond(intEnum == expectedInt.value.toString(), "intEnum value did not match")
-          _    <- cond(longEnum.exists(_ == expectedLong.value), "longEnum value did not match")
-          _    <- cond(stringEnum.exists(_ == expectedString.value), "stringEnum value did not match")
-          _    <- cond(body == Json.fromInt(expectedBody.value), "body value did not match")
-          resp <- Created(Json.fromString(expectedResponse.value))
-        } yield resp
+    val httpService = HttpRoutes.of[IO] { case req @ Method.POST -> Root / "foo" / intEnum :? LongParamMatcher(longEnum) :? StringParamMatcher(stringEnum) =>
+      for {
+        body <- req.as[Json]
+        _    <- cond(intEnum == expectedInt.value.toString(), "intEnum value did not match")
+        _    <- cond(longEnum.exists(_ == expectedLong.value), "longEnum value did not match")
+        _    <- cond(stringEnum.exists(_ == expectedString.value), "stringEnum value did not match")
+        _    <- cond(body == Json.fromInt(expectedBody.value), "body value did not match")
+        resp <- Created(Json.fromString(expectedResponse.value))
+      } yield resp
     }
 
     val fooClient = FooClient.httpClient(Client.fromHttpApp(httpService.orNotFound), "http://localhost:1234")

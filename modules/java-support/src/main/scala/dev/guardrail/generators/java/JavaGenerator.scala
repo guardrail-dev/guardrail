@@ -5,7 +5,7 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.ast.Modifier._
 import com.github.javaparser.ast._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, ArrayType => AstArrayType }
+import com.github.javaparser.ast.`type`.{ ArrayType => AstArrayType, ClassOrInterfaceType, PrimitiveType, Type }
 import com.github.javaparser.ast.body.{ BodyDeclaration, ClassOrInterfaceDeclaration, Parameter, TypeDeclaration }
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt.Statement
@@ -159,11 +159,10 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
   override def parseType(tpe: Tracker[String]): Target[Option[com.github.javaparser.ast.`type`.Type]] =
     safeParseType(tpe.unwrapTracker)
       .map(Option.apply)
-      .recover({
-        case err =>
-          println(s"Warning: Unparsable x-java-type: ${tpe.unwrapTracker} $err (${tpe.showHistory})")
-          None
-      })
+      .recover { case err =>
+        println(s"Warning: Unparsable x-java-type: ${tpe.unwrapTracker} $err (${tpe.showHistory})")
+        None
+      }
   override def parseTypeName(tpe: String): Target[Option[JavaTypeName]] = Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseTypeName)
   override def pureTermName(tpe: String): Target[com.github.javaparser.ast.expr.Name] =
     Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseUserError("A structure's name is empty"))
@@ -176,7 +175,7 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
       default: Option[com.github.javaparser.ast.Node]
   ): Target[com.github.javaparser.ast.body.Parameter] =
     safeParseSimpleName(nameStr.asString).map(name => new Parameter(new NodeList(finalModifier), tpe, name))
-  override def typeNamesEqual(a: JavaTypeName, b: JavaTypeName): Target[Boolean]                                               = Target.pure(a.asString == b.asString)
+  override def typeNamesEqual(a: JavaTypeName, b: JavaTypeName): Target[Boolean] = Target.pure(a.asString == b.asString)
   override def typesEqual(a: com.github.javaparser.ast.`type`.Type, b: com.github.javaparser.ast.`type`.Type): Target[Boolean] = Target.pure(a.equals(b))
   override def extractTypeName(tpe: com.github.javaparser.ast.`type`.Type): Target[Option[JavaTypeName]] = {
     def extractTypeName(tpe: Type): Target[JavaTypeName] = tpe match {
@@ -213,16 +212,16 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
       )
     )
 
-  override def bytesType(): Target[com.github.javaparser.ast.`type`.Type]                         = Target.raiseUserError("format: bytes not supported for Java")
-  override def uuidType(): Target[com.github.javaparser.ast.`type`.Type]                          = safeParseType("java.util.UUID")
-  override def dateType(): Target[com.github.javaparser.ast.`type`.Type]                          = safeParseType("java.time.LocalDate")
-  override def dateTimeType(): Target[com.github.javaparser.ast.`type`.Type]                      = safeParseType("java.time.OffsetDateTime")
-  override def stringType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type]  = format.fold(Target.pure[Type](STRING_TYPE))(safeParseType)
-  override def floatType(): Target[com.github.javaparser.ast.`type`.Type]                         = safeParseType("Float")
-  override def doubleType(): Target[com.github.javaparser.ast.`type`.Type]                        = safeParseType("Double")
-  override def numberType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type]  = safeParseType("java.math.BigDecimal")
-  override def intType(): Target[com.github.javaparser.ast.`type`.Type]                           = safeParseType("Integer")
-  override def longType(): Target[com.github.javaparser.ast.`type`.Type]                          = safeParseType("Long")
+  override def bytesType(): Target[com.github.javaparser.ast.`type`.Type]                        = Target.raiseUserError("format: bytes not supported for Java")
+  override def uuidType(): Target[com.github.javaparser.ast.`type`.Type]                         = safeParseType("java.util.UUID")
+  override def dateType(): Target[com.github.javaparser.ast.`type`.Type]                         = safeParseType("java.time.LocalDate")
+  override def dateTimeType(): Target[com.github.javaparser.ast.`type`.Type]                     = safeParseType("java.time.OffsetDateTime")
+  override def stringType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = format.fold(Target.pure[Type](STRING_TYPE))(safeParseType)
+  override def floatType(): Target[com.github.javaparser.ast.`type`.Type]                        = safeParseType("Float")
+  override def doubleType(): Target[com.github.javaparser.ast.`type`.Type]                       = safeParseType("Double")
+  override def numberType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType("java.math.BigDecimal")
+  override def intType(): Target[com.github.javaparser.ast.`type`.Type]                          = safeParseType("Integer")
+  override def longType(): Target[com.github.javaparser.ast.`type`.Type]                         = safeParseType("Long")
   override def integerType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType("java.math.BigInteger")
   override def booleanType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType("Boolean")
   override def fallbackType(tpe: Option[String], format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] =
@@ -313,8 +312,8 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
   ): Target[Option[WriteTree]] =
     for {
       pkgDecl <- dtoComponents.traverse(buildPkgDecl)
-      writeTree <- pkgDecl.traverse(
-        x => prettyPrintSource(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), new CompilationUnit().setPackageDeclaration(x))
+      writeTree <- pkgDecl.traverse(x =>
+        prettyPrintSource(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), new CompilationUnit().setPackageDeclaration(x))
       )
     } yield writeTree
 
@@ -376,8 +375,8 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
         case RandomType(_, _) =>
           Option.empty
       }
-      writeTree <- nameAndCompilationUnit.traverse {
-        case (name, cu) => prettyPrintSource(resolveFile(outputPath)(dtoComponents.toList).resolve(s"$name.java"), cu)
+      writeTree <- nameAndCompilationUnit.traverse { case (name, cu) =>
+        prettyPrintSource(resolveFile(outputPath)(dtoComponents.toList).resolve(s"$name.java"), cu)
       }
     } yield (writeTree.toList, List.empty[Statement])
   override def writeClient(

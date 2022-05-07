@@ -26,8 +26,7 @@ object Common {
       swagger: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String]
-  )(
-      implicit
+  )(implicit
       C: ClientTerms[L, F],
       Fw: FrameworkTerms[L, F],
       P: ProtocolTerms[L, F],
@@ -47,19 +46,20 @@ object Common {
       serverUrls = NonEmptyList.fromList(
         swagger
           .downField("servers", _.getServers)
-          .flatExtract(
-            server =>
-              server
-                .downField("url", _.getUrl)
-                .unwrapTracker
-                .map({ x =>
-                  val uri = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
-                  @SuppressWarnings(Array("org.wartremover.warts.Null"))
-                  val scheme = Option(uri.getScheme).orElse(Option(uri.getHost).filterNot(_.isEmpty).map(_ => "http")).getOrElse(null) // Only force a scheme if we have a host, falling back to null as required by URI
-                  new URI(scheme, uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
-                })
-                .filterNot(_.toString().isEmpty)
-                .toList
+          .flatExtract(server =>
+            server
+              .downField("url", _.getUrl)
+              .unwrapTracker
+              .map { x =>
+                val uri = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
+                @SuppressWarnings(Array("org.wartremover.warts.Null"))
+                val scheme = Option(uri.getScheme)
+                  .orElse(Option(uri.getHost).filterNot(_.isEmpty).map(_ => "http"))
+                  .getOrElse(null) // Only force a scheme if we have a host, falling back to null as required by URI
+                new URI(scheme, uri.getUserInfo, uri.getHost, uri.getPort, "", uri.getQuery, uri.getFragment)
+              }
+              .filterNot(_.toString().isEmpty)
+              .toList
           )
       )
       basePath = swagger
@@ -133,8 +133,8 @@ object Common {
 
       // Only presume ...definitions._ import is available if we have
       // protocolElems which are not just all type aliases.
-      filteredDtoComponents: Option[NonEmptyList[String]] = Option(dtoComponents).filter(
-        _ => protocolElems.exists({ case _: RandomType[_] => false; case _ => true })
+      filteredDtoComponents: Option[NonEmptyList[String]] = Option(dtoComponents).filter(_ =>
+        protocolElems.exists { case _: RandomType[_] => false; case _ => true }
       )
 
       protoOut <- protocolElems.traverse(
@@ -163,35 +163,33 @@ object Common {
       ).mapN(_ ++ _)
 
       implicits <- renderImplicits(pkgPath, formattedPkgName, frameworkImports, protocolImports, customImports)
-      frameworkImplicitsFile <- frameworkImplicits.fold(Option.empty[WriteTree].pure[F])({
-        case (name, defn) =>
-          renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
-            .map(Option.apply)
-      })
-      protocolImplicitsFile <- protoImplicits.fold(Option.empty[WriteTree].pure[F])({
-        case (name, defn) =>
-          renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
-            .map(Option.apply)
-      })
-      frameworkDefinitionsFiles <- frameworkDefinitions.traverse({
-        case (name, defn) => renderFrameworkDefinitions(pkgPath, formattedPkgName, frameworkImports, defn, name)
-      })
+      frameworkImplicitsFile <- frameworkImplicits.fold(Option.empty[WriteTree].pure[F]) { case (name, defn) =>
+        renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
+          .map(Option.apply)
+      }
+      protocolImplicitsFile <- protoImplicits.fold(Option.empty[WriteTree].pure[F]) { case (name, defn) =>
+        renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
+          .map(Option.apply)
+      }
+      frameworkDefinitionsFiles <- frameworkDefinitions.traverse { case (name, defn) =>
+        renderFrameworkDefinitions(pkgPath, formattedPkgName, frameworkImports, defn, name)
+      }
 
       protocolStaticImports <- Pt.staticProtocolImports(formattedPkgName.toList)
 
-      supportDefinitionsFiles <- (supportDefinitions ++ protocolSupport).traverse({
-        case SupportDefinition(name, imports, defn, true)  => renderFrameworkDefinitions(pkgPath, formattedPkgName, imports ++ protocolStaticImports, defn, name)
+      supportDefinitionsFiles <- (supportDefinitions ++ protocolSupport).traverse {
+        case SupportDefinition(name, imports, defn, true) => renderFrameworkDefinitions(pkgPath, formattedPkgName, imports ++ protocolStaticImports, defn, name)
         case SupportDefinition(name, imports, defn, false) => renderFrameworkDefinitions(supportPkgPath, formattedPkgName :+ "support", imports, defn, name)
-      })
+      }
     } yield (
       protocolDefinitions ++
-          packageObject.toList ++
-          files ++
-          implicits.toList ++
-          frameworkImplicitsFile.toList ++
-          protocolImplicitsFile.toList ++
-          frameworkDefinitionsFiles ++
-          supportDefinitionsFiles
+        packageObject.toList ++
+        files ++
+        implicits.toList ++
+        frameworkImplicitsFile.toList ++
+        protocolImplicitsFile.toList ++
+        frameworkDefinitionsFiles ++
+        supportDefinitionsFiles
     ).toList
   }
 
@@ -199,13 +197,12 @@ object Common {
       args: NonEmptyList[Args]
   )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
     import C._
-    args.traverse(
-      arg =>
-        for {
-          defaultFramework  <- getDefaultFramework
-          targetInterpreter <- extractGenerator(arg.context, defaultFramework)
-          writeFile         <- processArgSet(targetInterpreter)(arg)
-        } yield writeFile
+    args.traverse(arg =>
+      for {
+        defaultFramework  <- getDefaultFramework
+        targetInterpreter <- extractGenerator(arg.context, defaultFramework)
+        writeFile         <- processArgSet(targetInterpreter)(arg)
+      } yield writeFile
     )
   }
 

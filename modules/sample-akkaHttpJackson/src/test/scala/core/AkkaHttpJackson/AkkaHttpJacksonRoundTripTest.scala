@@ -37,19 +37,19 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet): Future[PetResource.AddPetResponse] =
         body match {
           case sdefs.Pet(
-              Some(128L),
-              Some(sdefs.Category(`categoryId`, `categoryName`)),
-              `name`,
-              `photoUrls`,
-              Some(Vector(sdefs.Tag(`tag1id`, `tag1name`), sdefs.Tag(`tag2id`, `tag2name`))),
-              Some(sdefs.PetStatus.Pending)
+                Some(128L),
+                Some(sdefs.Category(`categoryId`, `categoryName`)),
+                `name`,
+                `photoUrls`,
+                Some(Vector(sdefs.Tag(`tag1id`, `tag1name`), sdefs.Tag(`tag2id`, `tag2name`))),
+                Some(sdefs.PetStatus.Pending)
               ) =>
             Future.successful(respond.Created)
           case _ => failTest("Parameters didn't match")
         }
       def deletePet(
           respond: PetResource.DeletePetResponse.type
-      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
@@ -92,7 +92,7 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
       def findPetsByStatusEnum(
           respond: PetResource.FindPetsByStatusEnumResponse.type
       )(_status: sdefs.PetStatus): Future[PetResource.FindPetsByStatusEnumResponse] =
-        Future.successful(petStatus.fold(Vector.empty[sdefs.Pet])({ value =>
+        Future.successful(petStatus.fold(Vector.empty[sdefs.Pet]) { value =>
           if (_status.value == value) {
             Vector(
               sdefs.Pet(
@@ -107,12 +107,12 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
           } else {
             failTest("Parameters didn't match!")
           }
-        }))
+        })
 
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
           respond: PetResource.DeletePetResponse.type
-      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
@@ -160,7 +160,7 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
           respond: PetResource.DeletePetResponse.type
-      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
@@ -228,13 +228,14 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
 
     val result = petClient.deletePet(petId, Some(true), Some(cdefs.PetStatus.Pending), Some(apiKey)).value.futureValue
     result
-      .fold({ err =>
-        failTest(err.toString)
-      }, {
-        case DeletePetResponse.OK         => ()
-        case DeletePetResponse.BadRequest => ()
-        case DeletePetResponse.NotFound   => ()
-      })
+      .fold(
+        err => failTest(err.toString),
+        {
+          case DeletePetResponse.OK         => ()
+          case DeletePetResponse.BadRequest => ()
+          case DeletePetResponse.NotFound   => ()
+        }
+      )
   }
 
   test("round-trip: File uploads") {
@@ -244,7 +245,7 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
           respond: PetResource.DeletePetResponse.type
-      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None)                                  = ???
+      )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.PetStatus], _apiKey: Option[String] = None) = ???
       def findPetsByStatus(respond: PetResource.FindPetsByStatusResponse.type)(status: Iterable[String])                                                  = ???
       def findPetsByStatusEnum(respond: PetResource.FindPetsByStatusEnumResponse.type)(status: sdefs.PetStatus)                                           = ???
       def findPetsByTags(respond: PetResource.FindPetsByTagsResponse.type)(tags: Iterable[String])                                                        = ???
@@ -263,12 +264,11 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
           customValue: examples.support.PositiveLong,
           customOptionalValue: Option[examples.support.PositiveLong]
       ) = {
-        val f1Length = file.flatMap({
-          case (f, _, _) =>
-            if (f.exists) {
-              Some(f.length)
-            } else None
-        })
+        val f1Length = file.flatMap { case (f, _, _) =>
+          if (f.exists) {
+            Some(f.length)
+          } else None
+        }
         val f2Length = if (file2._1.exists) {
           Some(file2._1.length)
         } else None
@@ -301,10 +301,9 @@ class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with M
       .futureValue
     result
       .fold(
-        { err =>
-          failTest(err.fold(_.toString, resp => Unmarshal(resp.entity).to[String].futureValue))
-        }, {
-          case UploadFileResponse.OK(resp) => assert(resp.code.contains(2), "Unexpected number of file uploads!")
+        err => failTest(err.fold(_.toString, resp => Unmarshal(resp.entity).to[String].futureValue)),
+        { case UploadFileResponse.OK(resp) =>
+          assert(resp.code.contains(2), "Unexpected number of file uploads!")
         }
       )
   }

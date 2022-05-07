@@ -5,9 +5,7 @@ import cats.syntax.all._
 
 /** IndexedDistributive, heavily inspired by Data.Distributive, but exposing an index into the structure being walked
   *
-  *  val result: List[(String, Tracker[Foo])] =
-  *    IndexedDistributive[Tracker[List[(String, HasFoo)]]]
-  *      .cotraverse(value)(_.downField("foo"), _.getFoo)
+  * val result: List[(String, Tracker[Foo])] = IndexedDistributive[Tracker[List[(String, HasFoo)]]] .cotraverse(value)(_.downField("foo"), _.getFoo)
   */
 trait IndexedDistributive[F[_]] {
   def indexedDistribute[G[_], A](value: F[G[A]])(implicit G: IndexedFunctor[G]): G[F[A]]
@@ -36,7 +34,7 @@ trait IndexedDistributiveImplicits {
   }
 
   implicit def nestedTupleFoldable[F[_], Z](implicit F: Foldable[F]) = new Foldable[Lambda[Y => F[(Z, Y)]]] {
-    def foldLeft[A, B](fa: F[(Z, A)], b: B)(f: (B, A) => B): B                           = F.foldLeft(fa, b)({ case (b, (z, a))   => f(b, a) })
-    def foldRight[A, B](fa: F[(Z, A)], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] = F.foldRight(fa, lb)({ case ((z, a), b) => f(a, b) })
+    def foldLeft[A, B](fa: F[(Z, A)], b: B)(f: (B, A) => B): B                           = F.foldLeft(fa, b) { case (b, (z, a)) => f(b, a) }
+    def foldRight[A, B](fa: F[(Z, A)], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] = F.foldRight(fa, lb) { case ((z, a), b) => f(a, b) }
   }
 }

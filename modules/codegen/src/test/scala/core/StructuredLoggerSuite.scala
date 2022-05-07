@@ -21,7 +21,7 @@ class StructuredLoggerSuite extends AnyFunSuite with Matchers {
       }
     Target.loggerEnabled.set(false)
     val logEntries = structure.logEntries
-    val expected   = """
+    val expected = """
       |   INFO    first second: one
       |   INFO    first second: two
       |   INFO    first second: three

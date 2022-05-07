@@ -35,14 +35,13 @@ class DropwizardGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage
 
   override def getFrameworkDefinitions(tracing: Boolean): Target[List[(Name, List[BodyDeclaration[_ <: BodyDeclaration[_]]])]] =
     supportDefs.map(
-      _.map(
-        supportDef =>
-          (
-            supportDef.className,
-            supportDef.definition.collect({
-              case bd: BodyDeclaration[_] => bd
-            })
-          )
+      _.map(supportDef =>
+        (
+          supportDef.className,
+          supportDef.definition.collect { case bd: BodyDeclaration[_] =>
+            bd
+          }
+        )
       )
     )
 

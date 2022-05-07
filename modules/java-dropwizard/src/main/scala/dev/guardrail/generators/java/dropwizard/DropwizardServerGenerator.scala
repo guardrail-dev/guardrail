@@ -133,14 +133,14 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
       val (classDecls, creator) = response.value
         .map(_._2)
-        .orElse({
+        .orElse {
           if (response.statusCode >= 400 && response.statusCode <= 599) {
             errorEntityFallbackType
           } else {
             None
           }
-        })
-        .fold[(List[BodyDeclaration[_ <: BodyDeclaration[_]]], BodyDeclaration[_ <: BodyDeclaration[_]])]({
+        }
+        .fold[(List[BodyDeclaration[_ <: BodyDeclaration[_]]], BodyDeclaration[_ <: BodyDeclaration[_]])] {
           val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
           val _ = constructor.setBody(
             new BlockStmt(
@@ -161,7 +161,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
           )
 
           (List(constructor), creator)
-        })({ valueType =>
+        } { valueType =>
           val constructParam = new Parameter(new NodeList(finalModifier), valueType.unbox, new SimpleName("entityBody"))
 
           val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
@@ -211,7 +211,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
             )
 
           (List(constructor, entityBodyField, entityBodyGetter), creator)
-        })
+        }
 
       sortDefinitions(classDecls).foreach(cls.addMember)
       (cls, creator)
@@ -280,16 +280,16 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       basePathComponents = basePath.toList.flatMap(ResponseHelpers.splitPathComponents)
       commonPathPrefix   = ResponseHelpers.findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
       routeMethodsAndHandlerMethodSigs <- routes
-        .traverse({
+        .traverse {
           case GenerateRouteMeta(
-              operationId,
-              methodName,
-              responseClsName,
-              customExtractionFields,
-              tracingFields,
-              sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
-              parameters,
-              responses
+                operationId,
+                methodName,
+                responseClsName,
+                customExtractionFields,
+                tracingFields,
+                sr @ RouteMeta(path, httpMethod, operation, securityRequirements),
+                parameters,
+                responses
               ) =>
             parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
@@ -315,17 +315,16 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
                   .distinct
                   .map(toJaxRsAnnotationName)
               )
-              .foreach(
-                producesExprs =>
-                  method.addAnnotation(
-                    new SingleMemberAnnotationExpr(
-                      new Name("Produces"),
-                      producesExprs.toList match {
-                        case singleProduces :: Nil => singleProduces
-                        case manyProduces          => new ArrayInitializerExpr(manyProduces.toNodeList)
-                      }
-                    )
+              .foreach(producesExprs =>
+                method.addAnnotation(
+                  new SingleMemberAnnotationExpr(
+                    new Name("Produces"),
+                    producesExprs.toList match {
+                      case singleProduces :: Nil => singleProduces
+                      case manyProduces          => new ArrayInitializerExpr(manyProduces.toNodeList)
+                    }
                   )
+                )
               )
 
             def transformJsr310Params(parameter: Parameter): Target[Parameter] = {
@@ -424,27 +423,26 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
                 (parameters.headerParams, "HeaderParam"),
                 (parameters.queryStringParams, "QueryParam"),
                 (parameters.formParams, if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam")
-              ).flatTraverse({
-                case (params, annotationName) =>
-                  params.traverse({ param =>
-                    val parameter                  = param.param.clone()
-                    val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
-                    val annotated                  = addParamAnnotation(optionalCollectionStripped, param, annotationName)
-                    for {
-                      dateTransformed <- transformJsr310Params(annotated)
-                      fileTransformed <- transformMultipartFile(dateTransformed, param)
-                    } yield addValidationAnnotations(fileTransformed, param)
-                  })
-              })
+              ).flatTraverse { case (params, annotationName) =>
+                params.traverse { param =>
+                  val parameter                  = param.param.clone()
+                  val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
+                  val annotated                  = addParamAnnotation(optionalCollectionStripped, param, annotationName)
+                  for {
+                    dateTransformed <- transformJsr310Params(annotated)
+                    fileTransformed <- transformMultipartFile(dateTransformed, param)
+                  } yield addValidationAnnotations(fileTransformed, param)
+                }
+              }
 
               bareMethodParams <- parameters.bodyParams.toList
-                .traverse({ param =>
+                .traverse { param =>
                   val parameter                  = param.param.clone()
                   val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
                   for {
                     dateTransformed <- transformJsr310Params(optionalCollectionStripped)
                   } yield addValidationAnnotations(dateTransformed, param)
-                })
+                }
 
               methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
               _            = methodParams.foreach(method.addParameter)
@@ -454,36 +452,35 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
               (responseType, resultResumeBody) = ServerRawResponse(operation)
                 .filter(_ == true)
-                .fold({
+                .fold {
                   val responseName = s"$handlerName.$responseClsName"
                   val entitySetterIfTree = NonEmptyList
-                    .fromList(responses.value.collect({
-                      case Response(statusCodeName, Some(_), _) => statusCodeName
-                    }))
-                    .map(_.reverse.foldLeft[IfStmt](null)({
-                      case (nextIfTree, statusCodeName) =>
-                        val responseSubclassType = StaticJavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
-                        new IfStmt(
-                          new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
-                          new BlockStmt(
-                            new NodeList(
-                              new ExpressionStmt(
-                                new MethodCallExpr(
-                                  new NameExpr("builder"),
-                                  "entity",
-                                  new NodeList[Expression](
-                                    new MethodCallExpr(
-                                      new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
-                                      "getEntityBody"
-                                    )
+                    .fromList(responses.value.collect { case Response(statusCodeName, Some(_), _) =>
+                      statusCodeName
+                    })
+                    .map(_.reverse.foldLeft[IfStmt](null) { case (nextIfTree, statusCodeName) =>
+                      val responseSubclassType = StaticJavaParser.parseClassOrInterfaceType(s"${responseName}.${statusCodeName}")
+                      new IfStmt(
+                        new InstanceOfExpr(new NameExpr("result"), responseSubclassType),
+                        new BlockStmt(
+                          new NodeList(
+                            new ExpressionStmt(
+                              new MethodCallExpr(
+                                new NameExpr("builder"),
+                                "entity",
+                                new NodeList[Expression](
+                                  new MethodCallExpr(
+                                    new EnclosedExpr(new CastExpr(responseSubclassType, new NameExpr("result"))),
+                                    "getEntityBody"
                                   )
                                 )
                               )
                             )
-                          ),
-                          nextIfTree
-                        )
-                    }))
+                          )
+                        ),
+                        nextIfTree
+                      )
+                    })
                   (
                     StaticJavaParser.parseClassOrInterfaceType(responseName),
                     (
@@ -503,17 +500,17 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
                           )
                         )
                       ) ++ entitySetterIfTree ++ List(
-                            new ExpressionStmt(
-                              new MethodCallExpr(
-                                new NameExpr("asyncResponse"),
-                                "resume",
-                                new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
-                              )
-                            )
+                        new ExpressionStmt(
+                          new MethodCallExpr(
+                            new NameExpr("asyncResponse"),
+                            "resume",
+                            new NodeList[Expression](new MethodCallExpr(new NameExpr("builder"), "build"))
                           )
+                        )
+                      )
                     ).toNodeList
                   )
-                })({ _ =>
+                } { _ =>
                   (
                     RESPONSE_TYPE,
                     new NodeList(
@@ -526,7 +523,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
                       )
                     )
                   )
-                })
+                }
 
               resultErrorBody = List[Statement](
                 new ExpressionStmt(
@@ -589,14 +586,14 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
               transformedAnnotatedParams <- (
                 parameters.pathParams ++
-                    parameters.headerParams ++
-                    parameters.queryStringParams ++
-                    parameters.formParams
-              ).traverse({ param =>
+                  parameters.headerParams ++
+                  parameters.queryStringParams ++
+                  parameters.formParams
+              ).traverse { param =>
                 val parameter                  = param.param.clone()
                 val optionalCollectionStripped = stripOptionalFromCollections(parameter, param)
                 transformMultipartFile(optionalCollectionStripped, param)
-              })
+              }
               transformedBodyParams = parameters.bodyParams.map(param => stripOptionalFromCollections(param.param.clone(), param))
             } yield {
               val futureResponseType = responseType.liftFutureType
@@ -606,7 +603,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
               (method, handlerMethodSig)
             }
-        })
+        }
         .map(_.unzip)
       (routeMethods, handlerMethodSigs) = routeMethodsAndHandlerMethodSigs
     } yield {
@@ -649,13 +646,15 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       securityExposure: SecurityExposure
   ): Target[List[Parameter]] =
     for {
-      customExtraction <- if (customExtraction) {
-        Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
-      } else Target.pure(List.empty)
+      customExtraction <-
+        if (customExtraction) {
+          Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
+        } else Target.pure(List.empty)
 
-      tracing <- if (tracing) {
-        Target.raiseUserError(s"Tracing is not yet supported by this framework")
-      } else Target.pure(List.empty)
+      tracing <-
+        if (tracing) {
+          Target.raiseUserError(s"Tracing is not yet supported by this framework")
+        } else Target.pure(List.empty)
     } yield (customExtraction ::: tracing)
 
   override def generateResponseDefinitions(
@@ -671,7 +670,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       abstractResponseClass <- generateResponseSuperClass(responseClsName)
       responseClasses       <- responses.value.traverse(resp => generateResponseClass(abstractResponseClassType, resp, None))
     } yield {
-      sortDefinitions(responseClasses.flatMap({ case (cls, creator) => List[BodyDeclaration[_ <: BodyDeclaration[_]]](cls, creator) }))
+      sortDefinitions(responseClasses.flatMap { case (cls, creator) => List[BodyDeclaration[_ <: BodyDeclaration[_]]](cls, creator) })
         .foreach(abstractResponseClass.addMember)
 
       abstractResponseClass :: Nil
@@ -724,8 +723,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       authImplementation: AuthImplementation
   ): Target[List[BodyDeclaration[_ <: BodyDeclaration[_]]]] =
     safeParseSimpleName(className) >>
-        safeParseSimpleName(handlerName) >>
-        Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
+      safeParseSimpleName(handlerName) >>
+      Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
 
   override def renderHandler(
       handlerName: String,
@@ -750,7 +749,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
   ): ClassOrInterfaceDeclaration = {
     val cls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier), false, className)
     classAnnotations.foreach(cls.addAnnotation)
-    sortDefinitions(supportDefinitions ++ combinedRouteTerms.collect({ case bd: BodyDeclaration[_] => bd }))
+    sortDefinitions(supportDefinitions ++ combinedRouteTerms.collect { case bd: BodyDeclaration[_] => bd })
       .foreach(cls.addMember)
     cls
   }

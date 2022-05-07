@@ -64,7 +64,7 @@ class EnumTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(EnumDefinition(_, _, _, _, cls, staticDefns) :: Nil, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -72,7 +72,7 @@ class EnumTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       override def toString: String = value.toString
     }
     """
-    val companion  = q"""
+    val companion = q"""
     object Bar {
       object members {
         case object V1 extends Bar("v1")
@@ -100,7 +100,7 @@ class EnumTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, _, staticDefns, cls, _) :: _, Nil),
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val client = q"""

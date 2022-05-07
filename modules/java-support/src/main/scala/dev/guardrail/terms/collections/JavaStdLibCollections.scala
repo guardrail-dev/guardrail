@@ -353,19 +353,18 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
       case lambda: LambdaExpr =>
         lambda.getParameters.getFirst.asScala.fold(
           throw new IllegalStateException("LambdaExpr must have an argument")
-        )(
-          param =>
-            (
-              lambda.getBody match {
-                case bs: BlockStmt      => bs
-                case es: ExpressionStmt => new BlockStmt(new NodeList(es))
-                case other =>
-                  throw new IllegalStateException(
-                    s"This shouldn't be possible: LambdaExpr contains a ${other.getClass}, but only BlockStmt and ExpressionStmt are valid"
-                  )
-              },
-              param.getNameAsString
-            )
+        )(param =>
+          (
+            lambda.getBody match {
+              case bs: BlockStmt      => bs
+              case es: ExpressionStmt => new BlockStmt(new NodeList(es))
+              case other =>
+                throw new IllegalStateException(
+                  s"This shouldn't be possible: LambdaExpr contains a ${other.getClass}, but only BlockStmt and ExpressionStmt are valid"
+                )
+            },
+            param.getNameAsString
+          )
         )
       case methRef: MethodReferenceExpr =>
         (

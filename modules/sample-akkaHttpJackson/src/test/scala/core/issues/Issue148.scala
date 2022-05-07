@@ -18,10 +18,10 @@ import scala.concurrent.Future
 
 /** Changes
   *
-  * - Server request body validation
-  * - Client responses
-  *   - No content vs Partial content vs Invalid content
-  * - Polymorphic discriminator error messages
+  *   - Server request body validation
+  *   - Client responses
+  *     - No content vs Partial content vs Invalid content
+  *   - Polymorphic discriminator error messages
   */
 class Issue148Suite extends AnyFunSuite with TestImplicits with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(10.seconds, 1.second)
@@ -246,8 +246,8 @@ class Issue148Suite extends AnyFunSuite with TestImplicits with Matchers with Ei
     Client.httpClient(jsonResponse("{}"), "http://localhost:80").getFoo().value.futureValue match {
       case Left(Left(e: IllegalArgumentException)) =>
         e.getMessage should startWith(
-              "Could not resolve subtype of [simple type, class issues.issue148.client.akkaHttpJackson.definitions.Foo]: missing type id property 'type'"
-            )
+          "Could not resolve subtype of [simple type, class issues.issue148.client.akkaHttpJackson.definitions.Foo]: missing type id property 'type'"
+        )
       case ex => failTest(s"Unknown: ${ex}")
     }
 

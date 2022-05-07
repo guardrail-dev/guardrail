@@ -47,20 +47,18 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
 
   override def extractEnum(enumSchema: Tracker[EnumSchema]) = {
     type EnumValues[A] = (String, Option[String]) => List[A] => Either[String, HeldEnum]
-    implicit val wrapNumberValues: EnumValues[Number] = {
-      case (tpe, fmt) =>
-        Option(_)
-          .filterNot(_.isEmpty)
-          .toRight("Model has no enumerations")
-          .map(
-            xs =>
-              (tpe, fmt) match {
-                case ("integer", None)          => IntHeldEnum(xs)
-                case ("integer", Some("int32")) => IntHeldEnum(xs)
-                case ("integer", Some("int64")) => LongHeldEnum(xs)
-                case _                          => StringHeldEnum.fromNumbers(xs) // TODO: Preserve previous behaviour if we don't get a match
-              }
-          )
+    implicit val wrapNumberValues: EnumValues[Number] = { case (tpe, fmt) =>
+      Option(_)
+        .filterNot(_.isEmpty)
+        .toRight("Model has no enumerations")
+        .map(xs =>
+          (tpe, fmt) match {
+            case ("integer", None)          => IntHeldEnum(xs)
+            case ("integer", Some("int32")) => IntHeldEnum(xs)
+            case ("integer", Some("int64")) => LongHeldEnum(xs)
+            case _                          => StringHeldEnum.fromNumbers(xs) // TODO: Preserve previous behaviour if we don't get a match
+          }
+        )
     }
     implicit val wrapStringValues: EnumValues[String] = (_, _) => Option(_).filterNot(_.isEmpty).toRight("Model has no enumerations").map(StringHeldEnum.apply)
 
@@ -85,56 +83,52 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
       globalSecurityRequirements: Option[SecurityRequirements]
   ): Target[List[RouteMeta]] =
     Target.log.function("extractOperations")(for {
-      _ <- Target.log.debug(s"Args: ${paths.unwrapTracker.value.map({ case (a, b) => (a, b.showNotNull) })} (${paths.showHistory})")
-      routes <- paths.indexedCosequence.value.flatTraverse({
-        case (pathStr, path) =>
-          for {
-            operationMap <- path
-              .downField("operations", _.readOperationsMap)
-              .toNel
-              .raiseErrorIfEmpty("No operations defined")
-            operationRoutes <- operationMap.indexedCosequence.value.toList.traverse({
-              case (httpMethod, operation) =>
-                val securityRequirements: Option[SecurityRequirements] =
-                  operation.downField[Option[List[SecurityRequirement]]]("security", _.getSecurity()).indexedDistribute.flatMap { srs =>
-                    NonEmptyList
-                      .fromList(srs.indexedDistribute)
-                      .fold(globalSecurityRequirements)(SecurityRequirements(_, SecurityRequirements.Local))
-                  }
+      _ <- Target.log.debug(s"Args: ${paths.unwrapTracker.value.map { case (a, b) => (a, b.showNotNull) }} (${paths.showHistory})")
+      routes <- paths.indexedCosequence.value.flatTraverse { case (pathStr, path) =>
+        for {
+          operationMap <- path
+            .downField("operations", _.readOperationsMap)
+            .toNel
+            .raiseErrorIfEmpty("No operations defined")
+          operationRoutes <- operationMap.indexedCosequence.value.toList.traverse { case (httpMethod, operation) =>
+            val securityRequirements: Option[SecurityRequirements] =
+              operation.downField[Option[List[SecurityRequirement]]]("security", _.getSecurity()).indexedDistribute.flatMap { srs =>
+                NonEmptyList
+                  .fromList(srs.indexedDistribute)
+                  .fold(globalSecurityRequirements)(SecurityRequirements(_, SecurityRequirements.Local))
+              }
 
-                // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
-                // requestBodies, so let's manually fix that up here.
-                val updatedOperation: Target[Tracker[Operation]] = operation
-                  .downField("body", _.getRequestBody)
-                  .flatDownField("$ref", _.get$ref)
-                  .refine[Target[Tracker[Operation]]]({ case Some(x) => (x, x.split("/").toList) })(
-                    tracker =>
-                      tracker.unwrapTracker match {
-                        case (rbref, "#" :: "components" :: "requestBodies" :: name :: Nil) =>
-                          commonRequestBodies
-                            .get(name)
-                            .fold[Target[Tracker[Operation]]](
-                              Target.raiseUserError(s"Unable to resolve reference to '$rbref' when attempting to process ${tracker.showHistory}")
-                            )({ commonRequestBody =>
-                              Target.pure(
-                                operation.map(
-                                  op =>
-                                    SwaggerUtil
-                                      .copyOperation(op)
-                                      .requestBody(SwaggerUtil.copyRequestBody(commonRequestBody))
-                                )
-                              )
-                            })
-                        case (rbref, _) =>
-                          Target.raiseUserError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
+            // For some reason the 'resolve' option on the openapi parser doesn't auto-resolve
+            // requestBodies, so let's manually fix that up here.
+            val updatedOperation: Target[Tracker[Operation]] = operation
+              .downField("body", _.getRequestBody)
+              .flatDownField("$ref", _.get$ref)
+              .refine[Target[Tracker[Operation]]] { case Some(x) => (x, x.split("/").toList) }(tracker =>
+                tracker.unwrapTracker match {
+                  case (rbref, "#" :: "components" :: "requestBodies" :: name :: Nil) =>
+                    commonRequestBodies
+                      .get(name)
+                      .fold[Target[Tracker[Operation]]](
+                        Target.raiseUserError(s"Unable to resolve reference to '$rbref' when attempting to process ${tracker.showHistory}")
+                      ) { commonRequestBody =>
+                        Target.pure(
+                          operation.map(op =>
+                            SwaggerUtil
+                              .copyOperation(op)
+                              .requestBody(SwaggerUtil.copyRequestBody(commonRequestBody))
+                          )
+                        )
                       }
-                  )
-                  .getOrElse(Target.pure(operation))
+                  case (rbref, _) =>
+                    Target.raiseUserError(s"Invalid request body $$ref name '$rbref' when attempting to process ${tracker.showHistory}")
+                }
+              )
+              .getOrElse(Target.pure(operation))
 
-                updatedOperation.map(op => RouteMeta(Tracker.cloneHistory(path, pathStr), httpMethod, op, securityRequirements))
-            })
-          } yield operationRoutes
-      })
+            updatedOperation.map(op => RouteMeta(Tracker.cloneHistory(path, pathStr), httpMethod, op, securityRequirements))
+          }
+        } yield operationRoutes
+      }
     } yield routes)
 
   override def extractApiKeySecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]) =

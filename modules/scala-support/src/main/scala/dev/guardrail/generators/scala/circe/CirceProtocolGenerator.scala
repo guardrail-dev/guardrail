@@ -38,20 +38,17 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
   override def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) = {
     val fields = elems match {
       case RenderedStringEnum(elems) =>
-        elems.map({
-          case (value, termName, _) =>
-            (termName, Lit.String(value))
-        })
+        elems.map { case (value, termName, _) =>
+          (termName, Lit.String(value))
+        }
       case RenderedIntEnum(elems) =>
-        elems.map({
-          case (value, termName, _) =>
-            (termName, Lit.Int(value))
-        })
+        elems.map { case (value, termName, _) =>
+          (termName, Lit.Int(value))
+        }
       case RenderedLongEnum(elems) =>
-        elems.map({
-          case (value, termName, _) =>
-            (termName, Lit.Long(value))
-        })
+        elems.map { case (value, termName, _) =>
+          (termName, Lit.Long(value))
+        }
     }
 
     Target.pure(Some(q"""
@@ -71,7 +68,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
     Target.pure(Some(q"""
       implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] =
         _root_.io.circe.Decoder[${tpe}].emap(value => from(value).toRight(${Term
-      .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
+        .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
     """))
 
   override def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
@@ -90,11 +87,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
       decoder: Option[scala.meta.Defn]
   ): Target[StaticDefns[ScalaLanguage]] = {
     val longType = Type.Name(clsName)
-    val terms: List[Defn.Val] = accessors
-      .map({ pascalValue =>
-        q"val ${Pat.Var(pascalValue)}: ${longType} = members.${pascalValue}"
-      })
-      .toList
+    val terms: List[Defn.Val] = accessors.map { pascalValue =>
+      q"val ${Pat.Var(pascalValue)}: ${longType} = members.${pascalValue}"
+    }.toList
     val values: Defn.Val = q"val values = _root_.scala.Vector(..$accessors)"
     val implicits: List[Defn.Val] = List(
       q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${longType}] = Show[${tpe}].contramap[${longType}](_.value)"
@@ -104,13 +99,13 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
         className = clsName,
         extraImports = List.empty[Import],
         definitions = members.toList ++
-              terms ++
-              List(Some(values), encoder, decoder).flatten ++
-              implicits ++
-              List(
-                q"def from(value: ${tpe}): _root_.scala.Option[${longType}] = values.find(_.value == value)",
-                q"implicit val order: cats.Order[${longType}] = cats.Order.by[${longType}, Int](values.indexOf)"
-              )
+          terms ++
+          List(Some(values), encoder, decoder).flatten ++
+          implicits ++
+          List(
+            q"def from(value: ${tpe}): _root_.scala.Option[${longType}] = values.find(_.value == value)",
+            q"implicit val order: cats.Order[${longType}] = cats.Order.by[${longType}, Int](values.indexOf)"
+          )
       )
     )
   }
@@ -120,16 +115,16 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
 
   override def extractProperties(swagger: Tracker[Schema[_]]) =
     swagger
-      .refine[Target[List[(String, Tracker[Schema[_]])]]]({ case o: ObjectSchema => o })(
-        m => Target.pure(m.downField("properties", _.getProperties).indexedCosequence.value)
+      .refine[Target[List[(String, Tracker[Schema[_]])]]] { case o: ObjectSchema => o }(m =>
+        Target.pure(m.downField("properties", _.getProperties).indexedCosequence.value)
       )
-      .orRefine({ case c: ComposedSchema => c })({ comp =>
+      .orRefine { case c: ComposedSchema => c } { comp =>
         val extractedProps =
           comp.downField("allOf", _.getAllOf()).indexedDistribute.flatMap(_.downField("properties", _.getProperties).indexedCosequence.value)
         Target.pure(extractedProps)
-      })
-      .orRefine({ case x: Schema[_] if Option(x.get$ref()).isDefined => x })(
-        comp => Target.raiseUserError(s"Attempted to extractProperties for a ${comp.unwrapTracker.getClass()}, unsure what to do here (${comp.showHistory})")
+      }
+      .orRefine { case x: Schema[_] if Option(x.get$ref()).isDefined => x }(comp =>
+        Target.raiseUserError(s"Attempted to extractProperties for a ${comp.unwrapTracker.getClass()}, unsure what to do here (${comp.showHistory})")
       )
       .getOrElse(Target.pure(List.empty))
       .map(_.toList)
@@ -156,9 +151,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
 
         readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly()).unwrapTracker.contains(true))
         emptyToNull = property
-          .refine({ case d: DateSchema => d })(d => EmptyValueIsNull(d))
-          .orRefine({ case dt: DateTimeSchema => dt })(dt => EmptyValueIsNull(dt))
-          .orRefine({ case s: StringSchema => s })(s => EmptyValueIsNull(s))
+          .refine { case d: DateSchema => d }(d => EmptyValueIsNull(d))
+          .orRefine { case dt: DateTimeSchema => dt }(dt => EmptyValueIsNull(dt))
+          .orRefine { case s: StringSchema => s }(s => EmptyValueIsNull(s))
           .toOption
           .flatten
           .getOrElse(EmptyIsEmpty)
@@ -226,9 +221,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
     } else {
       None
     }
-    val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-      param => discriminatorNames.contains(param.term.name.value)
-    )
+    val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(param => discriminatorNames.contains(param.term.name.value))
 
     val terms = params.map(_.term)
 
@@ -241,20 +234,17 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
       val toStringTerms = params.map(p => List(mkToStringTerm(p))).intercalate(List(Lit.String(",")))
 
       List[Defn.Def](
-        q"override def toString: String = ${toStringTerms.foldLeft[Term](Lit.String(s"${clsName}("))(
-          (accum, term) => q"$accum + $term"
-        )} + ${Lit.String(")")}"
+        q"override def toString: String = ${toStringTerms.foldLeft[Term](Lit.String(s"${clsName}("))((accum, term) => q"$accum + $term")} + ${Lit.String(")")}"
       )
     } else {
       List.empty[Defn.Def]
     }
 
     val code = parentOpt
-      .fold(q"""case class ${Type.Name(clsName)}(..${terms}) { ..$toStringMethod }""")(
-        parent =>
-          q"""case class ${Type.Name(clsName)}(..${terms}) extends ..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces.map(
-                a => init"${Type.Name(a)}(...$Nil)"
-              )} { ..$toStringMethod }"""
+      .fold(q"""case class ${Type.Name(clsName)}(..${terms}) { ..$toStringMethod }""")(parent =>
+        q"""case class ${Type.Name(clsName)}(..${terms}) extends ..${init"${Type.Name(parent.clsName)}(...$Nil)" :: parent.interfaces.map(a =>
+            init"${Type.Name(a)}(...$Nil)"
+          )} { ..$toStringMethod }"""
       )
 
     Target.pure(code)
@@ -266,13 +256,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
       selfParams: List[ProtocolParameter[ScalaLanguage]],
       parents: List[SuperClass[ScalaLanguage]] = Nil
   ) = {
-    val discriminators     = parents.flatMap(_.discriminators)
-    val discriminatorNames = discriminators.map(_.propertyName).toSet
-    val (discriminatorParams, params) = (parents.reverse.flatMap(_.params) ++ selfParams).partition(
-      param => discriminatorNames.contains(param.name.value)
-    )
-    val readOnlyKeys: List[String] = params.flatMap(_.readOnlyKey).toList
-    val typeName                   = Type.Name(clsName)
+    val discriminators                = parents.flatMap(_.discriminators)
+    val discriminatorNames            = discriminators.map(_.propertyName).toSet
+    val (discriminatorParams, params) = (parents.reverse.flatMap(_.params) ++ selfParams).partition(param => discriminatorNames.contains(param.name.value))
+    val readOnlyKeys: List[String]    = params.flatMap(_.readOnlyKey).toList
+    val typeName                      = Type.Name(clsName)
     val encVal = {
       def encodeStatic(param: ProtocolParameter[ScalaLanguage], clsName: String) =
         q"""(${Lit.String(param.name.value)}, Json.fromString(${Lit.String(clsName)}))"""
@@ -328,30 +316,28 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
       selfParams: List[ProtocolParameter[ScalaLanguage]],
       parents: List[SuperClass[ScalaLanguage]] = Nil
   ) = {
-    val discriminators     = parents.flatMap(_.discriminators)
-    val discriminatorNames = discriminators.map(_.propertyName).toSet
-    val params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(
-      param => discriminatorNames.contains(param.name.value)
-    )
+    val discriminators            = parents.flatMap(_.discriminators)
+    val discriminatorNames        = discriminators.map(_.propertyName).toSet
+    val params                    = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(param => discriminatorNames.contains(param.name.value))
     val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
     val paramCount                = params.length
     for {
       presence <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
-      decVal <- if (paramCount == 0) {
-        Target.pure(
-          Option[Term](
-            q"""
+      decVal <-
+        if (paramCount == 0) {
+          Target.pure(
+            Option[Term](
+              q"""
                  new _root_.io.circe.Decoder[${Type.Name(clsName)}] {
                     final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[${Type.Name(clsName)}] =
                       _root_.scala.Right(${Term.Name(clsName)}())
                   }
                 """
+            )
           )
-        )
-      } else {
-        params.zipWithIndex
-          .traverse({
-            case (param, idx) =>
+        } else {
+          params.zipWithIndex
+            .traverse { case (param, idx) =>
               for {
                 rawTpe <- Target.fromOption(param.term.decltpe, UserError("Missing type"))
                 tpe <- rawTpe match {
@@ -374,10 +360,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
                   )
                 }
 
-                val decodeOptionalField: Type => (Term => Term, Term) => NonEmptyVector[Term => Term] = {
-                  tpe => (present, absent) =>
-                    NonEmptyVector.of[Term => Term](
-                      t => q"""
+                val decodeOptionalField: Type => (Term => Term, Term) => NonEmptyVector[Term => Term] = { tpe => (present, absent) =>
+                  NonEmptyVector.of[Term => Term](t => q"""
                         ((c: _root_.io.circe.HCursor) =>
                           c
                             .value
@@ -387,8 +371,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
                               _root_.scala.Right($absent)
                             }
                         )($t)
-                      """
-                    )
+                      """)
                 }
 
                 def decodeOptionalRequirement(
@@ -397,9 +380,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
                   case PropertyRequirement.OptionalLegacy =>
                     decodeField(tpe)
                   case PropertyRequirement.RequiredNullable =>
-                    decodeField(t"_root_.io.circe.Json") :+ (
-                            t => q"$t.flatMap(_.as[${tpe}])"
-                        )
+                    decodeField(t"_root_.io.circe.Json") :+ (t => q"$t.flatMap(_.as[${tpe}])")
                   case PropertyRequirement.Optional => // matched only where there is inconsistency between encoder and decoder
                     decodeOptionalField(param.baseType)(x => q"Option($x)", q"None")
                 }
@@ -421,11 +402,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
                 val _enum     = enumerator"""${Pat.Var(term)} <- $parseTerm"""
                 (term, _enum)
               }
-          })
-          .map({ pairs =>
-            val (terms, enumerators) = pairs.unzip
-            Option(
-              q"""
+            }
+            .map { pairs =>
+              val (terms, enumerators) = pairs.unzip
+              Option(
+                q"""
                   new _root_.io.circe.Decoder[${Type.Name(clsName)}] {
                     final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[${Type.Name(clsName)}] =
                       for {
@@ -433,14 +414,12 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
                       } yield ${Term.Name(clsName)}(..${terms})
                   }
                 """
-            )
-          })
-      }
-    } yield {
-      decVal.map(decVal => q"""
+              )
+            }
+        }
+    } yield decVal.map(decVal => q"""
             implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = $decVal
           """)
-    }
   }
 
   override def renderDTOStaticDefns(
@@ -474,8 +453,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
           )
         case core.DeferredMap(tpeName, customTpe) =>
           Target.fromOption(
-            lookupTypeName(tpeName, concreteTypes)(
-              tpe => t"_root_.scala.Vector[${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, ${tpe}]]"
+            lookupTypeName(tpeName, concreteTypes)(tpe =>
+              t"_root_.scala.Vector[${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, ${tpe}]]"
             ),
             UserError(s"Unresolved reference ${tpeName}")
           )
@@ -571,15 +550,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
       definitions: List[(String, Tracker[Schema[_]])]
   ) = {
     def allParents: Tracker[Schema[_]] => Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
-      _.refine[Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]]]({ case x: ComposedSchema => x })(
+      _.refine[Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]]] { case x: ComposedSchema => x }(
         _.downField("allOf", _.getAllOf()).indexedDistribute.filter(_.downField("$ref", _.get$ref()).unwrapTracker.nonEmpty) match {
           case head :: tail =>
             definitions
-              .collectFirst({
+              .collectFirst {
                 case (clsName, e) if head.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$clsName")) =>
                   val thisParent = (clsName, e, tail)
                   allParents(e).map(otherParents => thisParent :: otherParents)
-              })
+              }
               .getOrElse(
                 Target.raiseUserError(s"Reference ${head.downField("$ref", _.get$ref()).unwrapTracker} not found among definitions (${head.showHistory})")
               )
@@ -608,17 +587,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
     )
 
   override def decodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
-    val (childrenCases, childrenDiscriminators) = children
-      .map({ child =>
-        val discriminatorValue = discriminator.mapping
-          .collectFirst({ case (value, elem) if elem.name == child => value })
-          .getOrElse(child)
-        (
-          p"case ${Lit.String(discriminatorValue)} => c.as[${Type.Name(child)}]",
-          discriminatorValue
-        )
-      })
-      .unzip
+    val (childrenCases, childrenDiscriminators) = children.map { child =>
+      val discriminatorValue = discriminator.mapping
+        .collectFirst { case (value, elem) if elem.name == child => value }
+        .getOrElse(child)
+      (
+        p"case ${Lit.String(discriminatorValue)} => c.as[${Type.Name(child)}]",
+        discriminatorValue
+      )
+    }.unzip
     val code =
       q"""implicit val decoder: _root_.io.circe.Decoder[${Type.Name(clsName)}] = _root_.io.circe.Decoder.instance({ c =>
                val discriminatorCursor = c.downField(discriminator)
@@ -626,19 +603,19 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
                  ..case $childrenCases;
                  case tpe =>
                    _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit
-        .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
+          .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
                }
           })"""
     Target.pure(Some(code))
   }
 
   override def encodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
-    val childrenCases = children.map({ child =>
+    val childrenCases = children.map { child =>
       val discriminatorValue = discriminator.mapping
-        .collectFirst({ case (value, elem) if elem.name == child => value })
+        .collectFirst { case (value, elem) if elem.name == child => value }
         .getOrElse(child)
       p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, ${Lit.String(discriminatorValue)}.asJson).asJson"
-    })
+    }
     val code =
       q"""implicit val encoder: _root_.io.circe.Encoder[${Type.Name(clsName)}] = _root_.io.circe.Encoder.instance {
             ..case $childrenCases
@@ -654,7 +631,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
       children: List[String] = Nil
   ) =
     for {
-      testTerms <- (
+      testTerms <-
         params
           .map(_.term)
           .filter(_.name.value != discriminator.propertyName)
@@ -662,19 +639,16 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator)(implici
             for {
               tpe <- Target.fromOption(
                 t.decltpe
-                  .flatMap({
+                  .flatMap {
                     case tpe: Type => Some(tpe)
                     case x         => None
-                  }),
+                  },
                 UserError(t.decltpe.fold("Nothing to map")(x => s"Unsure how to map ${x.structure}, please report this bug!"))
               )
             } yield q"""def ${Term.Name(t.name.value)}: ${tpe}"""
           }
+    } yield parents.headOption
+      .fold(q"""trait ${Type.Name(className)} {..${testTerms}}""")(parent =>
+        q"""trait ${Type.Name(className)} extends ${init"${Type.Name(parent.clsName)}(...$Nil)"} { ..${testTerms} } """
       )
-    } yield {
-      parents.headOption
-        .fold(q"""trait ${Type.Name(className)} {..${testTerms}}""")(
-          parent => q"""trait ${Type.Name(className)} extends ${init"${Type.Name(parent.clsName)}(...$Nil)"} { ..${testTerms} } """
-        )
-    }
 }

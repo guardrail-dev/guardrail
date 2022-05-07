@@ -17,10 +17,10 @@ import io.circe._
 
 /** Changes
   *
-  * - Server request body validation
-  * - Client responses
-  *   - No content vs Partial content vs Invalid content
-  * - Polymorphic discriminator error messages
+  *   - Server request body validation
+  *   - Client responses
+  *     - No content vs Partial content vs Invalid content
+  *   - Polymorphic discriminator error messages
   */
 class Issue184Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
   override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)

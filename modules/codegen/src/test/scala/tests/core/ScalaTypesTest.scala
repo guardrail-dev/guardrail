@@ -34,7 +34,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""

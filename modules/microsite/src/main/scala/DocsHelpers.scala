@@ -32,9 +32,9 @@ object DocsHelpers {
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
-        val server                              = codegenDefinitions.servers.head
-        val q"object ${oname } { ..${stats } }" = (server.serverDefinitions.head: @unchecked)
-        val routeStats                          = stats.collectFirst({ case line @ q"def routes(...$_): $_ = $_" => line }).toList
+        val server                            = codegenDefinitions.servers.head
+        val q"object ${oname} { ..${stats} }" = server.serverDefinitions.head: @unchecked
+        val routeStats                        = stats.collectFirst { case line @ q"def routes(...$_): $_ = $_" => line }.toList
         List(
           Some(server.handlerDefinition.toString),
           Some(""),
@@ -53,23 +53,23 @@ object DocsHelpers {
           case g :: Nil =>
             val StaticDefns(className, extraImports, definitions) = g.staticDefns
             val o                                                 = q"object ${Term.Name(className)} { ..${definitions} }"
-            val Right(q"""class ${name }(...${args }) {
-              ..${defns }
-            }""")                                                 = (g.client.head: @unchecked)
-            val basePath = defns.collectFirst {
-              case v @ q"val basePath: String = $_" => v
+            val Right(q"""class ${name}(...${args}) {
+              ..${defns}
+            }""") = g.client.head: @unchecked
+            val basePath = defns.collectFirst { case v @ q"val basePath: String = $_" =>
+              v
             }
             val (firstName, firstDefn) = defns
-              .collectFirst({
-                case q"def ${name }(...${args }): $tpe = $body" => (name, q"def ${name}(...${args}): $tpe = $body")
-              })
+              .collectFirst { case q"def ${name}(...${args}): $tpe = $body" =>
+                (name, q"def ${name}(...${args}): $tpe = $body")
+              }
               .toList
               .unzip
             val rest = defns.collect {
-              case q"def ${name }(...${args }): $tpe = $_" if !firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
+              case q"def ${name}(...${args}): $tpe = $_" if !firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
             }
             val matched = (basePath ++ firstDefn ++ rest).toList
-            val c       = q"""class ${name}(...${args}) {
+            val c = q"""class ${name}(...${args}) {
               ..${matched}
             }"""
 
@@ -86,22 +86,19 @@ object DocsHelpers {
         )
         val server = codegenDefinitions.servers.head
         val q"""
-          class ${oname }[..${tparms }](...${resourceParams }) extends ..${xtends } {
-            ..${stats }
+          class ${oname}[..${tparms}](...${resourceParams}) extends ..${xtends} {
+            ..${stats}
           }
-        """        = (server.serverDefinitions.head: @unchecked)
+        """ = server.serverDefinitions.head: @unchecked
 
-        val routeStats = stats
-          .collectFirst({
-            case q"""def routes(...$parms): $rtpe = HttpRoutes.of(${Term.Block(List(Term.PartialFunction(cases))) })""" =>
-              q"""
+        val routeStats = stats.collectFirst { case q"""def routes(...$parms): $rtpe = HttpRoutes.of(${Term.Block(List(Term.PartialFunction(cases)))})""" =>
+          q"""
           def routes(...${parms}): ${rtpe} = ${Term.Apply(
-                fun = q"HttpRoutes.of",
-                args = List(Term.Block(stats = List(Term.PartialFunction(cases = cases.take(2)))))
-              )}
+              fun = q"HttpRoutes.of",
+              args = List(Term.Block(stats = List(Term.PartialFunction(cases = cases.take(2)))))
+            )}
         """
-          })
-          .toList
+        }.toList
         List(
           Some(server.handlerDefinition.toString),
           Some(""),
@@ -121,23 +118,23 @@ object DocsHelpers {
           case g :: Nil =>
             val StaticDefns(className, extraImports, definitions) = g.staticDefns
             val o                                                 = q"object ${Term.Name(className)} { ..${definitions} }"
-            val Right(q"""class ${name }[..${tparms }](...${args }) {
-              ..${defns }
-            }""")                                                 = (g.client.head: @unchecked)
-            val basePath = defns.collectFirst {
-              case v @ q"val basePath: String = $_" => v
+            val Right(q"""class ${name}[..${tparms}](...${args}) {
+              ..${defns}
+            }""") = g.client.head: @unchecked
+            val basePath = defns.collectFirst { case v @ q"val basePath: String = $_" =>
+              v
             }
             val (firstName, firstDefn) = defns
-              .collectFirst({
-                case q"def ${name }(...${args }): $tpe = $body" => (name, q"def ${name}(...${args}): $tpe = $body")
-              })
+              .collectFirst { case q"def ${name}(...${args}): $tpe = $body" =>
+                (name, q"def ${name}(...${args}): $tpe = $body")
+              }
               .toList
               .unzip
             val rest = defns.collect {
-              case q"def ${name }(...${args }): $tpe = $_" if !firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
+              case q"def ${name}(...${args}): $tpe = $_" if !firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
             }
             val matched = (basePath ++ firstDefn ++ rest).toList
-            val c       = q"""class ${name}[..${tparms}](...${args}) {
+            val c = q"""class ${name}[..${tparms}](...${args}) {
               ..${matched}
             }"""
 
@@ -158,9 +155,9 @@ object DocsHelpers {
           Some("```scala"),
           Option(prefix).filter(_.nonEmpty)
         ) ++ segments ++ List[Option[String]](
-              Option(suffix).filter(_.nonEmpty),
-              Some("```")
-            )
+          Option(suffix).filter(_.nonEmpty),
+          Some("```")
+        )
       ).flatten.mkString("\n")
     )
   }

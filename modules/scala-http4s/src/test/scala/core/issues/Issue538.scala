@@ -38,8 +38,8 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val (
         ProtocolDefinitions(
           List(
-            _: ClassDefinition[ScalaLanguage], //bar
-            _: ClassDefinition[ScalaLanguage], //baz
+            _: ClassDefinition[ScalaLanguage], // bar
+            _: ClassDefinition[ScalaLanguage], // baz
             foo: ClassDefinition[ScalaLanguage]
           ),
           _,
@@ -77,8 +77,8 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val (
         ProtocolDefinitions(
           List(
-            _: ClassDefinition[ScalaLanguage], //bar
-            _: ClassDefinition[ScalaLanguage], //baz
+            _: ClassDefinition[ScalaLanguage], // bar
+            _: ClassDefinition[ScalaLanguage], // baz
             foo: ClassDefinition[ScalaLanguage]
           ),
           _,
@@ -116,8 +116,8 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val (
         ProtocolDefinitions(
           List(
-            _: ClassDefinition[ScalaLanguage], //bar
-            _: ClassDefinition[ScalaLanguage], //baz
+            _: ClassDefinition[ScalaLanguage], // bar
+            _: ClassDefinition[ScalaLanguage], // baz
             foo: ClassDefinition[ScalaLanguage]
           ),
           _,
@@ -155,8 +155,8 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       val (
         ProtocolDefinitions(
           List(
-            _: ClassDefinition[ScalaLanguage], //bar
-            _: ClassDefinition[ScalaLanguage], //baz
+            _: ClassDefinition[ScalaLanguage], // bar
+            _: ClassDefinition[ScalaLanguage], // baz
             foo: ClassDefinition[ScalaLanguage]
           ),
           _,

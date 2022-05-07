@@ -16,7 +16,7 @@ class DropwizardOptionalArrayParamTest extends AnyFreeSpec with Matchers with Re
 
   override def withFixture(test: NoArgTest) =
     if (isRetryable(test))
-      withRetry { super.withFixture(test) }
+      withRetry(super.withFixture(test))
     else
       super.withFixture(test)
 
@@ -48,7 +48,7 @@ class DropwizardOptionalArrayParamTest extends AnyFreeSpec with Matchers with Re
       |        200: {}
       |""".stripMargin
 
-  "Optional array resource method params should be unwrapped" taggedAs (Retryable) in {
+  "Optional array resource method params should be unwrapped" taggedAs Retryable in {
     val (
       _,
       _,
@@ -59,9 +59,9 @@ class DropwizardOptionalArrayParamTest extends AnyFreeSpec with Matchers with Re
       .asClassOrInterfaceDeclaration()
       .getMembers
       .asScala
-      .collectFirst({
+      .collectFirst {
         case method: MethodDeclaration if method.getNameAsString == "getFoo" => method
-      })
+      }
       .value
 
     getFooMethod

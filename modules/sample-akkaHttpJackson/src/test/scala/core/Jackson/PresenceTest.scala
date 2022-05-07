@@ -48,7 +48,7 @@ class PresenceTest extends AnyFreeSpec with TestImplicits with Matchers {
 
     mapper.readValue("""{"required":"","required-nullable":"i am present"}""", classOf[TestObject]) mustBe present
     mapper.readValue("""{"required":"","required-nullable":null}""", classOf[TestObject]) mustBe nulled
-    intercept[JsonMappingException] { mapper.readValue("""{"required":""}""", classOf[TestObject]) }
+    intercept[JsonMappingException](mapper.readValue("""{"required":""}""", classOf[TestObject]))
   }
 
   "Optional non-nullable deserialization should work" in {
@@ -56,7 +56,7 @@ class PresenceTest extends AnyFreeSpec with TestImplicits with Matchers {
     val absent  = present.copy(optional = Presence.absent)
 
     mapper.readValue("""{"required":"","required-nullable":null,"optional":"i am present"}""", classOf[TestObject]) mustBe present
-    intercept[JsonMappingException] { mapper.readValue("""{"required":"","required-nullable":null,"optional":null}""", classOf[TestObject]) }
+    intercept[JsonMappingException](mapper.readValue("""{"required":"","required-nullable":null,"optional":null}""", classOf[TestObject]))
     mapper.readValue("""{"required":"","required-nullable":null}""", classOf[TestObject]) mustBe absent
   }
 

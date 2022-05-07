@@ -8,25 +8,19 @@ import dev.guardrail.{ Target, UserError }
 import scala.jdk.CollectionConverters._
 import cats.Functor
 
-/**
-  * Tracker is a class to marshal access into potentially nullable fields in Java classes,
-  * while maintaining a human-readable history of which properties were accessed.
+/** Tracker is a class to marshal access into potentially nullable fields in Java classes, while maintaining a human-readable history of which properties were
+  * accessed.
   *
-  * Tracker heavily utilizes syntax from IndexedFunctor and IndexedDistributive.
-  * These classes are similar to Functor and Traversable, except they expose the
-  * index into the structure they are walking over. This is used to automatically
-  * build the history while walking structures.
+  * Tracker heavily utilizes syntax from IndexedFunctor and IndexedDistributive. These classes are similar to Functor and Traversable, except they expose the
+  * index into the structure they are walking over. This is used to automatically build the history while walking structures.
   *
-  * val tracker:        Tracker[        OpenAPI  ] = Tracker(openAPI)
-  * val servers:        Tracker[List[   Server  ]] = tracker.downField("servers", _.getServers)
-  * val firstServer:    Tracker[Option[ Server  ]] = servers.map(_.headOption)
-  * val firstServerUrl: Tracker[Option[ String  ]] = firstServer.flatDownField("url", _.getUrl)
+  * val tracker: Tracker[ OpenAPI ] = Tracker(openAPI) val servers: Tracker[List[ Server ]] = tracker.downField("servers", _.getServers) val firstServer:
+  * Tracker[Option[ Server ]] = servers.map(_.headOption) val firstServerUrl: Tracker[Option[ String ]] = firstServer.flatDownField("url", _.getUrl)
   *
-  * val trackedUrl:     Tracker[Option[ URL     ]] = firstServerUrl.map(_.map(new URL(_)))
+  * val trackedUrl: Tracker[Option[ URL ]] = firstServerUrl.map(_.map(new URL(_)))
   *
-  * // Examples of extracting:
-  * val firstServerUrl:         Option[ URL     ]  = trackedUrl.unwrapTracker  // Throw away history
-  * val firstServerUrl:         Target[ URL     ]  = trackedUrl.raiseErrorIfEmpty("No Server URL found!")  // Append history to the end of the error message
+  * // Examples of extracting: val firstServerUrl: Option[ URL ] = trackedUrl.unwrapTracker // Throw away history val firstServerUrl: Target[ URL ] =
+  * trackedUrl.raiseErrorIfEmpty("No Server URL found!") // Append history to the end of the error message
   */
 class Tracker[+A] private[core] (private[core] val get: A, private[core] val history: Vector[String]) {
   override def toString(): String = s"Tracker($get, $history)"
@@ -54,9 +48,8 @@ trait HighPriorityTrackerEvidence extends LowPriorityTrackerEvidence {
 trait LowestPriorityTrackerInstances {
   implicit object distributiveTracker extends IndexedDistributive[Tracker] {
     def indexedDistribute[G[_], A](value: Tracker[G[A]])(implicit G: IndexedFunctor[G]): G[Tracker[A]] =
-      G.map(value.unwrapTracker) {
-        case (i, a) =>
-          new Tracker(a, value.history ++ G.label(i))
+      G.map(value.unwrapTracker) { case (i, a) =>
+        new Tracker(a, value.history ++ G.label(i))
       }
   }
 
@@ -112,11 +105,13 @@ trait HighPriorityTrackerSyntax extends LowPriorityTrackerSyntax {
 
   implicit class RefineEitherSyntax[A, C](value: Either[Tracker[A], C]) {
     def orRefine[B1](r: PartialFunction[A, B1])(f: Tracker[B1] => C): Either[Tracker[A], C] =
-      value.fold({ tracker =>
-        r.andThen(value => f(Tracker.cloneHistory(tracker, value)))
-          .andThen(Right(_))
-          .applyOrElse(tracker.get, (_: A) => Left(tracker))
-      }, Right(_))
+      value.fold(
+        tracker =>
+          r.andThen(value => f(Tracker.cloneHistory(tracker, value)))
+            .andThen(Right(_))
+            .applyOrElse(tracker.get, (_: A) => Left(tracker)),
+        Right(_)
+      )
 
     def orRefineFallback(f: Tracker[A] => C): C =
       value.fold(f, identity _)

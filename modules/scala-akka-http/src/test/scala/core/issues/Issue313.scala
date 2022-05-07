@@ -50,7 +50,7 @@ class Issue313 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(tags, className, imports, staticDefns, NonEmptyList(Right(cls), _), _) :: _, Nil),
       _
-    )       = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
     val cmp = companionForStaticDefns(staticDefns)
 
     val client = q"""

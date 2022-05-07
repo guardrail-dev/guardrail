@@ -60,8 +60,8 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
   def injectSwagger[T](s: OpenAPI, rs: ReadSwagger[T]): T = rs.next(s)
 
   def extractPackage(path: Path, results: List[WriteTree]): Term.Ref = {
-    val Some(source"""package ${fooPkg }
-    ..${stats }
+    val Some(source"""package ${fooPkg}
+    ..${stats}
     """) = results.find(_.path == path).headOption.map(_.contents).map(x => new String(Target.unsafeExtract(Await.result(x, Duration.Inf))).parse[Source].get)
     fooPkg
   }
@@ -86,11 +86,11 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
           .processArgs[ScalaLanguage, Target](args)(
             new CoreTermInterp[ScalaLanguage](
               "akka-http",
-              ScalaModule.extract, {
-                case "akka-http" => Target.pure(AkkaHttp)
-              }, {
-                _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
-              }
+              ScalaModule.extract,
+              { case "akka-http" =>
+                Target.pure(AkkaHttp)
+              },
+              _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
             )
           )
       )
@@ -151,11 +151,11 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
           .processArgs[ScalaLanguage, Target](args)(
             new CoreTermInterp[ScalaLanguage](
               "akka-http",
-              ScalaModule.extract, {
-                case "akka-http" => Target.pure(AkkaHttp)
-              }, {
-                _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
-              }
+              ScalaModule.extract,
+              { case "akka-http" =>
+                Target.pure(AkkaHttp)
+              },
+              _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
             )
           )
       )
