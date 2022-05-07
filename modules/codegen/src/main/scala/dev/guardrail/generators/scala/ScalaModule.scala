@@ -59,23 +59,13 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
     AkkaHttpGenerator(AkkaHttpVersion.V10_1, modelGeneratorType)
   )
 
-  def http4sV0_22(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
+  def http4s(http4sVersion: Http4sVersion)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
       ClientTerms[ScalaLanguage, Target],
       ServerTerms[ScalaLanguage, Target],
       FrameworkTerms[ScalaLanguage, Target]
   ) = (
     Http4sClientGenerator(),
-    Http4sServerGenerator(Http4sVersion.V0_22),
-    Http4sGenerator()
-  )
-
-  def http4s(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): (
-      ClientTerms[ScalaLanguage, Target],
-      ServerTerms[ScalaLanguage, Target],
-      FrameworkTerms[ScalaLanguage, Target]
-  ) = (
-    Http4sClientGenerator(),
-    Http4sServerGenerator(Http4sVersion.V0_23),
+    Http4sServerGenerator(http4sVersion),
     Http4sGenerator()
   )
 
@@ -95,7 +85,8 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       (modelGeneratorType, protocol) <- popModule(
         "json",
         ("circe-java8", catchClassNotFound((CirceModelGenerator.V011, circeJava8(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
-        ("circe-0.11", catchClassNotFound((CirceModelGenerator.V011, circe(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
+        ("circe-v0.11", catchClassNotFound((CirceModelGenerator.V011, circe(CirceModelGenerator.V011)), MissingDependency("guardrail-scala-support"))),
+        ("circe-v0.12", catchClassNotFound((CirceModelGenerator.V012, circe(CirceModelGenerator.V012)), MissingDependency("guardrail-scala-support"))),
         ("circe", catchClassNotFound((CirceModelGenerator.V012, circe(CirceModelGenerator.V012)), MissingDependency("guardrail-scala-support"))),
         ("jackson", catchClassNotFound((JacksonModelGenerator, jackson), MissingDependency("guardrail-scala-support")))
       )
@@ -103,9 +94,9 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
         "framework",
         ("akka-http", catchClassNotFound(akkaHttp(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
         ("akka-http-v10.1", catchClassNotFound(akkaHttpV10_1(modelGeneratorType), MissingDependency("guardrail-scala-akka-http"))),
-        ("http4s", catchClassNotFound(http4s, MissingDependency("guardrail-scala-http4s"))),
-        ("http4s-v0.23", catchClassNotFound(http4s, MissingDependency("guardrail-scala-http4s"))),
-        ("http4s-v0.22", catchClassNotFound(http4sV0_22, MissingDependency("guardrail-scala-http4s"))),
+        ("http4s", catchClassNotFound(http4s(Http4sVersion.V0_23), MissingDependency("guardrail-scala-http4s"))),
+        ("http4s-v0.23", catchClassNotFound(http4s(Http4sVersion.V0_23), MissingDependency("guardrail-scala-http4s"))),
+        ("http4s-v0.22", catchClassNotFound(http4s(Http4sVersion.V0_22), MissingDependency("guardrail-scala-http4s"))),
         ("dropwizard", catchClassNotFound(dropwizard, MissingDependency("guardrail-scala-dropwizard")))
       )
       // parser             =  or interpFramework
@@ -118,6 +109,17 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]               = SwaggerGenerator[ScalaLanguage]()
       def LanguageInterp: LanguageTerms[ScalaLanguage, Target]             = ScalaGenerator()
       def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = collections
-    }).runA(modules.toList.toSet)
+    }).runA(
+      modules
+        .map {
+          case oldv @ "circe-0.11" =>
+            val newv = "circe-v0.11"
+            println(s"Deprecation: ${oldv} has been renamed to ${newv} for consistency")
+            newv
+          case other => other
+        }
+        .toList
+        .toSet
+    )
   }
 }

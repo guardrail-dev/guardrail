@@ -29,7 +29,7 @@ import dev.guardrail.{
 class CoreTermInterp[L <: LA](
     val defaultFramework: String,
     val handleModules: NonEmptyList[String] => Target[Framework[L, Target]],
-    val frameworkMapping: PartialFunction[String, Target[Framework[L, Target]]],
+    val frameworkMapping: PartialFunction[String, NonEmptyList[String]],
     val handleImport: String => Either[Error, L#Import]
 ) extends CoreTerms[L, Target] { self =>
   implicit def MonadF: Monad[Target] = Target.targetInstances
@@ -37,10 +37,10 @@ class CoreTermInterp[L <: LA](
   def extendWith(
       defaultFramework: String = self.defaultFramework,
       handleModules: NonEmptyList[String] => Target[Framework[L, Target]] = self.handleModules,
-      additionalFrameworkMappings: PartialFunction[String, Framework[L, Target]] = PartialFunction.empty,
+      additionalFrameworkMappings: PartialFunction[String, NonEmptyList[String]] = PartialFunction.empty,
       handleImport: String => Either[Error, L#Import] = self.handleImport
   ): CoreTermInterp[L] =
-    new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.andThen(Target.pure _).orElse(self.frameworkMapping), handleImport)
+    new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.orElse(self.frameworkMapping), handleImport)
 
   def getDefaultFramework =
     Target.log.function("getDefaultFramework") {
@@ -58,7 +58,8 @@ class CoreTermInterp[L <: LA](
             ctxFramework =>
               for {
                 frameworkName <- Target.fromOption(ctxFramework.orElse(vendorDefaultFramework), NoFramework)
-                framework     <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName)).flatten
+                modules       <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
+                framework     <- handleModules(modules)
                 _             <- Target.log.debug(s"Found: $framework")
               } yield framework,
             handleModules
@@ -109,9 +110,8 @@ class CoreTermInterp[L <: LA](
         customImports <- args.imports
           .traverse(x =>
             for {
-              _ <- Target.log.debug(s"Attempting to parse $x as an import directive")
-              customImport <- handleImport(x)
-                .fold[Target[L#Import]](err => Target.raiseError(UnparseableArgument("import", err.toString)), Target.pure _)
+              _            <- Target.log.debug(s"Attempting to parse $x as an import directive")
+              customImport <- Target.fromEither(handleImport(x).left.map(err => UnparseableArgument("import", err.toString)))
             } yield customImport
           )
         _ <- Target.log.debug("Finished processing arguments")

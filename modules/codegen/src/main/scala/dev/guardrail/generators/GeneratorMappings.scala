@@ -9,7 +9,7 @@ import _root_.scala.util.{ Failure, Success, Try }
 import dev.guardrail.core.CoreTermInterp
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.{ Args, Common, MissingDependency, ReadSwagger, Target, UnparseableArgument, WriteTree, monadForCore }
+import dev.guardrail.{ Args, Common, MissingDependency, ReadSwagger, Target, UnparseableArgument, WriteTree }
 
 object GeneratorMappings {
   private abstract class LoaderIndirection[A] {
@@ -30,32 +30,16 @@ object GeneratorMappings {
 
   val scalaModule = catchClassNotFound(indirectScalaModule, MissingDependency("guardrail-scala-support"))
 
-  private def indirectAkkaHttp = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
-    val instance = scala.akkaHttp.AkkaHttp
-  }
-  private def indirectHttp4s = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
-    val instance = new scala.http4s.Http4s(scala.http4s.Http4sVersion.V0_23)
-  }
-  private def indirectHttp4sV0_22 = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
-    val instance = new scala.http4s.Http4s(scala.http4s.Http4sVersion.V0_22)
-  }
-  private def indirectAkkaHttpJackson = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
-    val instance = scala.akkaHttp.AkkaHttpJackson
-  }
-  private def indirectScalaDropwizard = new LoaderIndirection[Framework[ScalaLanguage, Target]] {
-    val instance = scala.dropwizard.Dropwizard
-  }
-
   implicit def scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
     xs => scalaModule.flatMap(_.extract(xs)),
     {
-      case "akka-http"         => scalaModule *> catchClassNotFound(indirectAkkaHttp, MissingDependency("guardrail-scala-akka-http"))
-      case "http4s"            => scalaModule *> catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
-      case "http4s-v0.23"      => scalaModule *> catchClassNotFound(indirectHttp4s, MissingDependency("guardrail-scala-http4s"))
-      case "http4s-v0.22"      => scalaModule *> catchClassNotFound(indirectHttp4sV0_22, MissingDependency("guardrail-scala-http4s"))
-      case "akka-http-jackson" => scalaModule *> catchClassNotFound(indirectAkkaHttpJackson, MissingDependency("guardrail-scala-akka-http"))
-      case "dropwizard"        => scalaModule *> catchClassNotFound(indirectScalaDropwizard, MissingDependency("guardrail-scala-dropwizard"))
+      case "akka-http"         => NonEmptyList.of("akka-http", "circe")
+      case "http4s"            => NonEmptyList.of("circe", "http4s")
+      case "http4s-v0.23"      => NonEmptyList.of("circe", "http4s-v0.23")
+      case "http4s-v0.22"      => NonEmptyList.of("circe", "http4s-v0.22")
+      case "akka-http-jackson" => NonEmptyList.of("akka-http", "jackson")
+      case "dropwizard"        => NonEmptyList.of("dropwizard", "jackson")
     },
     _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
   )
@@ -66,19 +50,12 @@ object GeneratorMappings {
 
   val javaModule = catchClassNotFound(indirectJavaModule, MissingDependency("guardrail-java-support"))
 
-  private def indirectJavaDropwizard = new LoaderIndirection[Framework[JavaLanguage, Target]] {
-    val instance = java.dropwizard.Dropwizard
-  }
-  private def indirectSpringMvc = new LoaderIndirection[Framework[JavaLanguage, Target]] {
-    val instance = java.springMvc.SpringMvc
-  }
-
   implicit def javaInterpreter = new CoreTermInterp[JavaLanguage](
     "dropwizard",
     xs => javaModule.flatMap(_.extract(xs)),
     {
-      case "dropwizard" => javaModule *> catchClassNotFound(indirectJavaDropwizard, MissingDependency("guardrail-java-dropwizard"))
-      case "spring-mvc" => javaModule *> catchClassNotFound(indirectSpringMvc, MissingDependency("guardrail-java-spring-mvc"))
+      case "dropwizard" => NonEmptyList.of("dropwizard", "jackson", "java-stdlib", "async-http-client")
+      case "spring-mvc" => NonEmptyList.of("spring-mvc", "jackson", "java-stdlib", "async-http-client")
     },
     { str =>
       Try(StaticJavaParser.parseImport(s"import ${str};")) match {
