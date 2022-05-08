@@ -1,4 +1,4 @@
-package dev.guardrail.generators.collections
+package dev.guardrail.generators.java
 
 import cats.Monad
 import com.github.javaparser.ast.{ Node, NodeList }
@@ -8,7 +8,6 @@ import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.Target
 import dev.guardrail.core
 import dev.guardrail.generators.java.syntax.{ buildMethodCall, _ }
-import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.generators.spi.CollectionsGeneratorLoader
 

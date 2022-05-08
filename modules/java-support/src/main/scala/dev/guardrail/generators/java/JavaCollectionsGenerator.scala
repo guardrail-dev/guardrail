@@ -1,4 +1,4 @@
-package dev.guardrail.generators.collections
+package dev.guardrail.generators.java
 
 import cats.Monad
 import com.github.javaparser.StaticJavaParser
@@ -11,7 +11,6 @@ import dev.guardrail.core.LazyResolvedType
 import dev.guardrail.Target
 import dev.guardrail.core
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.generators.spi.CollectionsGeneratorLoader
 

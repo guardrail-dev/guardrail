@@ -4,9 +4,10 @@ import com.github.javaparser.ast.expr.Name
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Target
-import dev.guardrail.generators.collections.{ JavaCollectionsGenerator, JavaVavrCollectionsGenerator }
-import dev.guardrail.generators.java.syntax.{ safeParseName, safeParseType }
+import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaLanguage
+import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
+import dev.guardrail.generators.java.syntax.{ safeParseName, safeParseType }
 import dev.guardrail.generators.spi.FrameworkGeneratorLoader
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }

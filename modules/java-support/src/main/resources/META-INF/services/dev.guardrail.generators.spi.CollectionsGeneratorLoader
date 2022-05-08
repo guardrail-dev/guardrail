@@ -1,2 +1,2 @@
-dev.guardrail.generators.collections.JavaVavrCollectionsGeneratorLoader
-dev.guardrail.generators.collections.JavaCollectionsGeneratorLoader
+dev.guardrail.generators.java.JavaVavrCollectionsGeneratorLoader
+dev.guardrail.generators.java.JavaCollectionsGeneratorLoader

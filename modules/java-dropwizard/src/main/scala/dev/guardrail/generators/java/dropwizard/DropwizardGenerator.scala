@@ -8,8 +8,9 @@ import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Target
 import dev.guardrail.core.SupportDefinition
-import dev.guardrail.generators.collections.{ JavaCollectionsGenerator, JavaVavrCollectionsGenerator }
+import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaLanguage
+import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.generators.spi.FrameworkGeneratorLoader
