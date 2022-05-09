@@ -189,6 +189,15 @@ object Build {
         })
 
     def customDependsOn(other: Project, useProvided: Boolean = false): Project = {
+      // NB: Currently, any time any PR that breaks semver is merged, it breaks
+      //     the build until the next release.
+      //
+      //     A hack here is to just disable semver checking on master, since
+      //     we already gate semver both at PR time as well as later on
+      //     during release, so it actually serves no useful purpose to fail
+      //     master as well.
+      val isMasterBranch = sys.env.get("GITHUB_REF").contains("refs/heads/master")
+      println(s"GITHUB_REF=${sys.env.get("GITHUB_REF")}")
       val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
       val isCi = sys.env.contains("GUARDRAIL_CI")
       val isBincompatCi = if (isCi) {
@@ -197,7 +206,7 @@ object Build {
           .lineStream_!
           .exists(Set("major", "minor").contains)
       } else false
-      if (isRelease || isBincompatCi) {
+      if (!isMasterBranch && (isRelease || isBincompatCi)) {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
           .settings(libraryDependencies += {
