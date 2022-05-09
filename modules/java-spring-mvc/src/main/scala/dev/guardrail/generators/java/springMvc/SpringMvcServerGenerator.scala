@@ -15,19 +15,23 @@ import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.responses.ApiResponse
 import scala.compat.java8.OptionConverters._
 import scala.language.existentials
+import scala.reflect.runtime.universe.typeTag
 import scala.util.Try
 
 import dev.guardrail.AuthImplementation
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.ServerRawResponse
 import dev.guardrail.generators.RenderedRoutes
-import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.java.SerializationHelpers
-import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaLanguage
+import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
+import dev.guardrail.generators.java.SerializationHelpers
+import dev.guardrail.generators.java.syntax._
+import dev.guardrail.generators.spi.ServerGeneratorLoader
+import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import dev.guardrail.terms.server._
 import dev.guardrail.shims.OperationExt
-import dev.guardrail.terms.collections.CollectionsAbstraction
+import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.{
   AnyContentType,
   ApplicationJson,
@@ -46,6 +50,26 @@ import dev.guardrail.terms.{
 }
 import dev.guardrail.Target
 import dev.guardrail.terms.protocol.{ ADT, ClassDefinition, EnumDefinition, RandomType, StrictProtocolElems }
+
+class SpringMvcServerGeneratorLoader extends ServerGeneratorLoader {
+  type L = JavaLanguage
+  override def reified = typeTag[Target[JavaLanguage]]
+
+  def apply(parameters: Set[String]) =
+    for {
+      _ <- parameters.collectFirst { case SpringMvcVersion(version) =>
+        version
+      }
+      implicit0(cl: CollectionsLibTerms[JavaLanguage, Target]) <- parameters.collectFirst {
+        case JavaVavrCollectionsGenerator(version) => version
+        case JavaCollectionsGenerator(version)     => version
+      }
+      implicit0(ca: CollectionsAbstraction[JavaLanguage]) <- parameters.collectFirst {
+        case JavaVavrCollections(version)   => version
+        case JavaStdLibCollections(version) => version
+      }
+    } yield SpringMvcServerGenerator()
+}
 
 object SpringMvcServerGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ServerTerms[JavaLanguage, Target] =

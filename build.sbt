@@ -4,7 +4,7 @@ name := "guardrail-root"
 git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
 import dev.guardrail.sbt.Build._
-import dev.guardrail.sbt.Dependencies._
+import dev.guardrail.sbt.Dependencies
 import dev.guardrail.sbt.RegressionTests._
 import dev.guardrail.sbt.ExampleCase
 import dev.guardrail.sbt.modules
@@ -92,6 +92,7 @@ val javaSampleSettings = Seq(
 
 lazy val root = modules.root.project
   .settings(publish / skip := true)
+  .settings(libraryDependencies ++= Dependencies.testDependencies)
   .dependsOn(guardrail)
   .dependsOn(cli)
   .dependsOn(javaAsyncHttp, javaDropwizard, javaSpringMvc)
@@ -142,6 +143,9 @@ lazy val samples = (project in file("modules/samples"))
   )
 
 lazy val core = modules.core.project
+  .settings(
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
+  )
 
 lazy val cli = modules.cli.project
   .customDependsOn(guardrail)

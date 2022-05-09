@@ -1,10 +1,28 @@
 package dev.guardrail.generators.scala.akkaHttp
 
+import scala.meta._
+import scala.reflect.runtime.universe.typeTag
+
 import dev.guardrail.{ RuntimeFailure, Target }
-import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.spi.FrameworkGeneratorLoader
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
-import scala.meta._
+
+class AkkaHttpGeneratorLoader extends FrameworkGeneratorLoader {
+  type L = ScalaLanguage
+  def reified = typeTag[Target[ScalaLanguage]]
+
+  implicit val Cl = ScalaCollectionsGenerator()
+  def apply(parameters: Set[String]) =
+    for {
+      akkaHttpVersion <- parameters.collectFirst { case AkkaHttpVersion(version) => version }
+      collectionVersion <- parameters.collectFirst {
+        case CirceModelGenerator(version)   => version
+        case JacksonModelGenerator(version) => version
+      }
+    } yield AkkaHttpGenerator(akkaHttpVersion, collectionVersion)
+}
 
 object AkkaHttpGenerator {
   def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(implicit

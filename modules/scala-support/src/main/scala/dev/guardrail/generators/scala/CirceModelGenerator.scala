@@ -21,6 +21,7 @@ object CirceModelGenerator {
   }
 
   def unapply(version: String): Option[CirceModelGenerator] = version match {
+    case "circe"    => Some(V012)
     case V011.value => Some(V011)
     case V012.value => Some(V012)
     case _          => None

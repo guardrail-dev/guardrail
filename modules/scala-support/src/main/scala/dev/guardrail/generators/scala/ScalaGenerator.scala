@@ -8,19 +8,34 @@ import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Common.resolveFile
 import dev.guardrail._
 import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.generators.scala.syntax._
+import dev.guardrail.generators.spi.LanguageLoader
 import dev.guardrail.generators.syntax.RichString
 import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
 
+class ScalaGeneratorLoader extends LanguageLoader {
+  type L = ScalaLanguage
+  def reified = typeTag[Target[ScalaLanguage]]
+  def apply(parameters: Set[String]): Option[LanguageTerms[ScalaLanguage, Target]] =
+    for {
+      generator <- parameters.collectFirst { case ScalaGenerator(version) => version }
+    } yield generator
+}
+
 object ScalaGenerator {
   def apply(): LanguageTerms[ScalaLanguage, Target] =
     new ScalaGenerator
+  def unapply(value: String): Option[LanguageTerms[ScalaLanguage, Target]] = value match {
+    case "scala-language" => Some(apply())
+    case _                => None
+  }
 }
 
 class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {

@@ -1,0 +1,2 @@
+dev.guardrail.generators.scala.circe.CirceProtocolGeneratorLoader
+dev.guardrail.generators.scala.jackson.JacksonProtocolGeneratorLoader

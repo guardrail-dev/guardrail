@@ -12,21 +12,42 @@ import com.github.javaparser.ast.{ Node, NodeList }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
+import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core
 import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour }
+import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
+import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.syntax._
+import dev.guardrail.generators.spi.ProtocolGeneratorLoader
 import dev.guardrail.generators.RawParameterName
-import dev.guardrail.terms.collections.CollectionsAbstraction
+import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
 import dev.guardrail.{ RuntimeFailure, Target, UserError }
+
+class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
+  type L = JavaLanguage
+  def reified = typeTag[Target[JavaLanguage]]
+  def apply(parameters: Set[String]): Option[ProtocolTerms[JavaLanguage, Target]] =
+    for {
+      _ <- parameters.collectFirst { case JacksonVersion(version) => version }
+      implicit0(cl: CollectionsLibTerms[JavaLanguage, Target]) <- parameters.collectFirst {
+        case JavaVavrCollectionsGenerator(version) => version
+        case JavaCollectionsGenerator(version)     => version
+      }
+      implicit0(ca: CollectionsAbstraction[JavaLanguage]) <- parameters.collectFirst {
+        case JavaVavrCollections(version)   => version
+        case JavaStdLibCollections(version) => version
+      }
+    } yield JacksonGenerator()
+}
 
 object JacksonGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ProtocolTerms[JavaLanguage, Target] =

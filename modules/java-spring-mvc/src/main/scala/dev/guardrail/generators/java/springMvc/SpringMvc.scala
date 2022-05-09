@@ -1,9 +1,9 @@
 package dev.guardrail.generators.java.springMvc
 
 import dev.guardrail.Target
+import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.jackson.JacksonGenerator
-import dev.guardrail.generators.collections.JavaCollectionsGenerator
 import dev.guardrail.generators.{ Framework, SwaggerGenerator }
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.terms.collections.JavaStdLibCollections

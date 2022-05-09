@@ -1,14 +1,33 @@
 package dev.guardrail.generators.scala
 
 import cats.Monad
+import scala.meta._
+import scala.reflect.runtime.universe.typeTag
+
 import dev.guardrail.core
+import dev.guardrail.generators.spi.CollectionsGeneratorLoader
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.Target
-import scala.meta._
+
+class ScalaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
+  type L = ScalaLanguage
+  def reified = typeTag[Target[ScalaLanguage]]
+
+  def apply(parameters: Set[String]) =
+    for {
+      cl <- parameters.collectFirst { case ScalaCollectionsGenerator(version) =>
+        version
+      }
+    } yield cl
+}
 
 object ScalaCollectionsGenerator {
   def apply(): CollectionsLibTerms[ScalaLanguage, Target] =
     new ScalaCollectionsGenerator
+  def unapply(value: String): Option[ScalaCollectionsGenerator] = value match {
+    case "scala-stdlib" => Some(new ScalaCollectionsGenerator)
+    case _              => None
+  }
 }
 
 class ScalaCollectionsGenerator private extends CollectionsLibTerms[ScalaLanguage, Target] {

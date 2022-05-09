@@ -18,30 +18,54 @@ import scala.annotation.tailrec
 import dev.guardrail.Target
 import dev.guardrail.core.{ PathExtractor, SupportDefinition }
 import dev.guardrail.generators.RenderedClientOperation
+import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
+import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.asyncHttpClient.AsyncHttpClientHelpers._
 import dev.guardrail.generators.java.syntax._
+import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import dev.guardrail.javaext.helpers.ResponseHelpers
+import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
-import dev.guardrail.terms.collections.CollectionsAbstraction
+import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.terms.{
   AnyContentType,
   ApplicationJson,
   BinaryContent,
+  CollectionsLibTerms,
   ContentType,
   MultipartFormData,
   OctetStream,
   Response,
   Responses,
+  RouteMeta,
+  SecurityScheme,
   TextContent,
   TextPlain,
   UrlencodedFormData
 }
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+
+class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
+  type L = JavaLanguage
+  def reified = typeTag[Target[JavaLanguage]]
+
+  def apply(parameters: Set[String]) =
+    for {
+      _ <- parameters.collectFirst { case AsyncHttpClientVersion(version) => version }
+      implicit0(cl: CollectionsLibTerms[JavaLanguage, Target]) <- parameters.collectFirst {
+        case JavaVavrCollectionsGenerator(version) => version
+        case JavaCollectionsGenerator(version)     => version
+      }
+      implicit0(ca: CollectionsAbstraction[JavaLanguage]) <- parameters.collectFirst {
+        case JavaVavrCollections(version)   => version
+        case JavaStdLibCollections(version) => version
+      }
+    } yield AsyncHttpClientClientGenerator()
+}
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 object AsyncHttpClientClientGenerator {
