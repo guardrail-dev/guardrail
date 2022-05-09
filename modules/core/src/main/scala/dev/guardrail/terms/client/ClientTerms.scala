@@ -10,9 +10,9 @@ import dev.guardrail.generators.RenderedClientOperation
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+import dev.guardrail.terms.{ RouteMeta, SecurityScheme }
 
-abstract class ClientTerms[L <: LA, F[_]](implicit Cl: CollectionsLibTerms[L, F]) { self =>
+abstract class ClientTerms[L <: LA, F[_]] { self =>
   def MonadF: Monad[F]
   def generateClientOperation(
       className: List[String],

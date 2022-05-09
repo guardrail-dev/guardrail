@@ -11,14 +11,7 @@ import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
-import dev.guardrail.generators.scala.{
-  CirceModelGenerator,
-  JacksonModelGenerator,
-  ModelGeneratorType,
-  ResponseADTHelper,
-  ScalaCollectionsGenerator,
-  ScalaLanguage
-}
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ResponseADTHelper, ScalaLanguage }
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.generators.syntax._
@@ -26,13 +19,12 @@ import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
 import dev.guardrail.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, Responses, TextPlain }
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+import dev.guardrail.terms.{ RouteMeta, SecurityScheme }
 
 class AkkaHttpClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
 
-  implicit val Cl = ScalaCollectionsGenerator()
   def apply(parameters: Set[String]) =
     for {
       _ <- parameters.collectFirst { case AkkaHttpVersion(version) => version }
@@ -44,12 +36,11 @@ class AkkaHttpClientGeneratorLoader extends ClientGeneratorLoader {
 }
 
 object AkkaHttpClientGenerator {
-  def apply(modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target]): ClientTerms[ScalaLanguage, Target] =
+  def apply(modelGeneratorType: ModelGeneratorType): ClientTerms[ScalaLanguage, Target] =
     new AkkaHttpClientGenerator(modelGeneratorType)
 }
 
-class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType)(implicit Cl: CollectionsLibTerms[ScalaLanguage, Target])
-    extends ClientTerms[ScalaLanguage, Target] {
+class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) extends ClientTerms[ScalaLanguage, Target] {
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def splitOperationParts(operationId: String): (List[String], String) = {

@@ -36,7 +36,6 @@ object Common {
       Sw: SwaggerTerms[L, F]
   ): F[(ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import Fw._
-    import Cl._
     import Sw._
 
     Sw.log.function("prepareDefinitions")(for {
@@ -76,7 +75,7 @@ object Common {
         .flatMap(SecurityRequirements(_, SecurityRequirements.Global))
       requestBodies    <- extractCommonRequestBodies(swagger.downField("components", _.getComponents))
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
-      prefixes         <- vendorPrefixes()
+      prefixes         <- Cl.vendorPrefixes()
       securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.unwrapTracker, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes, context.tagsBehaviour).map(_ -> route))
       groupedRoutes = classNamedRoutes

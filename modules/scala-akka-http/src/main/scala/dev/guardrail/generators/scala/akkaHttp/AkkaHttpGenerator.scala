@@ -4,16 +4,14 @@ import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.{ RuntimeFailure, Target }
-import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.generators.spi.FrameworkGeneratorLoader
-import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework._
 
 class AkkaHttpGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
 
-  implicit val Cl = ScalaCollectionsGenerator()
   def apply(parameters: Set[String]) =
     for {
       akkaHttpVersion <- parameters.collectFirst { case AkkaHttpVersion(version) => version }
@@ -25,15 +23,11 @@ class AkkaHttpGeneratorLoader extends FrameworkGeneratorLoader {
 }
 
 object AkkaHttpGenerator {
-  def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(implicit
-      Cl: CollectionsLibTerms[ScalaLanguage, Target]
-  ): FrameworkTerms[ScalaLanguage, Target] =
+  def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType): FrameworkTerms[ScalaLanguage, Target] =
     new AkkaHttpGenerator(akkaHttpVersion, modelGeneratorType)
 }
 
-class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(implicit
-    Cl: CollectionsLibTerms[ScalaLanguage, Target]
-) extends FrameworkTerms[ScalaLanguage, Target] {
+class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType) extends FrameworkTerms[ScalaLanguage, Target] {
   override implicit def MonadF                  = Target.targetInstances
   override def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
   override def objectType(format: Option[String]) =

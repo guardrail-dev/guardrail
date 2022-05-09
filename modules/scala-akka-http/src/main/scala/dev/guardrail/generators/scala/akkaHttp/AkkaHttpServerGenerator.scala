@@ -12,7 +12,7 @@ import dev.guardrail.AuthImplementation
 import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
 import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, Tracker, VectorRawType }
 import dev.guardrail.generators.operations.TracingLabelFormatter
-import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaCollectionsGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.spi.ServerGeneratorLoader
 import dev.guardrail.generators.syntax._
@@ -20,7 +20,7 @@ import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawP
 import dev.guardrail.shims._
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.server._
-import dev.guardrail.terms.{ ApplicationJson, BinaryContent, CollectionsLibTerms, ContentType, Header, MultipartFormData, Response }
+import dev.guardrail.terms.{ ApplicationJson, BinaryContent, ContentType, Header, MultipartFormData, Response }
 import dev.guardrail.terms.{ Responses, RouteMeta, SecurityScheme, TextContent, TextPlain, UrlencodedFormData }
 import dev.guardrail.{ Target, UserError }
 
@@ -28,7 +28,6 @@ class AkkaHttpServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
 
-  implicit val Cl = ScalaCollectionsGenerator()
   def apply(parameters: Set[String]) =
     for {
       akkaHttpVersion <- parameters.collectFirst { case AkkaHttpVersion(version) =>
@@ -42,9 +41,7 @@ class AkkaHttpServerGeneratorLoader extends ServerGeneratorLoader {
 }
 
 object AkkaHttpServerGenerator {
-  def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(implicit
-      Cl: CollectionsLibTerms[ScalaLanguage, Target]
-  ): ServerTerms[ScalaLanguage, Target] =
+  def apply(akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType): ServerTerms[ScalaLanguage, Target] =
     new AkkaHttpServerGenerator(akkaHttpVersion, modelGeneratorType)
 
   def generateUrlPathExtractors(
@@ -85,9 +82,7 @@ object AkkaHttpServerGenerator {
     } yield result.reverse
 }
 
-class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType)(implicit
-    Cl: CollectionsLibTerms[ScalaLanguage, Target]
-) extends ServerTerms[ScalaLanguage, Target] {
+class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType) extends ServerTerms[ScalaLanguage, Target] {
   val customExtractionTypeName: Type.Name = Type.Name("E")
 
   def splitOperationParts(operationId: String): (List[String], String) = {
