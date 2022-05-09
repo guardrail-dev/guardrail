@@ -8,6 +8,8 @@ import cats.syntax.all._
 import dev.guardrail._
 import dev.guardrail.core.CoreTermInterp
 import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.spi.FrameworkLoader
+import dev.guardrail.generators.spi.ModuleMapperLoader
 
 import scala.meta._
 import scala.concurrent.Await
@@ -78,17 +80,14 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
       List.empty
     )
 
-    import dev.guardrail.generators.scala.ScalaModule
     val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
           .processArgs[ScalaLanguage, Target](args)(
             new CoreTermInterp[ScalaLanguage](
               "akka-http",
-              ScalaModule.extract,
-              { case "akka-http" =>
-                NonEmptyList.of("scala-stdlib", "akka-http", "circe")
-              },
+              xs => FrameworkLoader.load[ScalaLanguage](xs, MissingDependency(xs.mkString(", "))),
+              { case frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName, MissingDependency(frameworkName)) },
               _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
             )
           )
@@ -142,17 +141,14 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
       List.empty
     )
 
-    import dev.guardrail.generators.scala.ScalaModule
     val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
           .processArgs[ScalaLanguage, Target](args)(
             new CoreTermInterp[ScalaLanguage](
               "akka-http",
-              ScalaModule.extract,
-              { case "akka-http" =>
-                NonEmptyList.of("scala-stdlib", "akka-http", "circe")
-              },
+              xs => FrameworkLoader.load[ScalaLanguage](xs, MissingDependency(xs.mkString(", "))),
+              { case frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName, MissingDependency(frameworkName)) },
               _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
             )
           )
