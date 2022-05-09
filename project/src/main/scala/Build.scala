@@ -197,7 +197,6 @@ object Build {
       //     during release, so it actually serves no useful purpose to fail
       //     master as well.
       val isMasterBranch = sys.env.get("GITHUB_REF").contains("refs/heads/master")
-      println(s"GITHUB_REF=${sys.env.get("GITHUB_REF")}")
       val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
       val isCi = sys.env.contains("GUARDRAIL_CI")
       val isBincompatCi = if (isCi) {
