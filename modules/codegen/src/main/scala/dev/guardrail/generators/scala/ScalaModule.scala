@@ -5,13 +5,26 @@ import cats.implicits._
 
 import dev.guardrail._
 import dev.guardrail.generators._
-import dev.guardrail.generators.spi.{ ClientGeneratorLoader, FrameworkGeneratorLoader, ProtocolGeneratorLoader, ServerGeneratorLoader }
+import dev.guardrail.generators.spi.{
+  ClientGeneratorLoader,
+  CollectionsGeneratorLoader,
+  FrameworkGeneratorLoader,
+  ProtocolGeneratorLoader,
+  ServerGeneratorLoader
+}
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.server.ServerTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, ProtocolTerms, SwaggerTerms }
 
 object ScalaModule extends AbstractModule[ScalaLanguage] {
+  def stdlib: Target[(String, CollectionsLibTerms[ScalaLanguage, Target])] = {
+    val params = Set("scala-stdlib")
+    CollectionsGeneratorLoader
+      .load[ScalaLanguage](params, MissingDependency("guardrail-scala-support"))
+      .map(("scala-stdlib", _))
+  }
+
   def circe(circeModelGenerator: String): Target[(String, ProtocolTerms[ScalaLanguage, Target])] = {
     val params = Set(circeModelGenerator)
     ProtocolGeneratorLoader
@@ -85,6 +98,10 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
 
   def extract(modules: NonEmptyList[String]): Target[Framework[ScalaLanguage, Target]] =
     (for {
+      (_, collectionsImpl) <- popModule(
+        "collections",
+        ("scala-stdlib", stdlib)
+      )
       (modelGeneratorType, protocol) <- popModule(
         "json",
         ("circe-java8", circeJava8("circe-v0.11")),
@@ -112,7 +129,7 @@ object ScalaModule extends AbstractModule[ScalaLanguage] {
       def ServerInterp: ServerTerms[ScalaLanguage, Target]                 = server
       def SwaggerInterp: SwaggerTerms[ScalaLanguage, Target]               = SwaggerGenerator[ScalaLanguage]()
       def LanguageInterp: LanguageTerms[ScalaLanguage, Target]             = ScalaGenerator()
-      def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = ScalaCollectionsGenerator()
+      def CollectionsLibInterp: CollectionsLibTerms[ScalaLanguage, Target] = collectionsImpl
     }).runA(
       modules
         .map {

@@ -34,12 +34,12 @@ object GeneratorMappings {
     "akka-http",
     xs => scalaModule.flatMap(_.extract(xs)),
     {
-      case "akka-http"         => NonEmptyList.of("akka-http", "circe")
-      case "http4s"            => NonEmptyList.of("circe", "http4s")
-      case "http4s-v0.23"      => NonEmptyList.of("circe", "http4s-v0.23")
-      case "http4s-v0.22"      => NonEmptyList.of("circe", "http4s-v0.22")
-      case "akka-http-jackson" => NonEmptyList.of("akka-http", "jackson")
-      case "dropwizard"        => NonEmptyList.of("dropwizard", "jackson")
+      case "akka-http"         => NonEmptyList.of("scala-stdlib", "akka-http", "circe")
+      case "http4s"            => NonEmptyList.of("scala-stdlib", "circe", "http4s")
+      case "http4s-v0.23"      => NonEmptyList.of("scala-stdlib", "circe", "http4s-v0.23")
+      case "http4s-v0.22"      => NonEmptyList.of("scala-stdlib", "circe", "http4s-v0.22")
+      case "akka-http-jackson" => NonEmptyList.of("scala-stdlib", "akka-http", "jackson")
+      case "dropwizard"        => NonEmptyList.of("scala-stdlib", "dropwizard", "jackson")
     },
     _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
   )
