@@ -43,6 +43,7 @@ jobs:
     - name: Run tests
       run:  sbt ++${{ matrix.scala.version }} clean guardrail/clean checkFormatting coverage guardrail/test coverageAggregate versionPolicyCheck microsite/compile
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GUARDRAIL_CI: true
     - uses: codecov/codecov-action@v2
       with:

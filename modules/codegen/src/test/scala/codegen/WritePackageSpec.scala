@@ -4,12 +4,9 @@ import java.nio.file.{ Path, Paths }
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
 import cats.data.NonEmptyList
-import cats.syntax.all._
 import dev.guardrail._
-import dev.guardrail.core.CoreTermInterp
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.spi.FrameworkLoader
-import dev.guardrail.generators.spi.ModuleMapperLoader
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 
 import scala.meta._
 import scala.concurrent.Await
@@ -83,14 +80,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
     val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
-          .processArgs[ScalaLanguage, Target](args)(
-            new CoreTermInterp[ScalaLanguage](
-              "akka-http",
-              xs => FrameworkLoader.load[ScalaLanguage](xs, MissingDependency(xs.mkString(", "))),
-              { case frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName, MissingDependency(frameworkName)) },
-              _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
-            )
-          )
+          .processArgs[ScalaLanguage, Target](args)(scalaInterpreter)
       )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
@@ -144,14 +134,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
     val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
-          .processArgs[ScalaLanguage, Target](args)(
-            new CoreTermInterp[ScalaLanguage](
-              "akka-http",
-              xs => FrameworkLoader.load[ScalaLanguage](xs, MissingDependency(xs.mkString(", "))),
-              { case frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName, MissingDependency(frameworkName)) },
-              _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
-            )
-          )
+          .processArgs[ScalaLanguage, Target](args)(scalaInterpreter)
       )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))

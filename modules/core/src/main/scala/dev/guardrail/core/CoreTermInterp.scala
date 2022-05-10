@@ -6,30 +6,27 @@ import cats.Monad
 import java.nio.file.Paths
 import scala.util.control.NonFatal
 
+import dev.guardrail.Args
+import dev.guardrail.Common
+import dev.guardrail.Context
+import dev.guardrail.Error
+import dev.guardrail.MissingArg
+import dev.guardrail.NoArgsSpecified
+import dev.guardrail.NoFramework
+import dev.guardrail.PrintHelp
+import dev.guardrail.ReadSwagger
+import dev.guardrail.Target
+import dev.guardrail.UnparseableArgument
+import dev.guardrail.WriteTree
 import dev.guardrail.generators.Framework
 import dev.guardrail.languages.LA
 import dev.guardrail.terms._
 import dev.guardrail.terms.protocol.PropertyRequirement
-import dev.guardrail.{
-  Args,
-  Common,
-  Context,
-  Error,
-  MissingArg,
-  NoArgsSpecified,
-  NoFramework,
-  PrintHelp,
-  ReadSwagger,
-  Target,
-  UnknownFramework,
-  UnparseableArgument,
-  WriteTree
-}
 
 class CoreTermInterp[L <: LA](
     val defaultFramework: String,
     val handleModules: Set[String] => Target[Framework[L, Target]],
-    val frameworkMapping: PartialFunction[String, Target[Set[String]]],
+    val frameworkMapping: String => Target[Set[String]],
     val handleImport: String => Either[Error, L#Import]
 ) extends CoreTerms[L, Target] { self =>
   implicit def MonadF: Monad[Target] = Target.targetInstances
@@ -40,7 +37,14 @@ class CoreTermInterp[L <: LA](
       additionalFrameworkMappings: PartialFunction[String, Target[Set[String]]] = PartialFunction.empty,
       handleImport: String => Either[Error, L#Import] = self.handleImport
   ): CoreTermInterp[L] =
-    new CoreTermInterp[L](defaultFramework, handleModules, additionalFrameworkMappings.orElse(self.frameworkMapping), handleImport)
+    new CoreTermInterp[L](
+      defaultFramework,
+      handleModules,
+      { (frameworkName: String) =>
+        additionalFrameworkMappings.applyOrElse(frameworkName, self.frameworkMapping)
+      },
+      handleImport
+    )
 
   def getDefaultFramework =
     Target.log.function("getDefaultFramework") {
@@ -58,9 +62,8 @@ class CoreTermInterp[L <: LA](
             ctxFramework =>
               for {
                 frameworkName <- Target.fromOption(ctxFramework.orElse(vendorDefaultFramework), NoFramework)
-                modules       <- Target.fromOption(PartialFunction.condOpt(frameworkName)(frameworkMapping), UnknownFramework(frameworkName))
-                modules_      <- modules
-                framework     <- handleModules(modules_)
+                modules       <- frameworkMapping(frameworkName)
+                framework     <- handleModules(modules)
                 _             <- Target.log.debug(s"Found: $framework")
               } yield framework,
             modules => handleModules(modules.toList.toSet)
