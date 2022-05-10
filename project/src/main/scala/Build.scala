@@ -155,7 +155,7 @@ object Build {
         }
       )
       .settings(commonSettings)
-      .settings(versionPolicyIntention := Compatibility.BinaryCompatible)
+      .settings(versionPolicyIntention := { if (useStableVersions) Compatibility.BinaryCompatible else Compatibility.None })
       .settings(name := moduleName)
       .settings(codegenSettings)
       .settings(libraryDependencies ++= Dependencies.testDependencies)
