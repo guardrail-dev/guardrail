@@ -9,7 +9,7 @@ import org.scalatest.{ Assertions, EitherValues, OptionValues }
 import org.scalactic.source.Position
 
 import dev.guardrail._
-import dev.guardrail.core.{ StructuredLogger, Tracker }
+import dev.guardrail.core.{ CoreTermInterp, StructuredLogger, Tracker }
 import dev.guardrail.generators.Framework
 import dev.guardrail.generators._
 import dev.guardrail.languages.LA
@@ -22,6 +22,18 @@ trait TargetValues { self: Assertions =>
   }
 }
 
+abstract class SpecRunnerAbstraction[L <: LA] {
+  def apply(
+      spec: String,
+      dtoPackage: List[String] = List.empty,
+      supportPackage: NonEmptyList[String] = NonEmptyList.one("support")
+  )(
+      context: Context,
+      framework: String,
+      targets: NonEmptyList[CodegenTarget] = NonEmptyList.of(CodegenTarget.Client, CodegenTarget.Server)
+  ): (ProtocolDefinitions[L], Clients[L], Servers[L])
+}
+
 trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues { self: Assertions =>
   def swaggerFromString(spec: String): OpenAPI = {
     val parseOpts = new ParseOptions
@@ -30,19 +42,28 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues
   }
 
   def runSwaggerSpec[L <: LA](
-      spec: String,
-      dtoPackage: List[String] = List.empty,
-      supportPackage: NonEmptyList[String] = NonEmptyList.one("support")
-  )(
-      context: Context,
-      framework: Framework[L, Target],
-      targets: NonEmptyList[CodegenTarget] = NonEmptyList.of(CodegenTarget.Client, CodegenTarget.Server)
-  ): (ProtocolDefinitions[L], Clients[L], Servers[L]) =
-    runSwagger(swaggerFromString(spec), dtoPackage, supportPackage)(
-      context,
-      framework,
-      targets
-    )
+      languageModule: CoreTermInterp[L]
+  ): SpecRunnerAbstraction[L] = new SpecRunnerAbstraction[L] {
+    override def apply(
+        spec: String,
+        dtoPackage: List[String] = List.empty,
+        supportPackage: NonEmptyList[String] = NonEmptyList.one("support")
+    )(
+        context: Context,
+        framework: String,
+        targets: NonEmptyList[CodegenTarget] = NonEmptyList.of(CodegenTarget.Client, CodegenTarget.Server)
+    ): (ProtocolDefinitions[L], Clients[L], Servers[L]) =
+      (
+        for {
+          modules   <- languageModule.frameworkMapping(framework)
+          framework <- languageModule.handleModules(modules)
+        } yield runSwagger(swaggerFromString(spec), dtoPackage, supportPackage)(
+          context,
+          framework,
+          targets
+        )
+      ).value
+  }
 
   private def runSwagger[L <: LA](
       swagger: OpenAPI,
@@ -80,15 +101,23 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues
       }
   }
 
-  def runInvalidSwaggerSpec[L <: LA](
-      spec: String
-  ): (Context, CodegenTarget, Framework[L, Target]) => (StructuredLogger, Error) = {
-    val parseOpts = new ParseOptions
-    parseOpts.setResolve(true)
-    runInvalidSwagger[L](new OpenAPIParser().readContents(spec, new LinkedList(), parseOpts).getOpenAPI) _
+  def runInvalidSwaggerSpec[L <: LA](languageModule: CoreTermInterp[L])(spec: String): (Context, CodegenTarget, String) => (StructuredLogger, Error) = {
+    (context, kind, framework) =>
+      (
+        for {
+          modules   <- languageModule.frameworkMapping(framework)
+          framework <- languageModule.handleModules(modules)
+        } yield {
+          val parseOpts = new ParseOptions
+          parseOpts.setResolve(true)
+          runInvalidSwagger[L](new OpenAPIParser().readContents(spec, new LinkedList(), parseOpts).getOpenAPI)(context, kind, framework)
+        }
+      ).value
   }
 
-  def runInvalidSwagger[L <: LA](swagger: OpenAPI)(context: Context, kind: CodegenTarget, framework: Framework[L, Target]): (StructuredLogger, Error) = {
+  private def runInvalidSwagger[L <: LA](
+      swagger: OpenAPI
+  )(context: Context, kind: CodegenTarget, framework: Framework[L, Target]): (StructuredLogger, Error) = {
     import framework._
     Common
       .prepareDefinitions[L, Target](

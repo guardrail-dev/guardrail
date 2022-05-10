@@ -8,7 +8,7 @@ import support.SwaggerSpecRunner
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.{ ADT, ClassDefinition }
 
@@ -99,7 +99,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val companion    = companionForStaticDefns(staticDefns)
     val companionCat = companionForStaticDefns(staticDefnsCat)
 
@@ -280,7 +280,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
     val companionDog        = companionForStaticDefns(staticDefnsDog)
     val companionPet        = companionForStaticDefns(staticDefnsPet)
@@ -419,7 +419,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(cls, _, _, defCls, _, _) :: ADT(_, _, _, _, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
 
     it("Direct extension should be supported") {
       cls shouldBe "Cat"
@@ -479,7 +479,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
     val companionCat        = companionForStaticDefns(staticDefnsCat)
 
@@ -579,7 +579,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val companionCat    = companionForStaticDefns(staticDefnsCat)
     val companionPet    = companionForStaticDefns(staticDefnsPet)
     val companionMammal = companionForStaticDefns(staticDefnsMammal)

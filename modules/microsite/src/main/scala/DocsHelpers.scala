@@ -10,9 +10,8 @@ import dev.guardrail._
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.Framework
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
-import dev.guardrail.generators.scala.http4s.Http4s
 import dev.guardrail.terms.protocol.StaticDefns
+import dev.guardrail.generators.spi.{ FrameworkLoader, ModuleMapperLoader }
 
 sealed trait SnippetComponent
 case object GeneratingAServer extends SnippetComponent
@@ -21,14 +20,18 @@ case object GeneratingClients extends SnippetComponent
 @SuppressWarnings(Array("org.wartremover.warts.EitherProjectionPartial", "org.wartremover.warts.TraversableOps"))
 object DocsHelpers {
   def sampleSpec = "modules/microsite/docs/sample-user.json"
-  def renderScalaSnippet(generator: Framework[ScalaLanguage, Target], identifier: SnippetComponent)(prefix: String, suffix: String): Unit = {
+  def renderScalaSnippet(framework: String, identifier: SnippetComponent)(prefix: String, suffix: String): Unit = {
+    val generator: Framework[ScalaLanguage, Target] = Target.unsafeExtract(for {
+      modules   <- ModuleMapperLoader.load[ScalaLanguage](framework, MissingDependency("framework"))
+      framework <- FrameworkLoader.load[ScalaLanguage](modules, MissingDependency(framework))
+    } yield framework)
     import generator._
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
     val openAPI = Tracker(new OpenAPIParser().readLocation(sampleSpec, new java.util.LinkedList(), parseOpts).getOpenAPI)
 
-    val segments: List[Option[String]] = (generator, identifier) match {
-      case (AkkaHttp, GeneratingAServer) =>
+    val segments: List[Option[String]] = (framework, identifier) match {
+      case ("akka-http", GeneratingAServer) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
@@ -45,7 +48,7 @@ object DocsHelpers {
             }
           """.toString)
         )
-      case (AkkaHttp, GeneratingClients) =>
+      case ("akka-http", GeneratingClients) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
@@ -80,7 +83,7 @@ object DocsHelpers {
             )
           case _ => ???
         }
-      case (_: Http4s, GeneratingAServer) =>
+      case ("http4s", GeneratingAServer) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Server, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
@@ -109,7 +112,7 @@ object DocsHelpers {
             }
           """.toString)
         )
-      case (_: Http4s, GeneratingClients) =>
+      case ("http4s", GeneratingClients) =>
         val (_, codegenDefinitions) = Target.unsafeExtract(
           Common.prepareDefinitions[ScalaLanguage, Target](CodegenTarget.Client, Context.empty, openAPI, List("definitions"), NonEmptyList.one("support"))
         )
@@ -145,8 +148,8 @@ object DocsHelpers {
             )
           case _ => ???
         }
-      case (generator, term) =>
-        List(Some(s"Unknown docs sample: ${generator.getClass().getSimpleName().stripSuffix("$")}/${term.toString()}"))
+      case (framework, term) =>
+        List(Some(s"Unknown docs sample: ${framework}/${term.toString()}"))
     }
 
     println(

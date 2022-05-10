@@ -1,7 +1,7 @@
 package tests.generators.dropwizard.server
 
 import com.github.javaparser.ast.body.MethodDeclaration
-import dev.guardrail.generators.java.dropwizard.Dropwizard
+import dev.guardrail.generators.java.JavaGeneratorMappings.javaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
 import org.scalatest.freespec.AnyFreeSpec
@@ -46,7 +46,7 @@ class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerS
       _,
       _,
       Servers(Server(_, _, _, genResource :: Nil) :: Nil, _)
-    ) = runSwaggerSpec(swagger)(Context.empty, Dropwizard)
+    ) = runSwaggerSpec(javaInterpreter)(swagger)(Context.empty, "dropwizard")
 
     genResource
       .asClassOrInterfaceDeclaration()
@@ -72,7 +72,7 @@ class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerS
       _,
       _,
       Servers(Server(_, _, _, genResource :: Nil) :: Nil, _)
-    ) = runSwaggerSpec(swagger)(Context.empty, Dropwizard)
+    ) = runSwaggerSpec(javaInterpreter)(swagger)(Context.empty, "dropwizard")
 
     val annotationArrayValues = genResource
       .asClassOrInterfaceDeclaration()

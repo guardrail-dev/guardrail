@@ -1,6 +1,6 @@
 package tests.generators.akkaHttp.client
 
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
@@ -38,7 +38,7 @@ class SchemeTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Use first scheme") {
     val (_, Clients(Client(_, clientName, _, staticDefns, cls, _) :: _, Nil), _) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+      runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val companion = q"""

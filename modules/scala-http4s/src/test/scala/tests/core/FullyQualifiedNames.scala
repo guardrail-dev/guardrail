@@ -8,7 +8,7 @@ import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.{ Client, Clients }
 import dev.guardrail.terms.protocol.ClassDefinition
@@ -47,7 +47,7 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
         ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _, _),
         Clients(List(Client(_, _, _, _, client, List(respTrait, respObject))), _),
         _
-      ) = runSwaggerSpec(swagger, List("_root_", "com", "test"))(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger, List("_root_", "com", "test"))(Context.empty, version.value)
 
       clz.fullType shouldEqual t"_root_.com.test.User"
       client.head.toOption.get shouldEqual q"""

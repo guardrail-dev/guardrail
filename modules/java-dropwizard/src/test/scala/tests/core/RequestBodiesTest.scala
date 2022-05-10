@@ -2,7 +2,7 @@ package tests.core
 
 import com.github.javaparser.ast.`type`.PrimitiveType
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
-import dev.guardrail.generators.java.dropwizard.Dropwizard
+import dev.guardrail.generators.java.JavaGeneratorMappings.javaInterpreter
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.Context
 import dev.guardrail.generators.Clients
@@ -70,7 +70,7 @@ class RequestBodiesTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner
 
   "References to requestBodies should resolve and generate the proper args/methods" in {
     val (_, Clients(client :: _, _), _) =
-      runSwaggerSpec(openapi)(Context.empty, Dropwizard)
+      runSwaggerSpec(javaInterpreter)(openapi)(Context.empty, "dropwizard")
 
     val cls = client.client.head.getOrElse(fail("Client does not contain a ClassDefinition"))
 

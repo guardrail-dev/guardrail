@@ -1,6 +1,6 @@
 package core.issues
 
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
@@ -81,7 +81,7 @@ class Issue260 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             ) :: Nil,
             _ // supportDefinitions
           )
-        ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+        ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
         it("Ensure LocalDateVar is generated only once") {
 

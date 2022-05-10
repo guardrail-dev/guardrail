@@ -13,7 +13,7 @@ The following is an example from the [akka-http](https://github.com/akka/akka-ht
 ```scala mdoc:passthrough
 import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
 import dev.guardrail.docs._
-DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingAServer)("""
+DocsHelpers.renderScalaSnippet("akka-http", GeneratingAServer)("""
     |// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some
     |// structural alterations (`F[_]` instead of `Future[_]` as the return type) the same handlers can be used with
     |// different `Resource` implementations from different framework generators. This permits greater compatibility between

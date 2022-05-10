@@ -8,7 +8,7 @@ import support.SwaggerSpecRunner
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.terms.protocol.ClassDefinition
 
@@ -38,7 +38,7 @@ class Issue420 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ProtocolDefinitions(List(bar: ClassDefinition[ScalaLanguage], foo: ClassDefinition[ScalaLanguage]), _, _, _, _),
         _,
         _
-      ) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       cmp(bar.cls, q"case class Bar(id: Option[String] = None)")
       cmp(foo.cls, q"case class Foo(id: Option[String] = None, otherId: Option[String] = None)")

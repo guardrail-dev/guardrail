@@ -3,10 +3,10 @@ package tests.generators.dropwizardScala.server
 import cats.data.NonEmptyList
 import dev.guardrail.{ CodegenTarget, Context }
 import dev.guardrail.generators.{ Server, Servers }
-import dev.guardrail.generators.scala.dropwizard.Dropwizard
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 
 import scala.meta._
 import support.SwaggerSpecRunner
@@ -55,7 +55,7 @@ class DropwizardScalaJsr310Test extends AnyFreeSpec with Matchers with OptionVal
       _,
       _,
       Servers(Server(_, _, handler, server) :: Nil, _)
-    ) = runSwaggerSpec(openapi)(Context.empty, Dropwizard, targets = NonEmptyList.of(CodegenTarget.Server))
+    ) = runSwaggerSpec(scalaInterpreter)(openapi)(Context.empty, "dropwizard", targets = NonEmptyList.of(CodegenTarget.Server))
 
     handler match {
       case Defn.Trait(

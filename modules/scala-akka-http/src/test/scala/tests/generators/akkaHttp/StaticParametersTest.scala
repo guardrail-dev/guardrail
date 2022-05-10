@@ -1,6 +1,6 @@
 package tests.generators.akkaHttp
 
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
 import support.SwaggerSpecRunner
@@ -34,7 +34,7 @@ class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRun
 
   test("Should produce static parameter constraints") {
     val (_, _, Servers(Server(_, _, genHandler, genResource :: Nil) :: Nil, Nil)) =
-      runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+      runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
 
     val handler = q"""
       trait Handler {

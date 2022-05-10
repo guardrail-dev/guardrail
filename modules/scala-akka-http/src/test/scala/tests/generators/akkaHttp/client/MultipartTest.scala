@@ -1,6 +1,6 @@
 package tests.generators.akkaHttp.client
 
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
 import support.SwaggerSpecRunner
@@ -52,7 +52,7 @@ class MultipartTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(_, className, _, _, cls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(swagger)(Context.empty, AkkaHttp)
+    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
 
     val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

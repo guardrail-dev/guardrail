@@ -3,7 +3,7 @@ package core.issues
 import support.SwaggerSpecRunner
 
 import dev.guardrail.Context
-import dev.guardrail.generators.scala.http4s.Http4s
+import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.{ Server, Servers }
 import org.scalatest.funsuite.AnyFunSuite
@@ -32,7 +32,7 @@ class Issue225 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Ensure mapRoute is generated") {
-      val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(swagger)(Context.empty, new Http4s(version))
+      val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
 
       val handler = q"""
       trait Handler[F[_]] {

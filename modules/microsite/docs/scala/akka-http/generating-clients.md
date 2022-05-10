@@ -15,7 +15,7 @@ The following is an example from the [akka-http](https://github.com/akka/akka-ht
 ```scala mdoc:passthrough
 import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
 import dev.guardrail.docs._
-DocsHelpers.renderScalaSnippet(AkkaHttp, GeneratingClients)(
+DocsHelpers.renderScalaSnippet("akka-http", GeneratingClients)(
   """|// Two constructors are provided, one accepting the `httpClient`,
      |// `ExecutionContext`, and `Materializer` implicitly, the other accepting
      |// an explicit `httpClient`, but still accepting the `ExecutionContext` and

@@ -9,8 +9,7 @@ import support.SwaggerSpecRunner
 import dev.guardrail.CodegenTarget
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.java.JavaLanguage
-import dev.guardrail.generators.java.dropwizard.Dropwizard
+import dev.guardrail.generators.java.JavaGeneratorMappings.javaInterpreter
 import dev.guardrail.terms.protocol.ClassDefinition
 
 class JacksonGetterTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
@@ -36,7 +35,7 @@ class JacksonGetterTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner
 
   "Jackson POJO getter for property called 'class' should not clash with Object.getClass()" in {
     val (ProtocolDefinitions(ClassDefinition("Foo", _, _, classDef, _, _) :: Nil, _, _, _, _), _, _) =
-      runSwaggerSpec[JavaLanguage](openapi)(Context.empty, Dropwizard, targets = NonEmptyList.of(CodegenTarget.Models))
+      runSwaggerSpec(javaInterpreter)(openapi)(Context.empty, "dropwizard", targets = NonEmptyList.of(CodegenTarget.Models))
 
     classDef.getMethodsByName("getClass").size mustBe 0
     classDef.getMethodsByName("getClass_").size mustBe 1

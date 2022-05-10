@@ -3,7 +3,7 @@ package tests.generators.dropwizard.server
 import com.github.javaparser.ast.body.MethodDeclaration
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
-import dev.guardrail.generators.java.dropwizard.Dropwizard
+import dev.guardrail.generators.java.JavaGeneratorMappings.javaInterpreter
 import org.scalatest.Retries
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -53,7 +53,7 @@ class DropwizardOptionalArrayParamTest extends AnyFreeSpec with Matchers with Re
       _,
       _,
       Servers(Server(_, _, _, genResource :: Nil) :: Nil, _)
-    ) = runSwaggerSpec(openapi)(Context.empty, Dropwizard)
+    ) = runSwaggerSpec(javaInterpreter)(openapi)(Context.empty, "dropwizard")
 
     val getFooMethod = genResource
       .asClassOrInterfaceDeclaration()
