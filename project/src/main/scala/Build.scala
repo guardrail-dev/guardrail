@@ -25,22 +25,24 @@ object Build {
     val isMasterBranch = sys.env.get("GITHUB_REF").contains("refs/heads/master")
     val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
     val isCi = sys.env.contains("GUARDRAIL_CI")
-    val ignoreBincompat = if (isCi) {
-      import scala.sys.process._
-      "support/current-pr-labels.sh"
-        .lineStream_!
-        .exists(Set("major", "minor").contains)
+    if (isCi) {
+      val ignoreBincompat = {
+        import scala.sys.process._
+        "support/current-pr-labels.sh"
+          .lineStream_!
+          .exists(Set("major", "minor").contains)
+      }
+
+      val useStableVersions = !isMasterBranch && (isRelease || ignoreBincompat)
+      println(s"isMasterBranch=${isMasterBranch} && (isRelease=${isRelease} || ignoreBincompat=${ignoreBincompat}): ${useStableVersions}")
+      if (useStableVersions) {
+        println(s"  Ensuring bincompat via MiMa during ${sys.env.get("GITHUB_REF")}")
+      } else {
+        println(s"  Skipping bincompat check on ${sys.env.get("GITHUB_REF")}")
+      }
+
+      useStableVersions
     } else false
-
-    val useStableVersions = !isMasterBranch && (isRelease || ignoreBincompat)
-    println(s"isMasterBranch=${isMasterBranch} && (isRelease=${isRelease} || ignoreBincompat=${ignoreBincompat}): ${useStableVersions}")
-    if (useStableVersions) {
-      println(s"  Ensuring bincompat via MiMa during ${sys.env.get("GITHUB_REF")}")
-    } else {
-      println(s"  Skipping bincompat check on ${sys.env.get("GITHUB_REF")}")
-    }
-
-    useStableVersions
   }
 
   def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
