@@ -10,13 +10,17 @@ if [ -n "$GITHUB_EVENT_PATH" ]; then
 
   if [ -f "$cache" ]; then
     echo "Using PR labels from $cache" >&2
-  else
+  elif [ "$pr_number" != "null" ]; then
     echo "Fetching labels for current PR (${pr_number})" >&2
     curl \
       -H "Accept: application/vnd.github.v3+json" \
       -H "Authorization: Bearer ${GITHUB_TOKEN}" \
       -o "$cache" \
       "https://api.github.com/repos/guardrail-dev/guardrail/pulls/${pr_number}"
+  else
+    # If $pr_number is null, we're either building a branch or master,
+    # so either way just skip labels.
+    echo '{"labels": []}' > "$cache"
   fi
 
   msg="$(jq -r .message < "$cache")"
