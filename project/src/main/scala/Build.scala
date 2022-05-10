@@ -13,6 +13,27 @@ import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
 
 object Build {
   val stableVersion: SettingKey[String] = SettingKey("stable-version")
+
+  val useStableVersions: Boolean = {
+    // NB: Currently, any time any PR that breaks semver is merged, it breaks
+    //     the build until the next release.
+    //
+    //     A hack here is to just disable semver checking on master, since
+    //     we already gate semver both at PR time as well as later on
+    //     during release, so it actually serves no useful purpose to fail
+    //     master as well.
+    val isMasterBranch = sys.env.get("GITHUB_REF").contains("refs/heads/master")
+    val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
+    val isCi = sys.env.contains("GUARDRAIL_CI")
+    val isBincompatCi = if (isCi) {
+      import scala.sys.process._
+      "support/current-pr-labels.sh"
+        .lineStream_!
+        .exists(Set("major", "minor").contains)
+    } else false
+    !isMasterBranch && (isRelease || isBincompatCi)
+  }
+
   def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
     Project(s"sample-${name}", file(s"modules/sample-${name}"))
       .settings(commonSettings)
@@ -189,23 +210,7 @@ object Build {
         })
 
     def customDependsOn(other: Project, useProvided: Boolean = false): Project = {
-      // NB: Currently, any time any PR that breaks semver is merged, it breaks
-      //     the build until the next release.
-      //
-      //     A hack here is to just disable semver checking on master, since
-      //     we already gate semver both at PR time as well as later on
-      //     during release, so it actually serves no useful purpose to fail
-      //     master as well.
-      val isMasterBranch = sys.env.get("GITHUB_REF").contains("refs/heads/master")
-      val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
-      val isCi = sys.env.contains("GUARDRAIL_CI")
-      val isBincompatCi = if (isCi) {
-        import scala.sys.process._
-        "support/current-pr-labels.sh"
-          .lineStream_!
-          .exists(Set("major", "minor").contains)
-      } else false
-      if (!isMasterBranch && (isRelease || isBincompatCi)) {
+      if (useStableVersions) {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
           .settings(libraryDependencies += {
