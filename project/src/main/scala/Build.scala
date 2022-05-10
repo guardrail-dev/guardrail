@@ -31,7 +31,16 @@ object Build {
         .lineStream_!
         .exists(Set("major", "minor").contains)
     } else false
-    !isMasterBranch && (isRelease || ignoreBincompat)
+
+    val useStableVersions = !isMasterBranch && (isRelease || ignoreBincompat)
+    println(s"isMasterBranch=${isMasterBranch} && (isRelease=${isRelease} || ignoreBincompat=${ignoreBincompat}): ${useStableVersions}")
+    if (useStableVersions) {
+      println(s"  Ensuring bincompat via MiMa during ${sys.env.get("GITHUB_REF")}")
+    } else {
+      println(s"  Skipping bincompat check on ${sys.env.get("GITHUB_REF")}")
+    }
+
+    useStableVersions
   }
 
   def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
