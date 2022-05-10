@@ -173,7 +173,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           NonEmptyList.fromList(protocolImplicits).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
           Some(t"ToResponseMarshaller[${responseSuperType}]"),
           q"""Marshaller { implicit ec => resp => ${Term.Name(s"${responseClsName.uncapitalized}TR")}(resp) }"""
-        )}
+        )};
+
             implicit def ${Term
           .Name(
             s"${responseClsName.uncapitalized}TR"
