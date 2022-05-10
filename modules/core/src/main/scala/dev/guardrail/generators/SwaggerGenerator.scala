@@ -159,6 +159,9 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
       flows <- securityScheme.downField("flows", _.getFlows).raiseErrorIfEmpty(s"Security scheme ${schemeName} has no OAuth2 flows")
     } yield OAuth2SecurityScheme[L](flows.unwrapTracker, tpe)
 
+  override def extractMutualTLSSecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]) =
+    Target.pure(MutualTLSSecurityScheme[L](tpe))
+
   override def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: Context.TagsBehaviour) =
     Target.log.function("getClassName")(for {
       _ <- Target.log.debug(s"Args: ${operation.unwrapTracker.showNotNull}")

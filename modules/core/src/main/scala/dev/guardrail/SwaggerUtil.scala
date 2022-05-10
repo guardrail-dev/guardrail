@@ -314,6 +314,7 @@ object SwaggerUtil {
             case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
             case SwSecurityScheme.Type.OPENIDCONNECT => extractOpenIdConnectSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
             case SwSecurityScheme.Type.OAUTH2        => extractOAuth2SecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.MUTUALTLS     => extractMutualTLSSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
           }
         } yield parsedScheme.toList.map(scheme => schemeName -> scheme)
       }
