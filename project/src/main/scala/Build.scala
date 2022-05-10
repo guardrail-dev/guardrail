@@ -25,13 +25,13 @@ object Build {
     val isMasterBranch = sys.env.get("GITHUB_REF").contains("refs/heads/master")
     val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
     val isCi = sys.env.contains("GUARDRAIL_CI")
-    val isBincompatCi = if (isCi) {
+    val ignoreBincompat = if (isCi) {
       import scala.sys.process._
       "support/current-pr-labels.sh"
         .lineStream_!
         .exists(Set("major", "minor").contains)
     } else false
-    !isMasterBranch && (isRelease || isBincompatCi)
+    !isMasterBranch && (isRelease || ignoreBincompat)
   }
 
   def buildSampleProject(name: String, extraLibraryDependencies: Seq[sbt.librarymanagement.ModuleID]) =
