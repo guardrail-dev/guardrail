@@ -33,8 +33,8 @@ object Build {
           .exists(Set("major", "minor").contains)
       }
 
-      val useStableVersions = !isMasterBranch && (isRelease || ignoreBincompat)
-      println(s"isMasterBranch=${isMasterBranch} && (isRelease=${isRelease} || ignoreBincompat=${ignoreBincompat}): ${useStableVersions}")
+      val useStableVersions = !isMasterBranch && (isRelease || !ignoreBincompat)
+      println(s"isMasterBranch=${isMasterBranch}, isRelease=${isRelease}, ignoreBincompat=${ignoreBincompat}: useStableVersions=${useStableVersions}")
       if (useStableVersions) {
         println(s"  Ensuring bincompat via MiMa during ${sys.env.get("GITHUB_REF")}")
       } else {
@@ -239,12 +239,7 @@ object Build {
           )
       } else {
         project
-          .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
-          .dependsOn(
-            if (useProvided) {
-              other % Provided
-            } else other
-          )
+          .dependsOn(other)
           .accumulateClasspath(other)
       }
     }
