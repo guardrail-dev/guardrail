@@ -310,10 +310,10 @@ object SwaggerUtil {
         for {
           tpe <- typeName.fold(Option.empty[L#Type].pure[F])(x => parseType(Tracker.cloneHistory(scheme, x)))
           parsedScheme <- scheme.downField("type", _.getType).unwrapTracker.traverse {
-            case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
-            case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
-            case SwSecurityScheme.Type.OPENIDCONNECT => extractOpenIdConnectSecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
-            case SwSecurityScheme.Type.OAUTH2        => extractOAuth2SecurityScheme(schemeName, scheme.unwrapTracker, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.OPENIDCONNECT => extractOpenIdConnectSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.OAUTH2        => extractOAuth2SecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
           }
         } yield parsedScheme.toList.map(scheme => schemeName -> scheme)
       }
