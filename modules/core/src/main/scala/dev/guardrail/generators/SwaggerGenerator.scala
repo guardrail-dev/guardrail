@@ -131,33 +131,36 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
       }
     } yield routes)
 
-  override def extractApiKeySecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]) =
+  override def extractApiKeySecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]) =
     for {
-      name <- Target.fromOption(Option(securityScheme.getName), UserError(s"Security scheme ${schemeName} is an API Key scheme but has no 'name' property"))
-      in   <- Target.fromOption(Option(securityScheme.getIn), UserError(s"Security scheme ${schemeName} is an API Key scheme but has no 'in' property"))
-    } yield ApiKeySecurityScheme[L](name, in, tpe)
+      name <- securityScheme.downField("name", _.getName).raiseErrorIfEmpty(s"Security scheme ${schemeName} is an API Key scheme but has no 'name' property")
+      in   <- securityScheme.downField("in", _.getIn).raiseErrorIfEmpty(s"Security scheme ${schemeName} is an API Key scheme but has no 'in' property")
+    } yield ApiKeySecurityScheme[L](name.unwrapTracker, in.unwrapTracker, tpe)
 
-  override def extractHttpSecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]) =
+  override def extractHttpSecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]) =
     for {
-      authScheme <- Target.fromOption(Option(securityScheme.getScheme), UserError(s"Security scheme ${schemeName} is a HTTP scheme but has no auth scheme"))
-    } yield HttpSecurityScheme[L](authScheme, tpe)
+      authScheme <- securityScheme.downField("scheme", _.getScheme).raiseErrorIfEmpty(s"Security scheme ${schemeName} is a HTTP scheme but has no auth scheme")
+    } yield HttpSecurityScheme[L](authScheme.unwrapTracker, tpe)
 
   override def extractOpenIdConnectSecurityScheme(
       schemeName: String,
-      securityScheme: SwSecurityScheme,
+      securityScheme: Tracker[SwSecurityScheme],
       tpe: Option[L#Type]
   ) =
     for {
-      url <- Target.fromOption(
-        Option(securityScheme.getOpenIdConnectUrl).flatMap(url => Try(new URI(url)).toOption),
-        UserError(s"Security scheme ${schemeName} has a missing or invalid OpenID Connect URL")
-      )
-    } yield OpenIdConnectSecurityScheme[L](url, tpe)
+      url <- securityScheme
+        .downField("openIdConnectUrl", _.getOpenIdConnectUrl)
+        .raiseErrorIfEmpty(s"Security scheme ${schemeName} has a missing OpenID Connect URL")
+      url <- url.map(url => Try(new URI(url)).toOption).raiseErrorIfEmpty(s"Security scheme ${schemeName} has an invalid OpenID Connect URL")
+    } yield OpenIdConnectSecurityScheme[L](url.unwrapTracker, tpe)
 
-  override def extractOAuth2SecurityScheme(schemeName: String, securityScheme: SwSecurityScheme, tpe: Option[L#Type]) =
+  override def extractOAuth2SecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]) =
     for {
-      flows <- Target.fromOption(Option(securityScheme.getFlows), UserError(s"Security scheme ${schemeName} has no OAuth2 flows"))
-    } yield OAuth2SecurityScheme[L](flows, tpe)
+      flows <- securityScheme.downField("flows", _.getFlows).raiseErrorIfEmpty(s"Security scheme ${schemeName} has no OAuth2 flows")
+    } yield OAuth2SecurityScheme[L](flows.unwrapTracker, tpe)
+
+  override def extractMutualTLSSecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]) =
+    Target.pure(MutualTLSSecurityScheme[L](tpe))
 
   override def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: Context.TagsBehaviour) =
     Target.log.function("getClassName")(for {
