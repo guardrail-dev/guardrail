@@ -25,7 +25,7 @@ object Build {
     val isMasterBranch = sys.env.get("GITHUB_REF").contains("refs/heads/master")
     val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
     val isCi = sys.env.contains("GUARDRAIL_CI")
-    if (isCi) {
+    if (isCi || isRelease) {
       val ignoreBincompat = {
         import scala.sys.process._
         "support/current-pr-labels.sh"
