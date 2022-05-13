@@ -426,13 +426,11 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
     )
     for {
       protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
-    } yield (
-      List(
-        List(formatHost(serverUrls)) ++ (if (tracing)
-                                           Some(formatClientName(tracingName))
-                                         else None),
-        implicits ++ protocolImplicits
-      )
+    } yield List(
+      List(formatHost(serverUrls)) ++ (if (tracing)
+                                         Some(formatClientName(tracingName))
+                                       else None),
+      implicits ++ protocolImplicits
     )
   }
   override def generateResponseDefinitions(
@@ -472,14 +470,12 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
 
       for {
         protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
-      } yield (
-        List(
-          q"""
+      } yield List(
+        q"""
               def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(
-              serverUrls
-            )}, ..$tracingParams)(..${implicits ++ protocolImplicits}): $tpe = $ctorCall
+            serverUrls
+          )}, ..$tracingParams)(..${implicits ++ protocolImplicits}): $tpe = $ctorCall
             """
-        )
       )
     }
 
@@ -498,12 +494,10 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
     for {
       extraDecls <- extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
       decls = q"""def apply(...$ctorArgs): ${Type.Name(clientName)} = $ctorCall""" +: extraDecls
-    } yield (
-      StaticDefns[ScalaLanguage](
-        className = clientName,
-        extraImports = List.empty,
-        definitions = decls
-      )
+    } yield StaticDefns[ScalaLanguage](
+      className = clientName,
+      extraImports = List.empty,
+      definitions = decls
     )
   }
   override def buildClient(

@@ -69,7 +69,7 @@ Tracker should:
         val xs = new Paths
         val x  = new PathItem
         List(("/foo", x)).foreach((xs.put _).tupled)
-        assert(Tracker(Holder[Paths](xs)).downField("value", _.value).unwrapTracker.value === List(("/foo" -> x)))
+        assert(Tracker(Holder[Paths](xs)).downField("value", _.value).unwrapTracker.value === List("/foo" -> x))
       }
       "Fallback" in {
         assert(Tracker(Holder(Holder(5L))).downField("value", _.value).unwrapTracker === Option(Holder(5L)))
