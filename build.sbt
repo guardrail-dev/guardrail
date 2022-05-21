@@ -93,6 +93,7 @@ val javaSampleSettings = Seq(
 lazy val root = modules.root.project
   .settings(publish / skip := true)
   .settings(libraryDependencies ++= Dependencies.testDependencies)
+  .settings(evictionErrorLevel := Level.Debug)  // Suppress "found version conflict(s) in library dependencies; some are suspected to be binary incompatible" in aggregate project
   .dependsOn(guardrail)
   .dependsOn(cli)
   .dependsOn(javaAsyncHttp, javaDropwizard, javaSpringMvc)
