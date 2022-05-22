@@ -18,7 +18,7 @@ Should you prefer the previous functionality, `x-scala-array-type` can be added 
            required: true
            schema:
              type: array
-+            x-scala-array-type: Iterator
++            x-scala-array-type: Iterable
              items:
                type: integer
                format: int64
