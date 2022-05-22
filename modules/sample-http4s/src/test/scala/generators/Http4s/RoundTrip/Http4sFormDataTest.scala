@@ -28,7 +28,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
                 IO.pure(respond.NotAcceptable)
               }
             def doBar(respond: DoBarResponse.type)(status: Option[sdefs.definitions.Status], description: Option[String]): IO[DoBarResponse] = ???
-            def doBaz(respond: DoBazResponse.type)(status: Iterable[String], description: Option[Iterable[String]]): IO[DoBazResponse]       = ???
+            def doBaz(respond: DoBazResponse.type)(status: Vector[String], description: Option[Vector[String]]): IO[DoBazResponse]           = ???
           })
           .orNotFound
       )
@@ -47,7 +47,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
               IO.pure(respond.NotAcceptable)
             }
           def doBar(respond: DoBarResponse.type)(status: Option[sdefs.definitions.Status], description: Option[String]): IO[DoBarResponse] = ???
-          def doBaz(respond: DoBazResponse.type)(status: Iterable[String], description: Option[Iterable[String]]): IO[DoBazResponse]       = ???
+          def doBaz(respond: DoBazResponse.type)(status: Vector[String], description: Option[Vector[String]]): IO[DoBazResponse]           = ???
         })
         .orNotFound
     )
@@ -67,7 +67,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
               } else {
                 IO.pure(respond.NotAcceptable)
               }
-            def doBaz(respond: DoBazResponse.type)(status: Iterable[String], description: Option[Iterable[String]]): IO[DoBazResponse] = ???
+            def doBaz(respond: DoBazResponse.type)(status: Vector[String], description: Option[Vector[String]]): IO[DoBazResponse] = ???
           })
           .orNotFound
       )
@@ -88,7 +88,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
               } else {
                 IO.pure(respond.NotAcceptable)
               }
-            def doBaz(respond: DoBazResponse.type)(status: Iterable[String], description: Option[Iterable[String]]): IO[DoBazResponse] = ???
+            def doBaz(respond: DoBazResponse.type)(status: Vector[String], description: Option[Vector[String]]): IO[DoBazResponse] = ???
           })
           .orNotFound
       )
@@ -103,7 +103,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
           .routes(new FooHandler[IO] {
             def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status, description: String): IO[DoFooResponse]                 = ???
             def doBar(respond: DoBarResponse.type)(status: Option[sdefs.definitions.Status], description: Option[String]): IO[DoBarResponse] = ???
-            def doBaz(respond: DoBazResponse.type)(status: Iterable[String], description: Option[Iterable[String]]): IO[DoBazResponse] =
+            def doBaz(respond: DoBazResponse.type)(status: Vector[String], description: Option[Vector[String]]): IO[DoBazResponse] =
               if (status.size == 1 && status.iterator.next() == sdefs.definitions.Status.Ok.toString) {
                 IO.pure(respond.Ok)
               } else {
@@ -113,6 +113,6 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
           .orNotFound
       )
     )
-    fooClient.doBaz(Seq(cdefs.definitions.Status.Ok.toString)).attempt.unsafeRunSync().value shouldBe cdefs.foo.DoBazResponse.Ok
+    fooClient.doBaz(Vector(cdefs.definitions.Status.Ok.toString)).attempt.unsafeRunSync().value shouldBe cdefs.foo.DoBazResponse.Ok
   }
 }

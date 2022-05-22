@@ -15,7 +15,7 @@ import com.github.javaparser.ast.stmt._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core
-import dev.guardrail.core.{ ReifiedRawType, Tracker }
+import dev.guardrail.core.{ LiteralRawType, ReifiedRawType, Tracker }
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour }
@@ -868,32 +868,32 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
           .flatten
           .getOrElse(EmptyIsEmpty)
       val dataRedaction = DataRedaction(property).getOrElse(DataVisible)
+
+      val fallbackRawType = LiteralRawType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
+
       for {
-        tpeClassDep <- meta match {
-          case core.Resolved(declType, classDep, _, _, _) =>
-            Target.pure((declType, classDep))
+        (tpe, classDep, rawType) <- meta match {
+          case core.Resolved(declType, classDep, _, rawType) =>
+            Target.pure((declType, classDep, rawType))
           case core.Deferred(tpeName) =>
             val tpe = concreteTypes.find(_.clsName == tpeName).map(x => Target.pure(x.tpe)).getOrElse {
               println(s"Unable to find definition for ${tpeName}, just inlining")
               safeParseType(tpeName)
             }
-            tpe.map((_, Option.empty))
+            tpe.map((_, Option.empty, fallbackRawType))
           case core.DeferredArray(tpeName, containerTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)
             for {
               innerType <- concreteType.fold(safeParseType(tpeName))(Target.pure)
               tpe       <- Cl.liftVectorType(innerType, containerTpe)
-            } yield (tpe, Option.empty)
+            } yield (tpe, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
           case core.DeferredMap(tpeName, containerTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)
             for {
               innerType <- concreteType.fold(safeParseType(tpeName))(Target.pure)
               tpe       <- Cl.liftMapType(innerType, containerTpe)
-            } yield (tpe, Option.empty)
+            } yield (tpe, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
         }
-        (tpe, classDep) = tpeClassDep
-
-        rawType = ReifiedRawType.of(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
 
         expressionDefaultValue <- (defaultValue match {
           case Some(e: Expression) => Target.pure(Some(e))
@@ -960,7 +960,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
   ): Target[Type] =
     for {
       result <- arr match {
-        case core.Resolved(tpe, dep, default, _, _) => Target.pure(tpe)
+        case core.Resolved(tpe, dep, default, _) => Target.pure(tpe)
         case core.Deferred(tpeName) =>
           Target.fromOption(lookupTypeName(tpeName, concreteTypes), UserError(s"Unresolved reference ${tpeName}"))
         case core.DeferredArray(tpeName, containerTpe) =>

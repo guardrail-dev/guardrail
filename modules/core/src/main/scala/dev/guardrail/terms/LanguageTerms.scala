@@ -5,11 +5,10 @@ import cats.data.NonEmptyList
 import java.nio.file.Path
 
 import dev.guardrail._
-import dev.guardrail.core.Tracker
+import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.core.ReifiedRawType
 
 abstract class LanguageTerms[L <: LA, F[_]] { self =>
   def MonadF: Monad[F]

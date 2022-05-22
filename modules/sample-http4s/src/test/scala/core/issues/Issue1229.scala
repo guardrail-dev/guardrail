@@ -21,7 +21,7 @@ class Issue1229Suite extends AnyFunSuite with Matchers {
       def getDepartment(respond: GetDepartmentResponse.type)(id: String): cats.effect.IO[GetDepartmentResponse] = IO.pure(respond.Ok(fooDept))
       def searchDepartments(
           respond: SearchDepartmentsResponse.type
-      )(query: Option[String], page: Int, pageSize: Int, sort: Option[Iterable[String]]): cats.effect.IO[SearchDepartmentsResponse] =
+      )(query: Option[String], page: Int, pageSize: Int, sort: Option[Vector[String]]): cats.effect.IO[SearchDepartmentsResponse] =
         IO.pure(respond.Ok(sdefs.DepartmentSearchResponse(Vector(fooDept), 0, 0, 0)))
     })
 

@@ -538,7 +538,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       },
       arg => {
         case t"String" =>
-          _ => Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), q"${arg.paramName}.toList"))
+          lift => Target.pure(Param(None, Some((q"urlForm.values.get(${arg.argName.toLit})", p"Some(${Pat.Var(arg.paramName)})")), lift(q"${arg.paramName}")))
         case tpe =>
           _ =>
             Target.pure(
@@ -555,15 +555,15 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
             )
       },
       arg => {
-        case t"String" => _ => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit}).map(_.toList)"))
+        case t"String" => lift => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit}).map(${lift(q"_")})"))
         case tpe =>
-          _ =>
+          lift =>
             Target.pure(
               Param(
                 None,
                 Some(
                   (
-                    q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).map(Json.fromString(_).as[$tpe]).sequence.sequence",
+                    q"${lift(q"urlForm.values.get(${arg.argName.toLit})")}.flatMap(${lift(q"_")}).map(Json.fromString(_).as[$tpe]).sequence.sequence",
                     p"Right(${Pat.Var(arg.paramName)})"
                   )
                 ),
@@ -1076,11 +1076,11 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     q"""
       object ${matcherName} {
         def unapply(params: Map[String, collection.Seq[String]]): Option[${container}[${tpe}]] = {
-          val res = params
+          ${transform(q"""params
             .get(${argName})
             .flatMap(values =>
               values.toList.traverse(s => QueryParamDecoder[${tpe}].decode(QueryParameterValue(s)).toOption))
-          ${transform(q"res")}
+          """)}
         }
       }
     """

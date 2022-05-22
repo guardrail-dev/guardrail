@@ -13,6 +13,10 @@ import dev.guardrail.core.{ Mappish, Tracker }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol._
 
+sealed trait SchemaProjection
+case class SchemaLiteral(schema: Schema[_])              extends SchemaProjection
+case class SchemaRef(schema: SchemaLiteral, ref: String) extends SchemaProjection
+
 abstract class SwaggerLogAdapter[F[_]] {
   def schemaToString(value: Schema[_]): String = "    " + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n    ")
   def function[A](name: String): F[A] => F[A]
@@ -41,14 +45,8 @@ abstract class SwaggerTerms[L <: LA, F[_]] {
   def extractMutualTLSSecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]): F[MutualTLSSecurityScheme[L]]
   def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: Context.TagsBehaviour): F[List[String]]
   def getParameterName(parameter: Tracker[Parameter]): F[String]
-  def getBodyParameterSchema(parameter: Tracker[Parameter]): F[Tracker[Schema[_]]]
-  def getHeaderParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
-  def getPathParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
-  def getQueryParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
-  def getCookieParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
-  def getFormParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
+  def getParameterSchema(parameter: Tracker[Parameter], components: Tracker[Option[Components]]): F[Tracker[SchemaProjection]]
   def getRefParameterRef(parameter: Tracker[Parameter]): F[Tracker[String]]
-  def getSerializableParameterType(parameter: Tracker[Parameter]): F[Tracker[String]]
   def fallbackParameterHandler(parameter: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)]
   def getOperationId(operation: Tracker[Operation]): F[String]
   def getResponses(operationId: String, operation: Tracker[Operation]): F[NonEmptyList[(String, Tracker[ApiResponse])]]
@@ -58,5 +56,12 @@ abstract class SwaggerTerms[L <: LA, F[_]] {
   def fallbackPropertyTypeHandler(prop: Tracker[Schema[_]]): F[L#Type]
   def resolveType(name: String, protocolElems: List[StrictProtocolElems[L]]): F[StrictProtocolElems[L]]
   def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]): F[List[StrictProtocolElems[L]]]
+
+  def dereferenceHeader(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[headers.Header]]
+  def dereferenceParameter(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[Parameter]]
+  def dereferenceRequestBodie(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[RequestBody]]
+  def dereferenceResponse(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[ApiResponse]]
+  def dereferenceSchema(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[Schema[_]]]
+
   def log: SwaggerLogAdapter[F]
 }

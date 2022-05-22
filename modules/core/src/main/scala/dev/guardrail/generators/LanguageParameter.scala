@@ -1,19 +1,19 @@
 package dev.guardrail.generators
 
 import cats.syntax.all._
-import io.swagger.v3.oas.models.media.Schema
+import io.swagger.v3.oas.models.media
 import io.swagger.v3.oas.models.parameters._
+import io.swagger.v3.oas.models.Components
 
 import dev.guardrail._
 import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
-import dev.guardrail.core.{ ResolvedType, Tracker }
+import dev.guardrail.core.{ ReifiedRawType, ResolvedType, Tracker }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.shims._
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
-import dev.guardrail.core.ReifiedRawType
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SchemaLiteral, SchemaRef, SwaggerTerms }
 
 case class RawParameterName private[generators] (value: String)
 class LanguageParameters[L <: LA](val parameters: List[LanguageParameter[L]]) {
@@ -49,7 +49,8 @@ object LanguageParameter {
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
   def fromParameter[L <: LA, F[_]](
-      protocolElems: List[StrictProtocolElems[L]]
+      protocolElems: List[StrictProtocolElems[L]],
+      components: Tracker[Option[Components]]
   )(implicit
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
@@ -62,33 +63,30 @@ object LanguageParameter {
     import Sw._
 
     def paramMeta(param: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)] = {
-      def getDefault[U <: Parameter: Default.GetDefault](_type: String, fmt: Tracker[Option[String]], p: Tracker[U]): F[Option[L#Term]] =
-        (_type, fmt.unwrapTracker) match {
-          case ("string", None) =>
-            Default(p).extract[String].traverse(litString(_))
-          case ("number", Some("float")) =>
-            Default(p).extract[Float].traverse(litFloat(_))
-          case ("number", Some("double")) =>
-            Default(p).extract[Double].traverse(litDouble(_))
-          case ("integer", Some("int32")) =>
-            Default(p).extract[Int].traverse(litInt(_))
-          case ("integer", Some("int64")) =>
-            Default(p).extract[Long].traverse(litLong(_))
-          case ("boolean", None) =>
-            Default(p).extract[Boolean].traverse(litBoolean(_))
-          case x => Option.empty[L#Term].pure[F]
-        }
-
-      def resolveParam(param: Tracker[Parameter], typeFetcher: Tracker[Parameter] => F[Tracker[String]]): F[(ResolvedType[L], Boolean)] =
+      def getDefault[U <: Parameter: Default.GetDefault](schema: Tracker[media.Schema[_]]): F[Option[L#Term]] =
         for {
-          tpeName <- typeFetcher(param)
-          schema = param.downField("schema", _.getSchema)
-          fmt    = schema.flatDownField("format", _.getFormat)
+          res <- schema
+            .refine[F[Option[L#Term]]] { case x: media.StringSchema => x }(schema => Default(schema).extract[String].traverse(litString))
+            .orRefine { case x: media.NumberSchema if x.getFormat() == "float" => x }(schema => Default(schema).extract[Float].traverse(litFloat))
+            .orRefine { case x: media.NumberSchema => x }(schema => Default(schema).extract[Double].traverse(litDouble))
+            .orRefine { case x: media.IntegerSchema if x.getFormat() == "int32" => x }(schema => Default(schema).extract[Int].traverse(litInt))
+            .orRefine { case x: media.IntegerSchema => x }(schema => Default(schema).extract[Long].traverse(litLong))
+            .orRefine { case x: media.BooleanSchema => x }(schema => Default(schema).extract[Boolean].traverse(litBoolean))
+            .orRefineFallback(_ => Option.empty[L#Term].pure[F])
+        } yield res
+
+      def resolveParam(param: Tracker[Parameter]): F[(ResolvedType[L], Boolean)] =
+        for {
+          schema <- getParameterSchema(param, components).map(_.map {
+            case SchemaLiteral(schema)               => schema
+            case SchemaRef(SchemaLiteral(schema), _) => schema
+          })
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
-          customSchemaTypeName <- schema.unwrapTracker.flatTraverse(SwaggerUtil.customTypeName(_: Schema[_]))
+          customSchemaTypeName <- SwaggerUtil.customTypeName(schema.unwrapTracker)
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
-          res <- (SwaggerUtil.typeName[L, F](tpeName.map(Option(_)), fmt, customTypeName), getDefault(tpeName.unwrapTracker, fmt, param))
-            .mapN(core.Resolved[L](_, None, _, Some(tpeName.unwrapTracker), fmt.unwrapTracker))
+          (declType, rawType) <- SwaggerUtil.determineTypeName[L, F](schema, customTypeName, components)
+          defaultValue        <- getDefault(schema)
+          res      = core.Resolved[L](declType, None, defaultValue, rawType)
           required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
         } yield (res, required)
 
@@ -109,24 +107,27 @@ object LanguageParameter {
         )
         .orRefine { case x: Parameter if x.isInBody => x }(param =>
           for {
-            schema   <- getBodyParameterSchema(param)
-            resolved <- SwaggerUtil.modelMetaType[L, F](schema)
+            schema <- getParameterSchema(param, components).map(_.map {
+              case SchemaLiteral(schema)               => schema
+              case SchemaRef(SchemaLiteral(schema), _) => schema
+            })
+            resolved <- SwaggerUtil.modelMetaType[L, F](schema, components)
             required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
           } yield (resolved, required)
         )
-        .orRefine { case x: Parameter if x.isInHeader => x }(x => resolveParam(x, getHeaderParameterType))
-        .orRefine { case x: Parameter if x.isInPath => x }(x => resolveParam(x, getPathParameterType))
-        .orRefine { case x: Parameter if x.isInQuery => x }(x => resolveParam(x, getQueryParameterType))
-        .orRefine { case x: Parameter if x.isInCookies => x }(x => resolveParam(x, getCookieParameterType))
-        .orRefine { case x: Parameter if x.isInFormData => x }(x => resolveParam(x, getFormParameterType))
+        .orRefine { case x: Parameter if x.isInHeader => x }(resolveParam)
+        .orRefine { case x: Parameter if x.isInPath => x }(resolveParam)
+        .orRefine { case x: Parameter if x.isInQuery => x }(resolveParam)
+        .orRefine { case x: Parameter if x.isInCookies => x }(resolveParam)
+        .orRefine { case x: Parameter if x.isInFormData => x }(resolveParam)
         .orRefineFallback(fallbackParameterHandler)
     }
 
     log.function(s"fromParameter")(
       for {
-        _                                                                 <- log.debug(parameter.unwrapTracker.showNotNull)
-        (meta, required)                                                  <- paramMeta(parameter)
-        core.Resolved(paramType, _, baseDefaultValue, rawType, rawFormat) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
+        _                                                             <- log.debug(parameter.unwrapTracker.showNotNull)
+        (meta, required)                                              <- paramMeta(parameter)
+        core.Resolved(paramType, _, baseDefaultValue, reifiedRawType) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
 
         declType <-
           if (!required) {
@@ -170,7 +171,7 @@ object LanguageParameter {
         paramTermName,
         RawParameterName(name),
         declType,
-        ReifiedRawType.of(rawType, rawFormat),
+        reifiedRawType,
         required,
         FileHashAlgorithm(parameter),
         isFileType
@@ -179,7 +180,8 @@ object LanguageParameter {
   }
 
   def fromParameters[L <: LA, F[_]](
-      protocolElems: List[StrictProtocolElems[L]]
+      protocolElems: List[StrictProtocolElems[L]],
+      components: Tracker[Option[Components]]
   )(implicit
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
@@ -188,7 +190,7 @@ object LanguageParameter {
   ): List[Tracker[Parameter]] => F[List[LanguageParameter[L]]] = { params =>
     import Sc._
     for {
-      parameters <- params.traverse(fromParameter(protocolElems))
+      parameters <- params.traverse(fromParameter(protocolElems, components))
       counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).view.mapValues(_.length).toMap)
       result <- parameters.traverse { param =>
         extractTermName(param.paramName).flatMap { name =>

@@ -8,6 +8,7 @@ import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.{ SwaggerUtil, monadForFrameworkTerms }
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.Components
 
 class Response[L <: LA](
     val statusCodeName: L#TermName,
@@ -26,7 +27,12 @@ class Responses[L <: LA](val value: List[Response[L]]) {
   override def toString: String = s"Responses($value)"
 }
 object Responses {
-  def getResponses[L <: LA, F[_]](operationId: String, operation: Tracker[Operation], protocolElems: List[StrictProtocolElems[L]])(implicit
+  def getResponses[L <: LA, F[_]](
+      operationId: String,
+      operation: Tracker[Operation],
+      protocolElems: List[StrictProtocolElems[L]],
+      components: Tracker[Option[Components]]
+  )(implicit
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
@@ -49,9 +55,9 @@ object Responses {
               schema                    <- content.downField("schema", _.getSchema()).indexedDistribute.toList
             } yield (contentType, schema)).traverse { case (contentType, prop) =>
               for {
-                meta     <- SwaggerUtil.propMeta[L, F](prop)
+                meta     <- SwaggerUtil.propMeta[L, F](prop, components)
                 resolved <- core.ResolvedType.resolve[L, F](meta, protocolElems)
-                core.Resolved(baseType, _, baseDefaultValue, _, _) = resolved
+                core.Resolved(baseType, _, baseDefaultValue, _) = resolved // TODO: ReifiedRawType is just dropped, should it be considered?
               } yield (contentType, baseType, baseDefaultValue)
             }
             headers <- resp.downField("headers", _.getHeaders()).unwrapTracker.value.toList.traverse { case (name, header) =>
