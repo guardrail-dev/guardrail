@@ -75,7 +75,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      * Missing discriminator
      */
     failedResponseBody(makeJsonRequest("{}")) should equal(
-      "The request body was invalid. Attempt to decode value on failed cursor: DownField(type)"
+      "The request body was invalid. Missing required field: DownField(type)"
     )
 
     /* Correct mime type
@@ -92,7 +92,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      * Missing "name" field
      */
     failedResponseBody(makeJsonRequest("""{"type": "Bar"}""")) should equal(
-      "The request body was invalid. Attempt to decode value on failed cursor: DownField(name)"
+      "The request body was invalid. Missing required field: DownField(name)"
     )
 
     val validEntity = """{"type": "Bar", "name": "bar"}"""
@@ -237,7 +237,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      */
     Client.httpClient(jsonResponse("{}"), "http://localhost:80").getFoo().attempt.unsafeRunSync() match {
       case Left(InvalidMessageBodyFailure(_, Some(DecodingFailure(message, history)))) =>
-        message shouldBe "Attempt to decode value on failed cursor"
+        message shouldBe "Missing required field"
         history should equal(List(CursorOp.DownField("type")))
       case ex => fail(s"Unknown: ${ex}")
     }
@@ -260,7 +260,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      */
     Client.httpClient(jsonResponse("""{"type": "Bar"}"""), "http://localhost:80").getFoo().attempt.unsafeRunSync() match {
       case Left(InvalidMessageBodyFailure(_, Some(DecodingFailure(message, history)))) =>
-        message shouldBe "Attempt to decode value on failed cursor"
+        message shouldBe "Missing required field"
         history should equal(List(CursorOp.DownField("name")))
       case ex => fail(s"Unknown: ${ex}")
     }

@@ -55,7 +55,7 @@ class Http4sDebugBodyTest extends AnyFunSuite with Matchers with EitherValues wi
         .unsafeRunSync()
 
     val expectedErrorMessage =
-      "The request body was invalid. Attempt to decode value on failed cursor: DownField(something1)"
+      "The request body was invalid. Missing required field: DownField(something1)"
 
     actualErrorMessages should (have length 1)
     actualErrorMessages.head should equal(expectedErrorMessage)

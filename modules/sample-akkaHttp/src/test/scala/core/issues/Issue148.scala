@@ -82,7 +82,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       .withHeaders(RawHeader("x-header", "false"))
       .withEntity(ContentTypes.`application/json`, "{}") ~> route ~> check {
       rejection match {
-        case ex: MalformedRequestContentRejection => ex.message shouldBe "Attempt to decode value on failed cursor: DownField(type)"
+        case ex: MalformedRequestContentRejection => ex.message shouldBe "Missing required field: DownField(type)"
       }
     }
 
@@ -109,7 +109,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       .withHeaders(RawHeader("x-header", "false"))
       .withEntity(ContentTypes.`application/json`, """{"type": "Bar"}""") ~> route ~> check {
       rejection match {
-        case ex: MalformedRequestContentRejection => ex.message shouldBe "Attempt to decode value on failed cursor: DownField(name)"
+        case ex: MalformedRequestContentRejection => ex.message shouldBe "Missing required field: DownField(name)"
       }
     }
 
@@ -249,7 +249,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      */
     Client.httpClient(jsonResponse("{}"), "http://localhost:80").getFoo().value.futureValue match {
       case Left(Left(DecodingFailure(message, history))) =>
-        message shouldBe "Attempt to decode value on failed cursor"
+        message shouldBe "Missing required field"
         history should equal(List(CursorOp.DownField("type")))
       case ex => failTest(s"Unknown: ${ex}")
     }
@@ -272,7 +272,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
      */
     Client.httpClient(jsonResponse("""{"type": "Bar"}"""), "http://localhost:80").getFoo().value.futureValue match {
       case Left(Left(DecodingFailure(message, history))) =>
-        message shouldBe "Attempt to decode value on failed cursor"
+        message shouldBe "Missing required field"
         history should equal(List(CursorOp.DownField("name")))
       case ex => failTest(s"Unknown: ${ex}")
     }
