@@ -1,3 +1,31 @@
+Migrating to guardrail-core 0.71.0
+==================================
+
+[#1407](https://github.com/guardrail-dev/guardrail/pull/1407) resolved some long-standing technical debt, unifying two different type resolution codepaths.
+
+The major deviation between the two was how `array` was handled. Previously, many parameters were generated as `Iterator`, now they are generated as `Vector`.
+
+Should you prefer the previous functionality, `x-scala-array-type` can be added to your specification in order to override the new default.
+
+```diff
+ openapi: 3.0.2
+ paths:
+   /foo:
+     post:
+       parameters:
+         - name: vector
+           in: query
+           required: true
+           schema:
+             type: array
++            x-scala-array-type: Iterator
+             items:
+               type: integer
+               format: int64
+```
+
+There is a [scalafix rule](https://raw.githubusercontent.com/guardrail-dev/guardrail-scalafix-rules/master/rules/src/main/scala/fix/GuardrailIteratorToVector.scala) that will also attempt to apply this change to method signatures throughout your codebase.
+
 Migrating to 0.62.0
 ===================
 
