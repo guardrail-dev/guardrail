@@ -359,7 +359,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
         .map(xs =>
           NonEmptyList
             .fromList(xs.flatMap(ContentType.unapply(_)))
-            .getOrElse(NonEmptyList.one(ApplicationJson))
+            .getOrElse(NonEmptyList.one(ApplicationJson(None)))
         )
       consumes = operation.unwrapTracker.consumes.toList.flatMap(ContentType.unapply(_))
 

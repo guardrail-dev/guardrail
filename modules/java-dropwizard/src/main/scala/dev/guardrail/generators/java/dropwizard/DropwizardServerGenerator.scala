@@ -83,7 +83,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def toJaxRsAnnotationName: ContentType => Expression = {
-    case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
+    case ApplicationJson(_)  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
     case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")
     case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA")
     case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN")

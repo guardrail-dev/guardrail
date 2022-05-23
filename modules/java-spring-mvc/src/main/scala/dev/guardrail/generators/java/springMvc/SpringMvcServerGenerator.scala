@@ -84,7 +84,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def toSpringMediaType: ContentType => Expression = {
-    case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON_VALUE")
+    case ApplicationJson(_)  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON_VALUE")
     case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED_VALUE")
     case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA_VALUE")
     case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN_VALUE")
@@ -140,7 +140,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
   def getBestConsumes(contentTypes: List[ContentType], parameters: LanguageParameters[JavaLanguage]): Option[ContentType] = {
     val priorityOrder = NonEmptyList.of(
       UrlencodedFormData,
-      ApplicationJson,
+      ApplicationJson(None),
       MultipartFormData,
       TextPlain
     )
@@ -151,7 +151,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
         case (None, next)     => contentTypes.find(_ == next)
       }
       .orElse(parameters.formParams.headOption.map(_ => UrlencodedFormData))
-      .orElse(parameters.bodyParams.map(_ => ApplicationJson))
+      .orElse(parameters.bodyParams.map(_ => ApplicationJson(None)))
   }
 
   private def getBestProduces(
@@ -160,7 +160,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       protocolElems: List[StrictProtocolElems[JavaLanguage]]
   ): Option[ContentType] = {
     val priorityOrder = NonEmptyList.of(
-      ApplicationJson,
+      ApplicationJson(None),
       TextPlain,
       OctetStream
     )
@@ -176,7 +176,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
             protocolElems
               .find(pe => definitionName(resp.downField("ref", _.get$ref()).unwrapTracker).contains(pe.name))
               .flatMap {
-                case _: ClassDefinition[_]                                              => Some(ApplicationJson)
+                case _: ClassDefinition[_]                                              => Some(ApplicationJson(None))
                 case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(TextPlain)
                 case _: ADT[_] | _: EnumDefinition[_]                                   => Some(TextPlain)
                 case _                                                                  => None
@@ -400,7 +400,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
                   Some(UrlencodedFormData)
                 }
               } else if (parameters.bodyParams.nonEmpty) {
-                Some(ApplicationJson)
+                Some(ApplicationJson(None))
               } else {
                 None
               }

@@ -25,12 +25,12 @@ object BinaryContent {
   }
 }
 
-case object ApplicationJson    extends TextContent("application/json")
-case object MultipartFormData  extends TextContent("multipart/form-data")
-case object UrlencodedFormData extends TextContent("application/x-www-form-urlencoded")
-case object TextPlain          extends TextContent("text/plain")
-case object OctetStream        extends BinaryContent("application/octet-stream")
-case object AnyContentType     extends ContentType("*/*")
+case class ApplicationJson(scope: Option[String]) extends TextContent(s"application/${scope.fold("")(_ + "+")}json")
+case object MultipartFormData                     extends TextContent("multipart/form-data")
+case object UrlencodedFormData                    extends TextContent("application/x-www-form-urlencoded")
+case object TextPlain                             extends TextContent("text/plain")
+case object OctetStream                           extends BinaryContent("application/octet-stream")
+case object AnyContentType                        extends ContentType("*/*")
 
 object ContentType {
   // This is not intended to be exhaustive, but should hopefully cover cases we're likely to see.
@@ -61,7 +61,7 @@ object ContentType {
       name.startsWith("example/")
 
   def unapply(value: String): Option[ContentType] = value.toLowerCase(Locale.US) match {
-    case "application/json"                            => Some(ApplicationJson)
+    case "application/json"                            => Some(ApplicationJson(None))
     case "multipart/form-data"                         => Some(MultipartFormData)
     case "application/x-www-form-urlencoded"           => Some(UrlencodedFormData)
     case "text/plain"                                  => Some(TextPlain)

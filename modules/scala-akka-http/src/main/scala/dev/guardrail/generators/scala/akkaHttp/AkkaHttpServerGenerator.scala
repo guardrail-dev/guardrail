@@ -815,7 +815,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               """
                   } yield (List(fru), NonEmptyList.one(unmarshallerTerm))
 
-                case Tracker(hist, ApplicationJson) =>
+                case Tracker(hist, ApplicationJson(_)) =>
                   Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${hist})")
 
                 case Tracker(hist, BinaryContent(name)) => Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})")
@@ -878,7 +878,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           .map(xs =>
             NonEmptyList
               .fromList(xs.flatMap(ContentType.unapply(_)))
-              .getOrElse(NonEmptyList.one(ApplicationJson))
+              .getOrElse(NonEmptyList.one(ApplicationJson(None)))
           )
 
         // special-case file upload stuff

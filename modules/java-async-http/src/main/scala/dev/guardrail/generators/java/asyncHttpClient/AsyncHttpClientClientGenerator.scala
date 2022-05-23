@@ -178,7 +178,7 @@ object AsyncHttpClientClientGenerator {
       Option(new ExpressionStmt(wrapSetBody(new NameExpr(param.paramName.asString))))
     } else {
       contentType match {
-        case Some(ApplicationJson) =>
+        case Some(ApplicationJson(_)) =>
           Option(
             new BlockStmt(
               new NodeList(
@@ -766,7 +766,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
                                           )
                                           ApplicationJson
                                         } match {
-                                        case ApplicationJson =>
+                                        case ApplicationJson(_) =>
                                           new AssignExpr(
                                             new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
                                             new MethodCallExpr(

@@ -17,8 +17,8 @@ object AkkaHttpHelper {
 
     for {
       unmarshallers <- consumes.indexedDistribute.toList.flatTraverse {
-        case Tracker(_, ApplicationJson)   => Target.pure(List(q"structuredJsonEntityUnmarshaller"))
-        case Tracker(_, TextPlain)         => Target.pure(List(q"stringyJsonEntityUnmarshaller"))
+        case Tracker(_, ApplicationJson(None)) => Target.pure(List(q"structuredJsonEntityUnmarshaller"))
+        case Tracker(_, TextPlain)             => Target.pure(List(q"stringyJsonEntityUnmarshaller"))
         case Tracker(history, contentType) => Target.log.warning(s"Unable to generate decoder for ${contentType} (${history})").map(_ => List.empty[Term.Name])
       }
       unmarshaller <- unmarshallers match {
