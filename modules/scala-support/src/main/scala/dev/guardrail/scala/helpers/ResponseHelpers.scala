@@ -9,15 +9,15 @@ import dev.guardrail.terms.{ ApplicationJson, BinaryContent, ContentType, Multip
 import io.swagger.v3.oas.models.Operation
 
 object ResponseHelpers {
-  private val CONSUMES_PRIORITY = NonEmptyList.of(ApplicationJson(None), TextPlain, OctetStream)
-  private val PRODUCES_PRIORITY = NonEmptyList.of(ApplicationJson(None), TextPlain, OctetStream)
+  private val CONSUMES_PRIORITY = NonEmptyList.of(ApplicationJson.empty, TextPlain.empty, OctetStream.empty)
+  private val PRODUCES_PRIORITY = NonEmptyList.of(ApplicationJson.empty, TextPlain.empty, OctetStream.empty)
 
   def getBestConsumes[L <: LA](operation: Tracker[Operation], contentTypes: List[ContentType], parameters: LanguageParameters[L]): Option[ContentType] =
     if (parameters.formParams.nonEmpty) {
-      if (parameters.formParams.exists(_.isFile) || contentTypes.contains(MultipartFormData)) {
-        Some(MultipartFormData)
+      if (parameters.formParams.exists(_.isFile) || contentTypes.exists(ContentType.isSubtypeOf[MultipartFormData])) {
+        Some(MultipartFormData.empty)
       } else {
-        Some(UrlencodedFormData)
+        Some(UrlencodedFormData.empty)
       }
     } else {
       parameters.bodyParams.map { bodyParam =>
@@ -28,8 +28,8 @@ object ResponseHelpers {
           .getOrElse {
             val fallback =
               bodyParam.rawType match {
-                case LiteralRawType(Some("object"), _) => ApplicationJson(None)
-                case _                                 => TextPlain
+                case LiteralRawType(Some("object"), _) => ApplicationJson.empty
+                case _                                 => TextPlain.empty
               }
             println(s"WARNING: no supported body param type at ${operation.showHistory}; falling back to $fallback")
             fallback
@@ -51,7 +51,7 @@ object ResponseHelpers {
           .orElse(contentTypes.collectFirst { case tc: TextContent => tc })
           .orElse(contentTypes.collectFirst { case bc: BinaryContent => bc })
           .orElse {
-            val fallback = if (fallbackIsString(valueType)) TextPlain else ApplicationJson(None)
+            val fallback = if (fallbackIsString(valueType)) TextPlain.empty else ApplicationJson.empty
             println(
               s"WARNING: no supported body param type for operation '$operationId', response code ${response.statusCode}; falling back to ${fallback.value}"
             )

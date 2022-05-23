@@ -108,7 +108,7 @@ class Http4sClientGenerator extends ClientTerms[ScalaLanguage, Target] {
     def generateFormDataParams(parameters: List[LanguageParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
       if (parameters.isEmpty) {
         None
-      } else if (consumes.contains(MultipartFormData)) {
+      } else if (consumes.exists(ContentType.isSubtypeOf[MultipartFormData])) {
         def liftOptionFileTerm(tParamName: Term, tName: RawParameterName) =
           q"$tParamName.map(v => Part.fileData[F](${tName.toLit}, v._1, v._2))"
 
@@ -212,7 +212,7 @@ class Http4sClientGenerator extends ClientTerms[ScalaLanguage, Target] {
         defaultHeaders                 = param"headers: List[Header.ToRaw] = List.empty"
         safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType))
 
-        formDataNeedsMultipart = consumes.contains(MultipartFormData)
+        formDataNeedsMultipart = consumes.exists(ContentType.isSubtypeOf[MultipartFormData])
         formEntity: Option[Term] = formDataParams.map { formDataParams =>
           if (formDataNeedsMultipart) {
             q"""_multipart"""

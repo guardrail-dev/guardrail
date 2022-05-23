@@ -34,7 +34,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
       fields: Mappish[List, String, Tracker[MediaType]],
       required: Tracker[Option[Boolean]]
   ): Option[Tracker[Parameter]] = {
-    val formContentTypes = Set[ContentType](MultipartFormData, UrlencodedFormData)
+    val formContentTypes = Set[ContentType](MultipartFormData.empty, UrlencodedFormData.empty)
     // FIXME: Just taking the head here isn't super great
     def unifyEntries: List[(String, Tracker[MediaType])] => Option[Tracker[Schema[_]]] =
       _.flatMap {
@@ -156,7 +156,11 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
           p.setRequired(isRequired)
           p.setExtensions(schema.unwrapTracker.getExtensions)
 
-          if (schema.downField("type", _.getType()).indexedCosequence.exists(_.unwrapTracker == "file") && contentTypes.contains(UrlencodedFormData)) {
+          if (
+            schema.downField("type", _.getType()).indexedCosequence.exists(_.unwrapTracker == "file") && contentTypes.exists(
+              ContentType.isSubtypeOf[UrlencodedFormData]
+            )
+          ) {
             p.setRequired(false)
           }
 

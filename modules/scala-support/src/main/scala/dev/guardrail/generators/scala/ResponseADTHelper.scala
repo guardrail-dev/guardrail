@@ -111,8 +111,10 @@ object ResponseADTHelper {
     }
 
   private def isJsonEncoderDecoder(consumesOrProduces: Seq[ContentType]): Boolean =
-    consumesOrProduces.contains(ApplicationJson(None)) ||
+    consumesOrProduces.exists(ContentType.isSubtypeOf[ApplicationJson]) ||
       consumesOrProduces.exists(ct => ct.value.startsWith("application/") && ct.value.endsWith("+json")) ||
       consumesOrProduces.isEmpty ||
-      consumesOrProduces.contains(AnyContentType) // guardrial converts missing contentTypes to */* what should be converted to JSON according OpenAPI
+      consumesOrProduces.exists(
+        ContentType.isSubtypeOf[AnyContentType]
+      ) // guardrial converts missing contentTypes to */* what should be converted to JSON according OpenAPI
 }
