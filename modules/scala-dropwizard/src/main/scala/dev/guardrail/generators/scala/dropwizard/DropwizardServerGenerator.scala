@@ -61,15 +61,15 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
   private val CONTAINER_TYPES = Seq("Vector", "List", "Seq", "IndexedSeq", "Iterable", "Map")
 
   private def toJaxRsAnnotationName: ContentType => Term = {
-    case ApplicationJson     => q"MediaType.APPLICATION_JSON"
-    case UrlencodedFormData  => q"MediaType.APPLICATION_FORM_URLENCODED"
-    case MultipartFormData   => q"MediaType.MULTIPART_FORM_DATA"
-    case TextPlain           => q"MediaType.TEXT_PLAIN"
-    case OctetStream         => q"MediaType.APPLICATION_OCTET_STREAM"
-    case TextContent(name)   => Lit.String(name)
-    case BinaryContent(name) => Lit.String(name)
-    case AnyContentType      => ??? // TODO: What do we do if we get here?
-    case _                   => ???
+    case _: ApplicationJson    => q"MediaType.APPLICATION_JSON"
+    case _: UrlencodedFormData => q"MediaType.APPLICATION_FORM_URLENCODED"
+    case _: MultipartFormData  => q"MediaType.MULTIPART_FORM_DATA"
+    case _: TextPlain          => q"MediaType.TEXT_PLAIN"
+    case _: OctetStream        => q"MediaType.APPLICATION_OCTET_STREAM"
+    case ct: TextContent       => Lit.String(ct.value)
+    case ct: BinaryContent     => Lit.String(ct.value)
+    case _: AnyContentType     => ??? // TODO: What do we do if we get here?
+    case _                     => ???
   }
 
   private def unwrapContainer(tpe: Type): (Type, Type => Type) = {
@@ -362,7 +362,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
 
         val methodAnnotations = pathAnnotation.toList ++ List(httpMethodAnnotation) ++ consumesAnnotation ++ producesAnnotation
 
-        val formParamAnnot = if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam"
+        val formParamAnnot = if (consumes.exists(ContentType.isSubtypeOf[MultipartFormData])) "FormDataParam" else "FormParam"
         val methodParams =
           parameters.pathParams.map(paramTransformers.transform(_, Some("PathParam"))) ++
             parameters.headerParams.map(paramTransformers.transform(_, Some("HeaderParam"))) ++

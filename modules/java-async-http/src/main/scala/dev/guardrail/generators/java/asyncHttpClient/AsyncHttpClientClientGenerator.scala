@@ -38,15 +38,13 @@ import dev.guardrail.terms.{
   BinaryContent,
   CollectionsLibTerms,
   ContentType,
-  MultipartFormData,
   OctetStream,
   Response,
   Responses,
   RouteMeta,
   SecurityScheme,
   TextContent,
-  TextPlain,
-  UrlencodedFormData
+  TextPlain
 }
 
 class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
@@ -178,7 +176,7 @@ object AsyncHttpClientClientGenerator {
       Option(new ExpressionStmt(wrapSetBody(new NameExpr(param.paramName.asString))))
     } else {
       contentType match {
-        case Some(ApplicationJson) =>
+        case Some(_: ApplicationJson) =>
           Option(
             new BlockStmt(
               new NodeList(
@@ -218,7 +216,7 @@ object AsyncHttpClientClientGenerator {
             )
           )
 
-        case Some(TextContent(_)) =>
+        case Some(_: TextContent) =>
           Option(
             new ExpressionStmt(
               wrapSetBody(
@@ -231,18 +229,12 @@ object AsyncHttpClientClientGenerator {
             )
           )
 
-        case Some(BinaryContent(_)) | None =>
+        case Some(_: BinaryContent) | None =>
           // FIXME: we're hoping that the type is something that AHC already supports
           Option(new ExpressionStmt(wrapSetBody(new NameExpr(param.paramName.asString))))
 
-        case Some(UrlencodedFormData) | Some(MultipartFormData) =>
-          // We shouldn't be here, since we can't have a body param with these content types
-          None
-        case Some(AnyContentType | OctetStream | TextPlain) =>
+        case Some(_: AnyContentType | _: OctetStream | _: TextPlain) =>
           // TODO: These need to be addressed, just suppressing warnings as of now
-          None
-        case Some(_: BinaryContent | _: TextContent) =>
-          // Impossible, see https://github.com/scala/bug/issues/12232
           None
       }
     }
@@ -596,7 +588,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       callBuilderFinalFields.foreach { case (tpe, name) => callBuilderCls.addField(tpe, name, PRIVATE, FINAL) }
       val callBuilderInitContentType = consumes.map { ct =>
         val ctStr = ct match {
-          case TextContent(_) => s"${ct.value}; charset=utf-8"
+          case _: TextContent => s"${ct.value}; charset=utf-8"
           case _              => ct.value
         }
         new ExpressionStmt(
@@ -764,9 +756,9 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
                                           println(
                                             s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
                                           )
-                                          ApplicationJson
+                                          ApplicationJson.empty
                                         } match {
-                                        case ApplicationJson =>
+                                        case _: ApplicationJson =>
                                           new AssignExpr(
                                             new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
                                             new MethodCallExpr(

@@ -84,16 +84,14 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def toSpringMediaType: ContentType => Expression = {
-    case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON_VALUE")
-    case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED_VALUE")
-    case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA_VALUE")
-    case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN_VALUE")
-    case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM_VALUE")
-    case TextContent(name)   => new StringLiteralExpr(name)
-    case BinaryContent(name) => new StringLiteralExpr(name)
-    case AnyContentType      => ??? // TODO: What do we do if we get here?
-    case _: TextContent      => ???
-    case _: BinaryContent    => ???
+    case _: ApplicationJson    => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON_VALUE")
+    case _: UrlencodedFormData => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED_VALUE")
+    case _: MultipartFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA_VALUE")
+    case _: TextPlain          => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN_VALUE")
+    case _: OctetStream        => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM_VALUE")
+    case ct: TextContent       => new StringLiteralExpr(ct.value)
+    case ct: BinaryContent     => new StringLiteralExpr(ct.value)
+    case _: AnyContentType     => ??? // TODO: What do we do if we get here?
   }
 
   private val ASYNC_RESPONSE_TYPE        = StaticJavaParser.parseClassOrInterfaceType("DeferredResult<ResponseEntity<?>>")
@@ -139,10 +137,10 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
 
   def getBestConsumes(contentTypes: List[ContentType], parameters: LanguageParameters[JavaLanguage]): Option[ContentType] = {
     val priorityOrder = NonEmptyList.of(
-      UrlencodedFormData,
-      ApplicationJson,
-      MultipartFormData,
-      TextPlain
+      UrlencodedFormData.empty,
+      ApplicationJson.empty,
+      MultipartFormData.empty,
+      TextPlain.empty
     )
 
     priorityOrder
@@ -150,8 +148,8 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
         case (s @ Some(_), _) => s
         case (None, next)     => contentTypes.find(_ == next)
       }
-      .orElse(parameters.formParams.headOption.map(_ => UrlencodedFormData))
-      .orElse(parameters.bodyParams.map(_ => ApplicationJson))
+      .orElse(parameters.formParams.headOption.map(_ => UrlencodedFormData.empty))
+      .orElse(parameters.bodyParams.map(_ => ApplicationJson.empty))
   }
 
   private def getBestProduces(
@@ -160,9 +158,9 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       protocolElems: List[StrictProtocolElems[JavaLanguage]]
   ): Option[ContentType] = {
     val priorityOrder = NonEmptyList.of(
-      ApplicationJson,
-      TextPlain,
-      OctetStream
+      ApplicationJson.empty,
+      TextPlain.empty,
+      OctetStream.empty
     )
 
     priorityOrder
@@ -176,9 +174,9 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
             protocolElems
               .find(pe => definitionName(resp.downField("ref", _.get$ref()).unwrapTracker).contains(pe.name))
               .flatMap {
-                case _: ClassDefinition[_]                                              => Some(ApplicationJson)
-                case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(TextPlain)
-                case _: ADT[_] | _: EnumDefinition[_]                                   => Some(TextPlain)
+                case _: ClassDefinition[_]                                              => Some(ApplicationJson.empty)
+                case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(TextPlain.empty)
+                case _: ADT[_] | _: EnumDefinition[_]                                   => Some(TextPlain.empty)
                 case _                                                                  => None
               }
           }
@@ -395,12 +393,12 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
             .orElse {
               if (parameters.formParams.nonEmpty) {
                 if (parameters.formParams.exists(_.isFile)) {
-                  Some(MultipartFormData)
+                  Some(MultipartFormData.empty)
                 } else {
-                  Some(UrlencodedFormData)
+                  Some(UrlencodedFormData.empty)
                 }
               } else if (parameters.bodyParams.nonEmpty) {
-                Some(ApplicationJson)
+                Some(ApplicationJson.empty)
               } else {
                 None
               }
@@ -494,7 +492,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
             (parameters.pathParams, "PathVariable"),
             (parameters.headerParams, "RequestHeader"),
             (parameters.queryStringParams, "RequestParam"),
-            (parameters.formParams, if (consumes.contains(MultipartFormData)) "RequestParam" else "ModelAttribute")
+            (parameters.formParams, if (consumes.exists(ContentType.isSubtypeOf[MultipartFormData])) "RequestParam" else "ModelAttribute")
           ).flatMap { case (params, annotationName) =>
             params.map { param =>
               val parameter       = param.param.clone()

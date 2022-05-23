@@ -83,14 +83,14 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def toJaxRsAnnotationName: ContentType => Expression = {
-    case ApplicationJson     => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
-    case UrlencodedFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")
-    case MultipartFormData   => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA")
-    case TextPlain           => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN")
-    case OctetStream         => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM")
-    case TextContent(name)   => new StringLiteralExpr(name)
-    case BinaryContent(name) => new StringLiteralExpr(name)
-    case _                   => ??? // TODO: What do we do if we get here?
+    case _: ApplicationJson    => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
+    case _: UrlencodedFormData => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")
+    case _: MultipartFormData  => new FieldAccessExpr(new NameExpr("MediaType"), "MULTIPART_FORM_DATA")
+    case _: TextPlain          => new FieldAccessExpr(new NameExpr("MediaType"), "TEXT_PLAIN")
+    case _: OctetStream        => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_OCTET_STREAM")
+    case ct: TextContent       => new StringLiteralExpr(ct.value)
+    case ct: BinaryContent     => new StringLiteralExpr(ct.value)
+    case _                     => ??? // TODO: What do we do if we get here?
   }
 
   private val ASYNC_RESPONSE_TYPE   = StaticJavaParser.parseClassOrInterfaceType("AsyncResponse")
@@ -446,7 +446,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
                 (parameters.pathParams, "PathParam"),
                 (parameters.headerParams, "HeaderParam"),
                 (parameters.queryStringParams, "QueryParam"),
-                (parameters.formParams, if (consumes.contains(MultipartFormData)) "FormDataParam" else "FormParam")
+                (parameters.formParams, if (consumes.exists(ContentType.isSubtypeOf[MultipartFormData])) "FormDataParam" else "FormParam")
               ).flatTraverse { case (params, annotationName) =>
                 params.traverse { param =>
                   val parameter                  = param.param.clone()

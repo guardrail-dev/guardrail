@@ -112,7 +112,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
     def generateFormDataParams(parameters: List[LanguageParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
       if (parameters.isEmpty) {
         None
-      } else if (consumes.contains(MultipartFormData)) {
+      } else if (consumes.exists(ContentType.isSubtypeOf[MultipartFormData])) {
         def liftOptionFileTerm(tParamName: Term, tName: RawParameterName) =
           q"$tParamName.map(v => Multipart.FormData.BodyPart(${tName.toLit}, v))"
 
@@ -217,7 +217,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
           Some((q"HttpEntity.Empty", t"HttpEntity.Strict"))
         else None
       val textPlainBody: Option[Term] =
-        if (consumes.contains(TextPlain))
+        if (consumes.exists(ContentType.isSubtypeOf[TextPlain]))
           body.map { sp =>
             val inner = if (sp.required) sp.paramName else q"${sp.paramName}.getOrElse(${Lit.String("")})"
             q"TextPlain(${inner})"
@@ -227,7 +227,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
         body.map(sp => (sp.paramName, sp.argType)).orElse(fallbackHttpBody)
 
       val formEntity: Option[Term] = formDataParams.map { formDataParams =>
-        if (consumes.contains(MultipartFormData)) {
+        if (consumes.exists(ContentType.isSubtypeOf[MultipartFormData])) {
           q"""Multipart.FormData(Source.fromIterator { () => $formDataParams.flatten.iterator })"""
         } else {
           q"""FormData($formDataParams: _*)"""
@@ -359,7 +359,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
         .map(xs =>
           NonEmptyList
             .fromList(xs.flatMap(ContentType.unapply(_)))
-            .getOrElse(NonEmptyList.one(ApplicationJson))
+            .getOrElse(NonEmptyList.one(ApplicationJson.empty))
         )
       consumes = operation.unwrapTracker.consumes.toList.flatMap(ContentType.unapply(_))
 

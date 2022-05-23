@@ -4,33 +4,44 @@ import cats.Order
 import cats.syntax.all._
 
 import java.util.Locale
+import scala.reflect.ClassTag
 
 sealed abstract class ContentType(val value: String) {
   override val toString: String = value
+  override def equals(x: Any): Boolean = x match {
+    case x: ContentType => x.value == value
+    case _              => false
+  }
 }
 sealed class TextContent(value: String)   extends ContentType(value)
 sealed class BinaryContent(value: String) extends ContentType(value)
 
-object TextContent {
-  def unapply(contentType: ContentType): Option[String] = contentType match {
-    case tc: TextContent => Some(tc.value)
-    case _               => None
-  }
+class ApplicationJson private (val scope: Option[String]) extends TextContent(s"application/${scope.fold("")(_ + "+")}json") {
+  def withScope(scope: Option[String]): ApplicationJson = new ApplicationJson(scope)
 }
-
-object BinaryContent {
-  def unapply(contentType: ContentType): Option[String] = contentType match {
-    case bc: BinaryContent => Some(bc.value)
-    case _                 => None
-  }
+object ApplicationJson {
+  val empty: ApplicationJson = new ApplicationJson(None)
 }
-
-case object ApplicationJson    extends TextContent("application/json")
-case object MultipartFormData  extends TextContent("multipart/form-data")
-case object UrlencodedFormData extends TextContent("application/x-www-form-urlencoded")
-case object TextPlain          extends TextContent("text/plain")
-case object OctetStream        extends BinaryContent("application/octet-stream")
-case object AnyContentType     extends ContentType("*/*")
+class MultipartFormData private () extends TextContent("multipart/form-data")
+object MultipartFormData {
+  val empty: MultipartFormData = new MultipartFormData()
+}
+class UrlencodedFormData private () extends TextContent("application/x-www-form-urlencoded")
+object UrlencodedFormData {
+  val empty: UrlencodedFormData = new UrlencodedFormData()
+}
+class TextPlain private () extends TextContent("text/plain")
+object TextPlain {
+  val empty: TextPlain = new TextPlain()
+}
+class OctetStream private () extends BinaryContent("application/octet-stream")
+object OctetStream {
+  val empty: OctetStream = new OctetStream()
+}
+class AnyContentType private () extends ContentType("*/*")
+object AnyContentType {
+  val empty: AnyContentType = new AnyContentType()
+}
 
 object ContentType {
   // This is not intended to be exhaustive, but should hopefully cover cases we're likely to see.
@@ -61,16 +72,21 @@ object ContentType {
       name.startsWith("example/")
 
   def unapply(value: String): Option[ContentType] = value.toLowerCase(Locale.US) match {
-    case "application/json"                            => Some(ApplicationJson)
-    case "multipart/form-data"                         => Some(MultipartFormData)
-    case "application/x-www-form-urlencoded"           => Some(UrlencodedFormData)
-    case "text/plain"                                  => Some(TextPlain)
-    case "application/octet-stream"                    => Some(OctetStream)
-    case "*/*"                                         => Some(AnyContentType)
+    case "application/json"                            => Some(ApplicationJson.empty)
+    case "multipart/form-data"                         => Some(MultipartFormData.empty)
+    case "application/x-www-form-urlencoded"           => Some(UrlencodedFormData.empty)
+    case "text/plain"                                  => Some(TextPlain.empty)
+    case "application/octet-stream"                    => Some(OctetStream.empty)
+    case "*/*"                                         => Some(AnyContentType.empty)
     case x if isUnsupported(x)                         => None
     case x if isTextRegistry(x) | isApplicationText(x) => Some(new TextContent(value))
     case _                                             => Some(new BinaryContent(value))
   }
 
   implicit val ContentTypeOrder: Order[ContentType] = Order[String].contramap[ContentType](_.value)
+
+  def isSubtypeOf[A](a: ContentType)(implicit ev: ClassTag[A]): Boolean = a match {
+    case a: A => true
+    case _    => false
+  }
 }

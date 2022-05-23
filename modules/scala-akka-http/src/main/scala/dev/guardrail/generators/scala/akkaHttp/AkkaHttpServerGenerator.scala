@@ -126,8 +126,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           }
         ) { case (contentType, valueType, _) =>
           val transformer: Term => Term = contentType match {
-            case TextPlain => x => q"TextPlain($x)"
-            case _         => identity _
+            case _: TextPlain => x => q"TextPlain($x)"
+            case _            => identity _
           }
           (
             q"case class  $responseName(..${param"value: ${valueType}" +: headerParamTerms}) extends $responseSuperType($statusCode)",
@@ -509,15 +509,15 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
   ): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
     for {
       _ <-
-        if (params.exists(_.isFile) && !consumes.exists(_.unwrapTracker == MultipartFormData)) {
+        if (params.exists(_.isFile) && !consumes.exists(ct => ContentType.isSubtypeOf[MultipartFormData](ct.unwrapTracker))) {
           Target.log.warning(s"type: file detected, automatically enabling multipart/form-data handling (${consumes.showHistory})")
         } else {
           Target.pure(())
         }
 
       hasFile              = params.exists(_.isFile)
-      urlencoded           = consumes.exists(_.unwrapTracker == UrlencodedFormData)
-      multipart            = consumes.exists(_.unwrapTracker == MultipartFormData)
+      urlencoded           = consumes.exists(ct => ContentType.isSubtypeOf[UrlencodedFormData](ct.unwrapTracker))
+      multipart            = consumes.exists(ct => ContentType.isSubtypeOf[MultipartFormData](ct.unwrapTracker))
       referenceAccumulator = q"fileReferences"
 
       result <- NonEmptyList
@@ -727,7 +727,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               .map(_.distinct)
               .indexedDistribute
               .traverse[Target, (List[Stat], NonEmptyList[Term.Name])] {
-                case Tracker(_, MultipartFormData) =>
+                case Tracker(_, _: MultipartFormData) =>
                   val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
                   val fru = q"""
                 object ${partsTerm} {
@@ -770,7 +770,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                 """.stats
                   Target.pure((fru, NonEmptyList.one(unmarshallerTerm)))
 
-                case Tracker(_, UrlencodedFormData) =>
+                case Tracker(_, _: UrlencodedFormData) =>
                   for {
                     unmarshalFieldTypeParam        <- AkkaHttpHelper.unmarshalFieldTypeParam(modelGeneratorType)
                     unmarshalFieldUnmarshallerType <- AkkaHttpHelper.unmarshalFieldUnmarshallerType(modelGeneratorType)
@@ -815,12 +815,12 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               """
                   } yield (List(fru), NonEmptyList.one(unmarshallerTerm))
 
-                case Tracker(hist, ApplicationJson) =>
+                case Tracker(hist, _: ApplicationJson) =>
                   Target.raiseUserError(s"Unable to generate unmarshaller for application/json (${hist})")
 
-                case Tracker(hist, BinaryContent(name)) => Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})")
+                case Tracker(hist, ct: BinaryContent) => Target.raiseUserError(s"Unable to generate unmarshaller for ${ct.value} (${hist})")
 
-                case Tracker(hist, TextContent(name)) => Target.raiseUserError(s"Unable to generate unmarshaller for $name (${hist})")
+                case Tracker(hist, ct: TextContent) => Target.raiseUserError(s"Unable to generate unmarshaller for ${ct.value} (${hist})")
 
                 case Tracker(hist, ct) => Target.raiseException(s"Unexpected ContentType ${ct} (${hist})")
               }
@@ -878,7 +878,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           .map(xs =>
             NonEmptyList
               .fromList(xs.flatMap(ContentType.unapply(_)))
-              .getOrElse(NonEmptyList.one(ApplicationJson))
+              .getOrElse(NonEmptyList.one(ApplicationJson.empty))
           )
 
         // special-case file upload stuff
