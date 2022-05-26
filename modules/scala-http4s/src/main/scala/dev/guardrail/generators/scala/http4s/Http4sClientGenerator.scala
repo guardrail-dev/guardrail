@@ -27,16 +27,23 @@ class Http4sClientGeneratorLoader extends ClientGeneratorLoader {
 
   def apply(parameters: Set[String]) =
     for {
-      _ <- parameters.collectFirst { case Http4sVersion(version) => version }
-    } yield Http4sClientGenerator()
+      version <- parameters.collectFirst { case Http4sVersion(version) => version }
+    } yield Http4sClientGenerator(version)
 }
 
 object Http4sClientGenerator {
+  @deprecated("Please specify which http4s version to use", "0.72.0")
   def apply(): ClientTerms[ScalaLanguage, Target] =
-    new Http4sClientGenerator
+    new Http4sClientGenerator(Http4sVersion.V0_23)
+
+  def apply(version: Http4sVersion): ClientTerms[ScalaLanguage, Target] =
+    new Http4sClientGenerator(version)
 }
 
-class Http4sClientGenerator extends ClientTerms[ScalaLanguage, Target] {
+class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLanguage, Target] {
+  @deprecated("Please specify which http4s version to use", "0.72.0")
+  def this() = this(Http4sVersion.V0_23)
+
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
   def splitOperationParts(operationId: String): (List[String], String) = {
@@ -226,9 +233,17 @@ class Http4sClientGenerator extends ClientTerms[ScalaLanguage, Target] {
             (List(q"""val tracingHttpClient = traceBuilder(s"$${clientName}:$${methodName}")(httpClient)"""), q"tracingHttpClient")
           else
             (List(), q"httpClient")
-        multipartExpr = formDataParams
-          .filter(_ => formDataNeedsMultipart)
-          .map(formDataParams => q"""val _multipart = Multipart($formDataParams.flatten.toVector)""")
+        embedMultipart =
+          formDataParams
+            .filter(_ => formDataNeedsMultipart)
+            .map(formDataParams =>
+              if (version == Http4sVersion.V0_23) { (inner: List[Stat]) =>
+                q"""Multiparts.forSync[F].flatMap(_.multipart($formDataParams.flatten.toVector).flatMap { _multipart => ..${inner} })"""
+              } else { (inner: List[Stat]) =>
+                Term.Block(List(q"val _multipart = Multipart($formDataParams.flatten.toVector)") ++ inner)
+              }
+            )
+            .getOrElse[List[Stat] => Term](Term.Block(_))
         headersExpr =
           if (formDataNeedsMultipart) {
             List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)")
@@ -298,11 +313,7 @@ class Http4sClientGenerator extends ClientTerms[ScalaLanguage, Target] {
         executeReqExpr =
           if (isGeneric) List(q"""$httpClientName.run(${reqBinding}).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
           else List(q"""$httpClientName.run(${reqBinding}).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
-        methodBody: Term = q"""
-            {
-              ..${tracingExpr ++ multipartExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
-            }
-            """
+        methodBody: Term = embedMultipart(tracingExpr ++ headersExpr ++ reqExpr ++ executeReqExpr)
 
         formParams = formArgs.map(scalaParam =>
           scalaParam.param.copy(
