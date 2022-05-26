@@ -237,13 +237,13 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
           formDataParams
             .filter(_ => formDataNeedsMultipart)
             .map(formDataParams =>
-              if (version == Http4sVersion.V0_23) { (inner: Term) =>
-                q"""Multiparts.forSync[F].flatMap(_.multipart($formDataParams.flatten.toVector).flatMap(_multipart => ${inner}))"""
-              } else { (inner: Term) =>
-                q"""{ ..${List(q"val _multipart = Multipart($formDataParams.flatten.toVector)", inner)} }"""
+              if (version == Http4sVersion.V0_23) { (inner: List[Stat]) =>
+                q"""Multiparts.forSync[F].flatMap(_.multipart($formDataParams.flatten.toVector).flatMap { _multipart => ..${inner} })"""
+              } else { (inner: List[Stat]) =>
+                Term.Block(List(q"val _multipart = Multipart($formDataParams.flatten.toVector)") ++ inner)
               }
             )
-            .getOrElse[Term => Term](identity _)
+            .getOrElse[List[Stat] => Term](Term.Block(_))
         headersExpr =
           if (formDataNeedsMultipart) {
             List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)")
@@ -313,11 +313,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
         executeReqExpr =
           if (isGeneric) List(q"""$httpClientName.run(${reqBinding}).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
           else List(q"""$httpClientName.run(${reqBinding}).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
-        methodBody: Term = embedMultipart(q"""
-            {
-              ..${tracingExpr ++ headersExpr ++ reqExpr ++ executeReqExpr}
-            }
-            """)
+        methodBody: Term = embedMultipart(tracingExpr ++ headersExpr ++ reqExpr ++ executeReqExpr)
 
         formParams = formArgs.map(scalaParam =>
           scalaParam.param.copy(
