@@ -21,7 +21,7 @@ abstract class AbstractGeneratorLoaderCompanion[A[_ <: LA, _[_]], B <: AbstractG
     val found = loader
       .iterator()
       .asScala
-      .filter(_.reified == tt)
+      .filter(_.reified.tpe =:= tt.tpe)
       .flatMap(_.apply(params).asInstanceOf[Option[A[L, Target]]])
       .toSeq
       .headOption
