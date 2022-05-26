@@ -150,6 +150,7 @@ object SwaggerUtil {
             .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "byte" => x }(const(bytesType()))
             .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "binary" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: StringSchema) => x }(extractFormat(fmt => stringType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: ByteArraySchema) => x }(const(bytesType()))
             .orRefine { case SchemaLiteral(x: NumberSchema) if x.getFormat() == "float" => x }(const(floatType()))
             .orRefine { case SchemaLiteral(x: NumberSchema) if x.getFormat() == "double" => x }(const(doubleType()))
             .orRefine { case SchemaLiteral(x: NumberSchema) => x }(extractFormat(fmt => numberType(fmt).map(log(fmt, _))))
@@ -175,6 +176,7 @@ object SwaggerUtil {
             .orRefine { case SchemaLiteral(x: BinarySchema) => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: MapSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: JsonSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
             .orRefineFallback { schemaProjection =>
               schemaProjection.unwrapTracker match {
                 case SchemaLiteral(x) =>
