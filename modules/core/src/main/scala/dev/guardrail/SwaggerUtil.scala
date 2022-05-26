@@ -140,6 +140,8 @@ object SwaggerUtil {
               extractFormat(fmt => stringType(None).map(log(fmt, _)))
             )
             .orRefine { case SchemaLiteral(x: UUIDSchema) => x }(const(uuidType()))
+            .orRefine { case SchemaLiteral(x: EmailSchema) => x }(const(stringType(None)))
+            .orRefine { case SchemaLiteral(x: PasswordSchema) => x }(const(stringType(None)))
             .orRefine { case SchemaLiteral(x: StringSchema) if x.getType() == "file" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "password" => x }(const(stringType(None)))
             .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "email" => x }(const(stringType(None)))
@@ -174,6 +176,11 @@ object SwaggerUtil {
             .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: MapSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
             .orRefineFallback { schemaProjection =>
+              schemaProjection.unwrapTracker match {
+                case SchemaLiteral(x) =>
+                  println(s"WARNING: Missing type mapping for ${x.getClass}, please report this at https://github.com/guardrail-dev/guardrail/issues")
+                case SchemaRef(schema, ref) => println(s"WARNING: Unexpected type mapping missing, $ref")
+              }
               val schema = schemaProjection.map {
                 case SchemaLiteral(x)               => x
                 case SchemaRef(SchemaLiteral(x), _) => x
