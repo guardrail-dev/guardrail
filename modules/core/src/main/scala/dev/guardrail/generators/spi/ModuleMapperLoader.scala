@@ -19,7 +19,7 @@ object ModuleMapperLoader {
     val found = moduleMapperLoader
       .iterator()
       .asScala
-      .filter(_.reified == tt)
+      .filter(_.reified.tpe =:= tt.tpe)
       .flatMap(_.apply(frameworkName).asInstanceOf[Option[Set[String]]])
       .toSeq
       .headOption
