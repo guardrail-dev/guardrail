@@ -70,7 +70,7 @@ class Issue122 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
               Left(Left(t))
           }))
         }
-        def getUser(id: String, optionalIterable: Option[Iterable[String]] = None, requiredIterable: Iterable[String], headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetUserResponse] = {
+        def getUser(id: String, optionalIterable: Option[Vector[String]] = None, requiredIterable: Vector[String], headers: List[HttpHeader] = Nil): EitherT[Future, Either[Throwable, HttpResponse], GetUserResponse] = {
           val allHeaders = headers ++ scala.collection.immutable.Seq[Option[HttpHeader]]().flatten
           makeRequest(HttpMethods.GET, host + basePath + "/user/" + Formatter.addPath(id), allHeaders, FormData(List(optionalIterable.toList.flatMap {
             x => x.toList.map(x => ("optionalIterable", Formatter.show(x)))
