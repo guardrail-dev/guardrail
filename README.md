@@ -41,8 +41,7 @@ The dependency chain and versions of published modules are listed below for refe
 | guardrail-scala-akka-http | [![guardrail-scala-akka-http](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail-scala-akka-http_2.12/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail-scala-akka-http_2.12) | scala-support |
 | guardrail-scala-dropwizard | [![guardrail-scala-dropwizard](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail-scala-dropwizard_2.12/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail-scala-dropwizard_2.12) | scala-support |
 | guardrail-scala-http4s | [![guardrail-scala-http4s](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail-scala-http4s_2.12/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail-scala-http4s_2.12) | scala-support |
-| guardrail | [![guardrail](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail_2.12/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail_2.12) | core, java-support, java-dropwizard,<br /> java-spring-mvc, java-async-http,<br /> scala-support, scala-akka-http,<br /> scala-dropwizard, scala-http4s |
-| guardrail-cli | [![guardrail-cli](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail-cli_2.12/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail-cli_2.12) | guardrail |
+| guardrail-cli | [![guardrail-cli](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail-cli_2.12/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail-cli_2.12) | guardrail-core |
 
 Interested in contributing?
 ---
