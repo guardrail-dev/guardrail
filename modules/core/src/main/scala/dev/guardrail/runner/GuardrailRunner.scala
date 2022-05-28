@@ -5,12 +5,11 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import scala.io.AnsiColor
 
-import dev.guardrail.{ Args, ReadSwagger, Target, UnparseableArgument, WriteTree }
+import dev.guardrail.{ Args, MissingDependency, ReadSwagger, Target, WriteTree }
 import dev.guardrail.core.StructuredLogger
+import dev.guardrail.generators.spi.CoreTermsLoader
 
 trait GuardrailRunner {
-  def languages: Map[String, NonEmptyList[Args] => Target[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
-
   def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
     runLanguages(tasks)
       .flatMap(
@@ -29,9 +28,8 @@ trait GuardrailRunner {
 
   def runLanguages(tasks: Map[String, NonEmptyList[Args]]): Target[List[ReadSwagger[Target[List[WriteTree]]]]] =
     tasks.toList.flatTraverse { case (language, args) =>
-      languages.get(language) match {
-        case None       => Target.raiseError(UnparseableArgument("language", language))
-        case Some(func) => func(args).map(_.toList)
-      }
+      CoreTermsLoader
+        .load(language, args, MissingDependency(s"${language}-support"))
+        .map(_.toList)
     }
 }

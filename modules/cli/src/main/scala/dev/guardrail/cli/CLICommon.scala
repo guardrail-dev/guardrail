@@ -57,11 +57,11 @@ object CommandLineResult {
 }
 
 trait CLICommon extends GuardrailRunner {
-  def languages: Map[String, NonEmptyList[Args] => Target[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]]]
-
   def processArgs(args: Array[String]): CommandLineResult = {
-    val (language, strippedArgs) = args.partition(languages.contains)
-    run(language.lastOption.getOrElse("scala"), strippedArgs)
+    val (languages, strippedArgs) = args.splitAt(1)
+    languages.headOption.fold(CommandLineResult.success) { language =>
+      run(language, strippedArgs)
+    }
   }
 
   def parseOptionalProperty(arg: String, value: String): Target[PropertyRequirement.OptionalRequirement] =

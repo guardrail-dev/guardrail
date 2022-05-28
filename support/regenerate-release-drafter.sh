@@ -160,5 +160,4 @@ write scala-akka-http   guardrail-scala-akka-http   modules/scala-akka-http/src/
 write scala-dropwizard  guardrail-scala-dropwizard  modules/scala-dropwizard/src/main/  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaDropwizard.scala
 write scala-http4s      guardrail-scala-http4s      modules/scala-http4s/src/main/      project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaHttp4s.scala
 write scala-support     guardrail-scala-support     modules/scala-support/src/main/     project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaSupport.scala
-write guardrail         guardrail                   modules/codegen/src/main/           project/src/main/scala/Build.scala  project/src/main/scala/modules/guardrail.scala
 write cli               guardrail-cli               modules/cli/src/main/               project/src/main/scala/Build.scala  project/src/main/scala/modules/cli.scala

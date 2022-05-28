@@ -1,12 +1,17 @@
 Project structure
 =================
 
-Structure in flux currently, please see [#1195: Proposal to modularize the guardrail repo](https://github.com/guardrail-dev/guardrail/issues/1195)
-
-
 - `root`: Contains tests and nothing else
-  - `codegen`: Codegen core. Defines algebras and default interpreters.
-  - `sample`: Contains integration tests for generated code. May be generated via `example` in the sbt console.
+  - `cli`: CLI driver and argument parser
+  - `core`: Tagless Final traits, SPI loaders, and core data structures
+  - `java-async-http`: Generators for [`async-http-client`](https://github.com/AsyncHttpClient/async-http-client)
+  - `java-dropwizard`: Generators for [dropwizard](https://www.dropwizard.io/)
+  - `java-spring-mvc`: Generators for [spring-mvc](https://spring.io/)
+  - `java-support`: Language definitions for Java, as well as Jackson generators
+  - `scala-akka-http`: Generators for [`akka-http`](https://doc.akka.io/docs/akka-http/current/index.html) clients and servers
+  - `scala-dropwizard`: Generators for [dropwizard](https://www.dropwizard.io/)
+  - `scala-http4s`: Generators for [`http4s`](https://http4s.org/) clients and servers
+  - `scala-support`: Language definitions for Scala, as well as circe and Jackson generators
 
 Coding guidelines
 =================
@@ -67,17 +72,6 @@ Running the tests
 -----------------
 
 Use the `runtimeSuite` command inside of an SBT session to run code generation and execute the tests
-
-
-Useful commands inside sbt console
-==================================
-
-- `testSuite`: Compile, test codegen, run sample codegen, compile sample, run tests inside sample
-- `runtimeSuite`: Run guardrail, then run all tests against the generated code
-- `cli`: Useful for scripting: `sbt 'cli --client ...'`
-- `format`: Runs scalafmt against codebase
-- `checkFormatting`: Verifies formatting, run as part of CI against PRs
-- `mdoc`: Generate the doc microsite locally
 
 Resources
 =========
