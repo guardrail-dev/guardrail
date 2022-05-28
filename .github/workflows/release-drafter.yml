@@ -88,15 +88,6 @@ jobs:
           config-name: release-drafter-scala-support.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  guardrail:
-    name: '[guardrail] Draft release'
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: blast-hardcheese/release-drafter@v5.16.42
-        with:
-          config-name: release-drafter-guardrail.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   cli:
     name: '[cli] Draft release'
     runs-on: ubuntu-20.04

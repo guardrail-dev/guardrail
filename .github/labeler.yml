@@ -43,11 +43,6 @@ scala-support:
 - modules/scala-support/**/*
 - project/src/main/scala/modules/scalaSupport.scala
 
-guardrail:
-- modules/codegen/*
-- modules/codegen/**/*
-- project/src/main/scala/modules/guardrail.scala
-
 cli:
 - modules/cli/*
 - modules/cli/**/*

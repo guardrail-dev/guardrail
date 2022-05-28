@@ -118,16 +118,6 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       # NB: Managed by support/regenerate-release-drafter.sh
-      - name: 'Publish artifacts [guardrail]'
-        if: ${{ steps.set-project-from-tag.outputs.module == 'guardrail' }}
-        run: sbt 'show version' "project guardrail" clean compile versionCheck test ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [cli]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'cli' }}
         run: sbt 'show version' "project guardrail-cli" clean compile versionCheck test ci-release

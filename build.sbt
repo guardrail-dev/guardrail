@@ -9,7 +9,7 @@ import dev.guardrail.sbt.RegressionTests._
 import dev.guardrail.sbt.ExampleCase
 import dev.guardrail.sbt.modules
 
-onLoadMessage := WelcomeMessage.welcomeMessage((guardrail / version).value)
+onLoadMessage := WelcomeMessage.welcomeMessage((core / version).value)
 
 import scoverage.ScoverageKeys
 
@@ -59,25 +59,12 @@ addCommandAlias("cli", "runMain dev.guardrail.cli.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x.projectName}/test").mkString("; "))
 addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"sample-${x.projectName}/test").mkString("; "))
 addCommandAlias("runtimeSuite", "; runtimeScalaSuite ; runtimeJavaSuite")
-addCommandAlias("scalaTestSuite", "; guardrail/test ; runtimeScalaSuite")
-addCommandAlias("javaTestSuite", "; guardrail/test ; runtimeJavaSuite")
+addCommandAlias("scalaTestSuite", "; test ; runtimeScalaSuite")
+addCommandAlias("javaTestSuite", "; test ; runtimeJavaSuite")
 addCommandAlias("format", "; scalafmtAll ; " + (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x.projectName}/scalafmtAll").mkString("; "))
 addCommandAlias("checkFormatting", "; scalafmtCheckAll ; " + (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x.projectName}/scalafmtCheckAll").mkString("; "))
-addCommandAlias("testSuite", "; guardrail/test ; runtimeScalaSuite ; runtimeJavaSuite ; microsite/compile")
+addCommandAlias("testSuite", "; test ; runtimeScalaSuite ; runtimeJavaSuite ; microsite/compile")
 addCommandAlias("compileSamples", (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x.projectName}/Test/compile").mkString("; "))
-
-addCommandAlias(
-  "publishSonatype",
-  "; set publishTo in guardrail := (sonatypePublishToBundle in guardrail).value; guardrail/publish"
-)
-addCommandAlias(
-  "publishLocal",
-  "; package ; guardrail/publishLocal"
-)
-addCommandAlias(
-  "publishM2",
-  "; package ; guardrail/publishM2"
-)
 
 resolvers += Resolver.sonatypeRepo("releases")
 
@@ -94,7 +81,7 @@ lazy val root = modules.root.project
   .settings(publish / skip := true)
   .settings(libraryDependencies ++= Dependencies.testDependencies)
   .settings(evictionErrorLevel := Level.Debug)  // Suppress "found version conflict(s) in library dependencies; some are suspected to be binary incompatible" in aggregate project
-  .dependsOn(guardrail)
+  .dependsOn(core % "compile->compile;test->test")
   .dependsOn(cli)
   .dependsOn(javaAsyncHttp, javaDropwizard, javaSpringMvc)
   .dependsOn(scalaAkkaHttp, scalaDropwizard, scalaHttp4s)
@@ -102,7 +89,6 @@ lazy val root = modules.root.project
   .aggregate(
     cli,
     core,
-    guardrail,
 
     javaSupport,
     javaAsyncHttp,
@@ -118,17 +104,6 @@ lazy val root = modules.root.project
 lazy val allDeps = modules.allDeps.project
   .settings(publish / skip := true)
   .settings(crossScalaVersions := crossScalaVersions.value.filter(_.startsWith("2.12")))
-
-lazy val guardrail = modules.guardrail.project
-  .customDependsOn(core)
-  .customDependsOn(javaSupport)
-  .customDependsOn(scalaSupport)
-  .providedDependsOn(javaDropwizard)
-  .providedDependsOn(javaSpringMvc)
-  .providedDependsOn(javaAsyncHttp)
-  .providedDependsOn(scalaAkkaHttp)
-  .providedDependsOn(scalaDropwizard)
-  .providedDependsOn(scalaHttp4s)
 
 lazy val samples = (project in file("modules/samples"))
   .settings(publish / skip := true)
@@ -149,7 +124,7 @@ lazy val core = modules.core.project
   )
 
 lazy val cli = modules.cli.project
-  .customDependsOn(guardrail)
+  .customDependsOn(core)
   .settings(run / fork := true)
 
 lazy val javaSupport = modules.javaSupport.project
@@ -194,7 +169,6 @@ lazy val microsite = baseModule("microsite", "microsite", file("modules/microsit
     mdocExtraArguments += "--no-link-hygiene",
     scalacOptions -= "-Xfatal-warnings"
   )
-  .dependsOn(guardrail)
   .dependsOn(scalaAkkaHttp)
   .dependsOn(scalaHttp4s)
 
@@ -204,7 +178,7 @@ watchSources ++= (baseDirectory.value / "modules/sample/src/test" ** "*.java").g
 lazy val githubMatrixSettings = taskKey[String]("Prints JSON value expected by the Scala CI matrix build: [{ version: ..., bincompat: ... }]")
 
 githubMatrixSettings := {
-  (guardrail/crossScalaVersions).value
+  (root/crossScalaVersions).value
     .map(v => (v, v.split('.').take(2).mkString(".")))
     .map({ case (version, bincompat) => s"""{"version":"${version}","bincompat":"${bincompat}"}""" })
     .mkString("[", ",", "]")
