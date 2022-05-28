@@ -58,10 +58,9 @@ object CommandLineResult {
 
 trait CLICommon extends GuardrailRunner {
   def processArgs(args: Array[String]): CommandLineResult = {
-    val (languages, strippedArgs) = args.splitAt(1)
-    languages.headOption.fold(CommandLineResult.success) { language =>
-      run(language, strippedArgs)
-    }
+    val (languages, strippedArgs) = args.span(!_.startsWith("-"))
+    val language                  = languages.headOption.getOrElse("scala")
+    run(language, strippedArgs)
   }
 
   def parseOptionalProperty(arg: String, value: String): Target[PropertyRequirement.OptionalRequirement] =
