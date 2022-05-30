@@ -51,23 +51,23 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
 
       clz.fullType shouldEqual t"_root_.com.test.User"
       client.head.toOption.get shouldEqual q"""
-       class Client[F[_]](host: String)(implicit F: Async[F], httpClient: Http4sClient[F]) {
-         val basePath: String = ""
-         private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] = F.pure(response.headers.get(CIString(header)).map(_.head.value))
-         private def parseRequiredHeader(response: Response[F], header: String): F[String] = response.headers.get(CIString(header)).map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
-         private[this] val getUserOkDecoder = jsonOf[F, _root_.com.test.User]
-         def getUser(id: String, headers: List[Header.ToRaw] = List.empty): F[GetUserResponse] = {
-           val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
-           val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/user/" + Formatter.addPath(id)), headers = Headers(allHeaders))
-           httpClient.run(req).use({
-             case _root_.org.http4s.Status.Ok(resp) =>
-               F.map(getUserOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetUserResponse.Ok.apply): F[GetUserResponse]
-             case resp =>
-               F.raiseError[GetUserResponse](UnexpectedStatus(resp.status, Method.GET, req.uri))
-           })
-         }
-       }
-    """
+        class Client[F[_]](host: String)(implicit F: Async[F], httpClient: Http4sClient[F]) {
+          val basePath: String = ""
+          private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] = F.pure(response.headers.get(CIString(header)).map(_.head.value))
+          private def parseRequiredHeader(response: Response[F], header: String): F[String] = response.headers.get(CIString(header)).map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
+          private[this] val getUserOkDecoder = jsonOf[F, _root_.com.test.User]
+          def getUser(id: String, headers: List[Header.ToRaw] = List.empty): F[GetUserResponse] = {
+            val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
+            val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/user/" + Formatter.addPath(id)), headers = Headers(allHeaders))
+            httpClient.run(req).use({
+              case _root_.org.http4s.Status.Ok(resp) =>
+                F.map(getUserOkDecoder.decode(resp, strict = false).value.flatMap(F.fromEither))(GetUserResponse.Ok.apply): F[GetUserResponse]
+              case resp =>
+                F.raiseError[GetUserResponse](UnexpectedStatus(resp.status, Method.GET, req.uri))
+            })
+          }
+        }
+      """
 
       respTrait shouldEqual
         q"""
