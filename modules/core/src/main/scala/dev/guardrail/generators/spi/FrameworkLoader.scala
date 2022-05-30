@@ -1,11 +1,18 @@
 package dev.guardrail.generators.spi
 
+import dev.guardrail.Target
 import dev.guardrail.generators.Framework
 import dev.guardrail.generators.SwaggerGenerator
+import dev.guardrail.languages.LA
 import dev.guardrail.{ MissingDependency, Target }
 import java.util.ServiceLoader
+import scala.jdk.CollectionConverters._
+import scala.reflect.runtime.universe.TypeTag
 
-trait FrameworkLoader extends AbstractGeneratorLoader[Framework] {
+trait FrameworkLoader {
+  type L <: LA
+  def reified: TypeTag[Target[L]]
+
   def apply(modules: Set[String]): Option[Framework[L, Target]] =
     (for {
       client      <- ClientGeneratorLoader.load[L](modules, MissingDependency(modules.mkString(", ")))(reified)
@@ -28,7 +35,18 @@ trait FrameworkLoader extends AbstractGeneratorLoader[Framework] {
       }
 }
 
-object FrameworkLoader extends AbstractGeneratorLoaderCompanion[Framework, FrameworkLoader] {
-  @deprecated("Deprecated in favor of an abstract 'loader' member", "0.71.2")
-  def frameworkLoader: ServiceLoader[FrameworkLoader] = loader
+object FrameworkLoader {
+  def loader: ServiceLoader[FrameworkLoader] = ServiceLoader.load(classOf[FrameworkLoader])
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
+  def load[L <: LA](params: Set[String], error: MissingDependency)(implicit tt: TypeTag[Target[L]]): Target[Framework[L, Target]] = {
+    val found = loader
+      .iterator()
+      .asScala
+      .filter(_.reified.tpe =:= tt.tpe)
+      .flatMap(_.apply(params).asInstanceOf[Option[Framework[L, Target]]])
+      .toSeq
+      .headOption
+
+    Target.fromOption(found, error)
+  }
 }

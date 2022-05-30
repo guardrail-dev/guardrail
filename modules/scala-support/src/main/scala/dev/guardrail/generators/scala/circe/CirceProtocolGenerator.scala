@@ -11,7 +11,7 @@ import dev.guardrail.core
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
-import dev.guardrail.generators.spi.ProtocolGeneratorLoader
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.terms.protocol.PropertyRequirement
@@ -22,10 +22,7 @@ import dev.guardrail.{ SwaggerUtil, Target, UserError }
 class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  def apply(parameters: Set[String]): Option[ProtocolTerms[ScalaLanguage, Target]] =
-    for {
-      circeVersion <- parameters.collectFirst { case CirceModelGenerator(version) => version }
-    } yield CirceProtocolGenerator(circeVersion)
+  val apply   = ModuleLoadResult.buildFrom(ModuleLoadResult.extract(CirceModelGenerator.unapply))(circeVersion => CirceProtocolGenerator(circeVersion))
 }
 
 object CirceProtocolGenerator {

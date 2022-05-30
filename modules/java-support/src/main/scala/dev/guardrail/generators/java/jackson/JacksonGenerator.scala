@@ -24,7 +24,7 @@ import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.ProtocolGeneratorLoader
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.protocol.PropertyRequirement
@@ -35,18 +35,14 @@ import dev.guardrail.{ RuntimeFailure, Target, UserError }
 class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  def apply(parameters: Set[String]): Option[ProtocolTerms[JavaLanguage, Target]] =
-    for {
-      _ <- parameters.collectFirst { case JacksonVersion(version) => version }
-      implicit0(cl: CollectionsLibTerms[JavaLanguage, Target]) <- parameters.collectFirst {
-        case JavaVavrCollectionsGenerator(version) => version
-        case JavaCollectionsGenerator(version)     => version
-      }
-      implicit0(ca: CollectionsAbstraction[JavaLanguage]) <- parameters.collectFirst {
-        case JavaVavrCollections(version)   => version
-        case JavaStdLibCollections(version) => version
-      }
-    } yield JacksonGenerator()
+
+  def apply = ModuleLoadResult.buildFrom(
+    ModuleLoadResult.forProduct3(
+      Seq(JacksonVersion.unapply _),
+      Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _),
+      Seq(JavaCollectionsGenerator.unapply _, JavaVavrCollectionsGenerator.unapply _)
+    )
+  ) { case (_, ca, cl) => JacksonGenerator()(cl, ca) }
 }
 
 object JacksonGenerator {

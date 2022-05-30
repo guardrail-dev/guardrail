@@ -5,21 +5,15 @@ import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.{ RuntimeFailure, Target }
 import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
-import dev.guardrail.generators.spi.FrameworkGeneratorLoader
+import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.terms.framework._
 
 class AkkaHttpGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      akkaHttpVersion <- parameters.collectFirst { case AkkaHttpVersion(version) => version }
-      collectionVersion <- parameters.collectFirst {
-        case CirceModelGenerator(version)   => version
-        case JacksonModelGenerator(version) => version
-      }
-    } yield AkkaHttpGenerator(akkaHttpVersion, collectionVersion)
+  val apply = ModuleLoadResult.buildFrom(
+    ModuleLoadResult.forProduct2(Seq(AkkaHttpVersion.unapply _), Seq(CirceModelGenerator.unapply _, JacksonModelGenerator.unapply _))
+  ) { case (akkaHttpVersion, collectionVersion) => AkkaHttpGenerator(akkaHttpVersion, collectionVersion) }
 }
 
 object AkkaHttpGenerator {

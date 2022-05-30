@@ -12,18 +12,12 @@ import dev.guardrail.Target
 import dev.guardrail.core
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.terms.CollectionsLibTerms
-import dev.guardrail.generators.spi.CollectionsGeneratorLoader
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult }
 
 class JavaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      cl <- parameters.collectFirst { case JavaCollectionsGenerator(version) =>
-        version
-      }
-    } yield cl
+  val apply   = ModuleLoadResult.buildFrom(ModuleLoadResult.extract(JavaCollectionsGenerator.unapply))(cl => cl)
 }
 
 object JavaCollectionsGenerator {

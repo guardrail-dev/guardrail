@@ -5,20 +5,14 @@ import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core
-import dev.guardrail.generators.spi.CollectionsGeneratorLoader
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.Target
 
 class ScalaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      cl <- parameters.collectFirst { case ScalaCollectionsGenerator(version) =>
-        version
-      }
-    } yield cl
+  val apply   = ModuleLoadResult.buildFrom(ModuleLoadResult.extract(ScalaCollectionsGenerator.unapply))(cl => cl)
 }
 
 object ScalaCollectionsGenerator {

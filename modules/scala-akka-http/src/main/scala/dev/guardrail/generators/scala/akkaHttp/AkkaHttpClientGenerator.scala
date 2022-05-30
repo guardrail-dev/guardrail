@@ -13,7 +13,7 @@ import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
 import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ResponseADTHelper, ScalaLanguage }
 import dev.guardrail.generators.scala.syntax._
-import dev.guardrail.generators.spi.ClientGeneratorLoader
+import dev.guardrail.generators.spi.{ ClientGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
@@ -24,15 +24,14 @@ import dev.guardrail.terms.{ RouteMeta, SecurityScheme }
 class AkkaHttpClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      _ <- parameters.collectFirst { case AkkaHttpVersion(version) => version }
-      collectionVersion <- parameters.collectFirst {
-        case CirceModelGenerator(version)   => version
-        case JacksonModelGenerator(version) => version
-      }
-    } yield AkkaHttpClientGenerator(collectionVersion)
+  val apply = ModuleLoadResult.buildFrom(
+    ModuleLoadResult.forProduct2(
+      Seq(AkkaHttpVersion.unapply _),
+      Seq(CirceModelGenerator.unapply _, JacksonModelGenerator.unapply _)
+    )
+  ) { case (_, collectionVersion) =>
+    AkkaHttpClientGenerator(collectionVersion)
+  }
 }
 
 object AkkaHttpClientGenerator {

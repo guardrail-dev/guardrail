@@ -27,7 +27,7 @@ import dev.guardrail._
 import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.generators.java.JavaLanguage.JavaTypeName
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.LanguageLoader
+import dev.guardrail.generators.spi.{ LanguageLoader, ModuleLoadResult }
 import dev.guardrail.generators.syntax.RichString
 import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.terms._
@@ -36,10 +36,7 @@ import dev.guardrail.terms.protocol._
 class JavaGeneratorLoader extends LanguageLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  def apply(parameters: Set[String]): Option[LanguageTerms[JavaLanguage, Target]] =
-    for {
-      generator <- parameters.collectFirst { case JavaGenerator(version) => version }
-    } yield generator
+  val apply   = ModuleLoadResult.buildFrom(ModuleLoadResult.extract(JavaGenerator.unapply))(generator => generator)
 }
 
 object JavaGenerator {
