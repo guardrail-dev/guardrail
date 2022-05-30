@@ -5,7 +5,7 @@ import dev.guardrail.generators.SwaggerGenerator
 import dev.guardrail.{ MissingDependency, Target }
 import java.util.ServiceLoader
 
-trait FrameworkLoader extends AbstractGeneratorLoader[Framework, Set[String]] {
+trait FrameworkLoader extends AbstractGeneratorLoader[Framework] {
   def apply(modules: Set[String]): Option[Framework[L, Target]] =
     (for {
       client      <- ClientGeneratorLoader.load[L](modules, MissingDependency(modules.mkString(", ")))(reified)
@@ -28,7 +28,7 @@ trait FrameworkLoader extends AbstractGeneratorLoader[Framework, Set[String]] {
       }
 }
 
-object FrameworkLoader extends AbstractGeneratorLoaderCompanion[Framework, Set[String], FrameworkLoader] {
+object FrameworkLoader extends AbstractGeneratorLoaderCompanion[Framework, FrameworkLoader] {
   @deprecated("Deprecated in favor of an abstract 'loader' member", "0.71.2")
   def frameworkLoader: ServiceLoader[FrameworkLoader] = loader
 }
