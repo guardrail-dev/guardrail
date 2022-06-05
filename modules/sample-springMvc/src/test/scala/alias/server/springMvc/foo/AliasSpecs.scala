@@ -36,12 +36,12 @@ class AliasSpecs extends AnyFreeSpec with Matchers with BeforeAndAfterAll with M
   "test alias.foo" - {
     "optional body handled with alias param" in {
 
-      when(handlerMock.doFoo(java.util.Optional.of(1L), java.util.Optional.of(42L)))
+      when(handlerMock.doFoo(java.util.Optional.of(1L), java.util.Optional.of("foo"), java.util.Optional.of(42L)))
         .thenReturn(CompletableFuture.completedFuture(FooHandler.DoFooResponse.Created(42L)))
 
       val mvcResult = mvc
         .perform(
-          post("/foo?long=1")
+          post("/foo?long=1&string=foo")
             .contentType(MediaType.APPLICATION_JSON)
             .content("42")
         )
