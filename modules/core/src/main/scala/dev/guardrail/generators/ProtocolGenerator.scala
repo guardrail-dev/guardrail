@@ -736,7 +736,9 @@ object ProtocolGenerator {
                 defaultPropertyRequirement,
                 components
               )
-              alias <- modelTypeAlias(clsName, x, components)
+              customTypeName <- SwaggerUtil.customTypeName(x)
+              (declType, _)  <- SwaggerUtil.determineTypeName[L, F](x, Tracker.cloneHistory(x, customTypeName), components)
+              alias          <- typeAlias[L, F](formattedClsName, declType)
             } yield enum.orElse(model).getOrElse(alias)
           )
           .orRefine { case x: IntegerSchema => x }(x =>
