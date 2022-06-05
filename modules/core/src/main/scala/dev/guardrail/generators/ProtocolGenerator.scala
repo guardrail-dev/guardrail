@@ -679,25 +679,7 @@ object ProtocolGenerator {
       polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
       elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model
-          .refine { case m: StringSchema => m }(m =>
-            for {
-              formattedClsName <- formatTypeName(clsName)
-              enum             <- fromEnum(formattedClsName, m, dtoPackage, components)
-              model <- fromModel(
-                NonEmptyList.of(formattedClsName),
-                m,
-                List.empty,
-                concreteTypes,
-                definitions.value,
-                dtoPackage,
-                supportPackage.toList,
-                defaultPropertyRequirement,
-                components
-              )
-              alias <- modelTypeAlias(clsName, m, components)
-            } yield enum.orElse(model).getOrElse(alias)
-          )
-          .orRefine { case c: ComposedSchema => c }(comp =>
+          .refine { case c: ComposedSchema => c }(comp =>
             for {
               formattedClsName <- formatTypeName(clsName)
               parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components)
@@ -737,6 +719,24 @@ object ProtocolGenerator {
                 components
               )
               alias <- modelTypeAlias(formattedClsName, m, components)
+            } yield enum.orElse(model).getOrElse(alias)
+          )
+          .orRefine { case x: StringSchema => x }(x =>
+            for {
+              formattedClsName <- formatTypeName(clsName)
+              enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
+              model <- fromModel(
+                NonEmptyList.of(formattedClsName),
+                x,
+                List.empty,
+                concreteTypes,
+                definitions.value,
+                dtoPackage,
+                supportPackage.toList,
+                defaultPropertyRequirement,
+                components
+              )
+              alias <- modelTypeAlias(clsName, x, components)
             } yield enum.orElse(model).getOrElse(alias)
           )
           .orRefine { case x: IntegerSchema => x }(x =>
