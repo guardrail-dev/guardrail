@@ -98,10 +98,7 @@ while [ "${#todo[@]}" -gt 0 ]; do
   reverse_deps=( core )
   trigger scala-support
 
-  reverse_deps=( core java-dropwizard java-spring-mvc java-support java-async-http scala-akka-http scala-dropwizard scala-http4s scala-support )
-  trigger guardrail
-
-  reverse_deps=( guardrail )
+  reverse_deps=( core )
   trigger cli
 done
 
