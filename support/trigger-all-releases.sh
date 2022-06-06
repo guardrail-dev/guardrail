@@ -18,6 +18,12 @@ find_draft_release_id() {
   gh api repos/guardrail-dev/guardrail/releases --jq "$(printf 'map(select((.draft == true) and (.name | startswith("%s"))))[0].id' "$module")"
 }
 
+find_draft_version() {
+  module="$1"
+  gh api repos/guardrail-dev/guardrail/releases --jq "$(printf 'map(select((.draft == true) and (.name | startswith("%s"))))[0].tag_name' "$module")" | \
+    sed 's/^.*-v//'
+}
+
 promote_release_draft_id() {
   us="$1"; shift || exit 1
   id="$1"
@@ -46,9 +52,17 @@ trigger() {
 
   if [ -n "$found" ] && [ -z "$blockers" ]; then
     if [ -n "$go" ]; then
+      version="$(find_draft_version "$us")"
       promote_release_draft_id "$us" "$(find_draft_release_id "$us")"
+      url="https://repo1.maven.org/maven2/dev/guardrail/guardrail-${us}_2.12/${version}/guardrail-${us}_2.12-${version}.pom"
+      echo $url
+      while ! curl -fs "$url"; do
+        echo -n .
+        sleep 10
+      done
+      echo
     else
-      echo "Would have released $us, $(find_draft_release_id "$us")"
+      echo "Would have released $us, $(find_draft_release_id "$us"), $(find_draft_version "$us")"
     fi
   fi
 }
