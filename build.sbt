@@ -142,7 +142,7 @@ lazy val dropwizardVavrSample = modules.javaDropwizard.sampleVavr
   .settings(javaSampleSettings)
 lazy val javaDropwizard = modules.javaDropwizard.project
   .customDependsOn(javaSupport)
-  .customDependsOn(javaAsyncHttp)
+  .dependsOn(javaAsyncHttp % "test->compile")
 
 lazy val javaSpringMvcSample = modules.javaSpringMvc.sample
   .settings(javaSampleSettings)
