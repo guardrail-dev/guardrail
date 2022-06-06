@@ -124,20 +124,14 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       def apply[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]): Client[F] = new Client[F](host = host)(F = F, httpClient = httpClient)
       def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://localhost:1234")(implicit F: Async[F]): Client[F] = new Client[F](host = host)(F = F, httpClient = httpClient)
     }"""
-      val client = q"""class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
+      val client = q"""
+    class Client[F[_]](host: String = "http://localhost:1234")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
-
-      private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
-        F.pure(response.headers.get(CIString(header)).map(_.head.value))
-
-      private def parseRequiredHeader(response: Response[F], header: String): F[String] =
-        response.headers
-          .get(CIString(header))
-          .map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
-
+      private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] = F.pure(response.headers.get(CIString(header)).map(_.head.value))
+      private def parseRequiredHeader(response: Response[F], header: String): F[String] = response.headers.get(CIString(header)).map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
       private[this] val getBazOkDecoder = jsonOf[F, io.circe.Json]
       def getBar(headers: List[Header.ToRaw] = List.empty): F[GetBarResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/bar"), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
@@ -147,7 +141,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def getBaz(headers: List[Header.ToRaw] = List.empty): F[GetBazResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/baz"), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(resp) =>
@@ -157,7 +151,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def postFoo(headers: List[Header.ToRaw] = List.empty): F[PostFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
         val req = Request[F](method = Method.POST, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
@@ -167,7 +161,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def getFoo(headers: List[Header.ToRaw] = List.empty): F[GetFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
@@ -177,7 +171,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def putFoo(headers: List[Header.ToRaw] = List.empty): F[PutFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
         val req = Request[F](method = Method.PUT, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
@@ -187,7 +181,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def patchFoo(headers: List[Header.ToRaw] = List.empty): F[PatchFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
         val req = Request[F](method = Method.PATCH, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
@@ -197,7 +191,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         })
       }
       def deleteFoo(headers: List[Header.ToRaw] = List.empty): F[DeleteFooResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
         val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/foo"), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(_) =>
@@ -206,7 +200,8 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
             F.raiseError[DeleteFooResponse](UnexpectedStatus(resp.status, Method.DELETE, req.uri))
         })
       }
-    }"""
+    }
+    """
       val expected = List(
         q"""
         sealed abstract class GetBarResponse {

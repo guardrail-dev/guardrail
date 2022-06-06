@@ -139,18 +139,14 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
       def httpClient[F[_]](httpClient: Http4sClient[F], host: String = "http://petstore.swagger.io")(implicit F: Async[F]): StoreClient[F] = new StoreClient[F](host = host)(F = F, httpClient = httpClient)
     }"""
 
-      val clientClass = q"""class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit F: Async[F], httpClient: Http4sClient[F]) {
+      val clientClass = q"""
+    class StoreClient[F[_]](host: String = "http://petstore.swagger.io")(implicit F: Async[F], httpClient: Http4sClient[F]) {
       val basePath: String = ""
-      private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
-        F.pure(response.headers.get(CIString(header)).map(_.head.value))
-
-      private def parseRequiredHeader(response: Response[F], header: String): F[String] =
-        response.headers
-          .get(CIString(header))
-          .map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
+      private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] = F.pure(response.headers.get(CIString(header)).map(_.head.value))
+      private def parseRequiredHeader(response: Response[F], header: String): F[String] = response.headers.get(CIString(header)).map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
       private[this] val getOrderByIdOkDecoder = jsonOf[F, Order]
       def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header.ToRaw] = List.empty): F[GetOrderByIdResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]](Some(("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List[Header.ToRaw](org.http4s.headers.Accept(org.http4s.MediaType.application.json.withQValue(org.http4s.QValue.One))) ++ headers ++ List[Option[Header.ToRaw]](Some(("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.Ok(resp) =>
@@ -159,21 +155,24 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
             F.pure(GetOrderByIdResponse.BadRequest): F[GetOrderByIdResponse]
           case _root_.org.http4s.Status.NotFound(_) =>
             F.pure(GetOrderByIdResponse.NotFound): F[GetOrderByIdResponse]
-          case resp => F.raiseError[GetOrderByIdResponse](UnexpectedStatus(resp.status, Method.GET, req.uri))
+          case resp =>
+            F.raiseError[GetOrderByIdResponse](UnexpectedStatus(resp.status, Method.GET, req.uri))
         })
       }
       def deleteOrder(orderId: Long, headers: List[Header.ToRaw] = List.empty): F[DeleteOrderResponse] = {
-        val allHeaders = headers ++ List[Option[Header.ToRaw]]().flatten
+        val allHeaders: List[org.http4s.Header.ToRaw] = List.empty[Header.ToRaw] ++ headers ++ List[Option[Header.ToRaw]]().flatten
         val req = Request[F](method = Method.DELETE, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId)), headers = Headers(allHeaders))
         httpClient.run(req).use({
           case _root_.org.http4s.Status.BadRequest(_) =>
             F.pure(DeleteOrderResponse.BadRequest): F[DeleteOrderResponse]
           case _root_.org.http4s.Status.NotFound(_) =>
             F.pure(DeleteOrderResponse.NotFound): F[DeleteOrderResponse]
-          case resp => F.raiseError[DeleteOrderResponse](UnexpectedStatus(resp.status, Method.DELETE, req.uri))
+          case resp =>
+            F.raiseError[DeleteOrderResponse](UnexpectedStatus(resp.status, Method.DELETE, req.uri))
         })
       }
-    }"""
+    }
+      """
 
       val expected = List(
         q"""

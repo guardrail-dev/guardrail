@@ -7,6 +7,7 @@ import cats.syntax.all._
 import java.net.URI
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
+import scala.collection.immutable.Seq
 
 import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
@@ -18,8 +19,7 @@ import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawPara
 import dev.guardrail.shims._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
-import dev.guardrail.terms.{ RouteMeta, SecurityScheme }
-import dev.guardrail.terms.{ ContentType, Header, MultipartFormData, Responses }
+import dev.guardrail.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, OctetStream, Responses, RouteMeta, SecurityScheme, TextPlain }
 
 class Http4sClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
@@ -192,6 +192,21 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       q"List[Option[Header.ToRaw]](..$args).flatten"
     }
 
+    def contentTypeToMediaTypeTerm(ct: ContentType): Option[Term] = {
+      val toRawHeader: ContentType => Option[Term] = {
+        case applicationJson: ApplicationJson =>
+          Some(q"org.http4s.MediaType.application.json")
+        case textPlain: TextPlain =>
+          Some(q"org.http4s.MediaType.text.plain")
+        case octetStream: OctetStream =>
+          Some(q"org.http4s.MediaType.application.`octet-stream`")
+        case other =>
+          None
+      }
+
+      toRawHeader.andThen(_.map(term => q"${term}.withQValue(org.http4s.QValue.One)")).apply(ct)
+    }
+
     def build(
         methodName: String,
         responseClsName: String,
@@ -215,6 +230,10 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
     ): Target[RenderedClientOperation[ScalaLanguage]] =
       for {
         _ <- Target.pure(())
+        acceptHeader = NonEmptyList.fromList(produces.flatMap(contentTypeToMediaTypeTerm).toList).fold[Term](q"List.empty[Header.ToRaw]") {
+          case NonEmptyList(first, rest) =>
+            q"List[Header.ToRaw](org.http4s.headers.Accept(${first}, ..${rest}))"
+        }
         implicitParams                 = Option(extraImplicits).filter(_.nonEmpty)
         defaultHeaders                 = param"headers: List[Header.ToRaw] = List.empty"
         safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType))
@@ -246,9 +265,11 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
             .getOrElse[List[Stat] => Term](Term.Block(_))
         headersExpr =
           if (formDataNeedsMultipart) {
-            List(q"val allHeaders = headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)")
+            List(
+              q"val allHeaders: List[org.http4s.Header.ToRaw] = $acceptHeader ++ headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)"
+            )
           } else {
-            List(q"val allHeaders = headers ++ $headerParams")
+            List(q"val allHeaders: List[org.http4s.Header.ToRaw] = $acceptHeader ++ headers ++ $headerParams")
           }
         methodExpr = q"Method.${Term.Name(httpMethod.toString.toUpperCase)}"
         reqBinding = q"req"
