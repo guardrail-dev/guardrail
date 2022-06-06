@@ -58,10 +58,9 @@ object CommandLineResult {
 
 trait CLICommon extends GuardrailRunner {
   def processArgs(args: Array[String]): CommandLineResult = {
-    val (languages, strippedArgs) = args.splitAt(1)
-    languages.headOption.fold(CommandLineResult.success) { language =>
-      run(language, strippedArgs)
-    }
+    val (languages, strippedArgs) = args.span(!_.startsWith("-"))
+    val language                  = languages.headOption.getOrElse("scala")
+    run(language, strippedArgs)
   }
 
   def parseOptionalProperty(arg: String, value: String): Target[PropertyRequirement.OptionalRequirement] =
@@ -69,7 +68,7 @@ trait CLICommon extends GuardrailRunner {
       case "required-nullable" => Target.pure(PropertyRequirement.RequiredNullable)
       case "optional"          => Target.pure(PropertyRequirement.Optional)
       case "legacy"            => Target.pure(PropertyRequirement.OptionalLegacy)
-      case _                   => Target.raiseError(UnparseableArgument(arg, "Expected one of required-nullable, optional or legacy"))
+      case _                   => Target.raiseError(UnparseableArgument(s"${arg} ${value}", "Expected one of required-nullable, optional or legacy"))
     }
 
   def parseAuthImplementation(arg: String, value: String): Target[AuthImplementation] =
@@ -78,7 +77,7 @@ trait CLICommon extends GuardrailRunner {
       case "native"  => Target.pure(AuthImplementation.Native)
       case "simple"  => Target.pure(AuthImplementation.Simple)
       case "custom"  => Target.pure(AuthImplementation.Custom)
-      case _         => Target.raiseError(UnparseableArgument(arg, "Expected one of 'disable', 'native', 'simple' or 'custom'"))
+      case _         => Target.raiseError(UnparseableArgument(s"${arg} ${value}", "Expected one of 'disable', 'native', 'simple' or 'custom'"))
     }
 
   def parseArgs(args: Array[String]): Target[List[Args]] = {
@@ -140,12 +139,12 @@ trait CLICommon extends GuardrailRunner {
               Continue((sofar.copyContext(tagsBehaviour = Context.PackageFromTags) :: already, xs))
             case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
               for {
-                propertyRequirement <- parseOptionalProperty(arg, value)
+                propertyRequirement <- parseOptionalProperty(arg.drop(2), value)
                 res                 <- Continue((sofar.copyPropertyRequirement(encoder = propertyRequirement) :: already, xs))
               } yield res
             case (sofar :: already, (arg @ "--optional-decode-as") :: value :: xs) =>
               for {
-                propertyRequirement <- parseOptionalProperty(arg, value)
+                propertyRequirement <- parseOptionalProperty(arg.drop(2), value)
                 res                 <- Continue((sofar.copyPropertyRequirement(decoder = propertyRequirement) :: already, xs))
               } yield res
             case (sofar :: already, (arg @ "--auth-implementation") :: value :: xs) =>
