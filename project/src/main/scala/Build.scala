@@ -87,7 +87,9 @@ object Build {
     crossScalaVersions := Seq("2.12.15", "2.13.8"),
     scalaVersion := "2.12.15",
 
-    versionScheme := Some("early-semver"), // This should help once the build plugins start depending directly on modules
+    // This was a mistake. We already have early-semver guaratees during CI, but including this in the publishing POM
+    // ensures that independent 0.x versions are incompatible, even though we know they are.
+    // versionScheme := Some("early-semver"), // This should help once the build plugins start depending directly on modules
 
     scalacOptions ++= Seq(
       "-Xfatal-warnings",
