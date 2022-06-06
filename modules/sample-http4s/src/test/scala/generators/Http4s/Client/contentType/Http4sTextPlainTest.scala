@@ -19,7 +19,9 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
   import org.http4s.implicits._
   test("Plain text should be emitted for required parameters (raw)") {
     val route: HttpRoutes[IO] = HttpRoutes.of { case req @ POST -> Root / "foo" =>
-      if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
+      val correctContentType = req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))
+      val correctAcceptType  = req.headers.get[org.http4s.headers.Accept].exists(_.values.exists(_.mediaRange.isText)) // guardrail-dev/guardrail#1502
+      if (correctContentType && correctAcceptType) {
         for {
           value <- req.as[String]
           resp  <- if (value == "sample") Created("response") else NotAcceptable()
@@ -33,7 +35,9 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("Plain text should be emitted for optional parameters (raw)") {
     val route: HttpRoutes[IO] = HttpRoutes.of { case req @ POST -> Root / "bar" =>
-      if (req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))) {
+      val correctContentType = req.contentType.contains(`Content-Type`(MediaType.text.plain, Charset.`UTF-8`))
+      val correctAcceptType  = req.headers.get[org.http4s.headers.Accept].exists(_.values.exists(_.mediaRange.isText)) // guardrail-dev/guardrail#1502
+      if (correctContentType && correctAcceptType) {
         for {
           value <- req.as[String]
           resp  <- if (value == "sample") Created("response") else NotAcceptable()
