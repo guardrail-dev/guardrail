@@ -128,6 +128,7 @@ sealed abstract class ModuleLoadResult[+A](val attempted: Set[String], val consu
 class ModuleLoadFailed(attempted: Set[String], consumed: Set[String], missing: Set[String]) extends ModuleLoadResult[Nothing](attempted, consumed, missing) {
   def map[B](f: Nothing => B)                       = this
   def flatMap[B](f: Nothing => ModuleLoadResult[B]) = this
+  override def toString(): String = s"ModuleLoadFailed($attempted, $consumed, $missing)"
 }
 
 class ModuleLoadSuccess[A](attempted: Set[String], consumed: Set[String], missing: Set[String], val result: A)
@@ -138,6 +139,7 @@ class ModuleLoadSuccess[A](attempted: Set[String], consumed: Set[String], missin
       case next: ModuleLoadFailed     => new ModuleLoadFailed(attempted ++ next.attempted, consumed ++ next.consumed, missing ++ next.missing)
       case next: ModuleLoadSuccess[_] => new ModuleLoadSuccess[B](attempted ++ next.attempted, consumed ++ next.consumed, missing ++ next.missing, next.result)
     }
+  override def toString(): String = s"ModuleLoadSuccess($attempted, $consumed, $missing, $result)"
 }
 
 trait AbstractGeneratorLoader[A[_ <: LA, _[_]]] {
