@@ -21,7 +21,7 @@ class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   // We do not support different versions of Jackson at this time, so if
   // this is desirable in the future we can adopt a similar strategy as is
   // used in CirceProtocolGenerator.
-  val apply = ModuleLoadResult.buildFrom(ModuleLoadResult.extract(JacksonModelGenerator.unapply))(_ => JacksonProtocolGenerator.apply)
+  val apply = ModuleLoadResult.forProduct1(Seq(JacksonModelGenerator.unapply _))(_ => JacksonProtocolGenerator.apply)
 }
 
 object JacksonProtocolGenerator {

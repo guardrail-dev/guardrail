@@ -24,12 +24,10 @@ import dev.guardrail.terms.{ RouteMeta, SecurityScheme }
 class AkkaHttpClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply = ModuleLoadResult.buildFrom(
-    ModuleLoadResult.forProduct2(
-      Seq(AkkaHttpVersion.unapply _),
-      Seq(CirceModelGenerator.unapply _, JacksonModelGenerator.unapply _)
-    )
-  ) { case (_, collectionVersion) =>
+  val apply = ModuleLoadResult.forProduct2(
+    Seq(AkkaHttpVersion.unapply _),
+    Seq(CirceModelGenerator.unapply _, JacksonModelGenerator.unapply _)
+  ) { (_, collectionVersion) =>
     AkkaHttpClientGenerator(collectionVersion)
   }
 }

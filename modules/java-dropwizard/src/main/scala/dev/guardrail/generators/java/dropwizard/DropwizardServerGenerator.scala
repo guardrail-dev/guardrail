@@ -53,13 +53,12 @@ import dev.guardrail.terms.{
 class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
   type L = JavaLanguage
   override def reified = typeTag[Target[JavaLanguage]]
-  val apply = ModuleLoadResult.buildFrom(
+  val apply =
     ModuleLoadResult.forProduct3(
       Seq(DropwizardVersion.unapply _),
       Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _),
       Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _)
-    )
-  ) { case (_, cl, ca) => DropwizardServerGenerator()(cl, ca) }
+    )((_, cl, ca) => DropwizardServerGenerator()(cl, ca))
 }
 
 object DropwizardServerGenerator {

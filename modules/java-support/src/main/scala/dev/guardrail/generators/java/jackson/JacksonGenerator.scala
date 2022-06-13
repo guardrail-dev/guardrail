@@ -36,13 +36,12 @@ class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
 
-  def apply = ModuleLoadResult.buildFrom(
+  def apply =
     ModuleLoadResult.forProduct3(
       Seq(JacksonVersion.unapply _),
       Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _),
       Seq(JavaCollectionsGenerator.unapply _, JavaVavrCollectionsGenerator.unapply _)
-    )
-  ) { case (_, ca, cl) => JacksonGenerator()(cl, ca) }
+    )((_, ca, cl) => JacksonGenerator()(cl, ca))
 }
 
 object JacksonGenerator {

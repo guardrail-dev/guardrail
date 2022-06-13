@@ -19,7 +19,7 @@ import dev.guardrail.{ RuntimeFailure, Target }
 class DropwizardClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply   = ModuleLoadResult.buildFrom(ModuleLoadResult.extract(DropwizardVersion.unapply))(_ => DropwizardClientGenerator())
+  val apply   = ModuleLoadResult.forProduct1(Seq(DropwizardVersion.unapply _))(_ => DropwizardClientGenerator())
 }
 
 object DropwizardClientGenerator {

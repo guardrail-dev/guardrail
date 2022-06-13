@@ -24,7 +24,7 @@ import dev.guardrail.terms.{ ApplicationJson, ContentType, Header, MultipartForm
 class Http4sClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply   = ModuleLoadResult.buildFrom(ModuleLoadResult.extract(Http4sVersion.unapply))(version => Http4sClientGenerator(version))
+  val apply   = ModuleLoadResult.forProduct1(Seq(Http4sVersion.unapply _))(version => Http4sClientGenerator(version))
 }
 
 object Http4sClientGenerator {

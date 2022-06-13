@@ -54,13 +54,12 @@ import dev.guardrail.terms.protocol.{ ADT, ClassDefinition, EnumDefinition, Rand
 class SpringMvcServerGeneratorLoader extends ServerGeneratorLoader {
   type L = JavaLanguage
   override def reified = typeTag[Target[JavaLanguage]]
-  val apply = ModuleLoadResult.buildFrom(
+  val apply =
     ModuleLoadResult.forProduct3(
       Seq(SpringMvcVersion.unapply _),
       Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _),
       Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _)
-    )
-  ) { case (_, cl, ca) => SpringMvcServerGenerator()(cl, ca) }
+    )((_, cl, ca) => SpringMvcServerGenerator()(cl, ca))
 }
 
 object SpringMvcServerGenerator {

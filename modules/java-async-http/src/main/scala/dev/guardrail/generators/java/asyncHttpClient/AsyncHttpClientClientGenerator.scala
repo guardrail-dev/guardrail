@@ -50,13 +50,11 @@ import dev.guardrail.terms.{
 class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  val apply = ModuleLoadResult.buildFrom(
-    ModuleLoadResult.forProduct3(
-      Seq(AsyncHttpClientVersion.unapply _),
-      Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _),
-      Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _)
-    )
-  ) { case (_, cl, ca) => AsyncHttpClientClientGenerator()(cl, ca) }
+  val apply = ModuleLoadResult.forProduct3(
+    Seq(AsyncHttpClientVersion.unapply _),
+    Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _),
+    Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _)
+  )((_, cl, ca) => AsyncHttpClientClientGenerator()(cl, ca))
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))

@@ -15,12 +15,11 @@ import dev.guardrail.terms.framework.FrameworkTerms
 class SpringMvcGeneratorLoader extends FrameworkGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  val apply = ModuleLoadResult.buildFrom(
+  val apply =
     ModuleLoadResult.forProduct2(
       Seq(SpringMvcVersion.unapply _),
       Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _)
-    )
-  ) { case (_, cl) => SpringMvcGenerator()(cl) }
+    )((_, cl) => SpringMvcGenerator()(cl))
 }
 
 object SpringMvcGenerator {

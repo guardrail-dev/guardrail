@@ -27,9 +27,10 @@ import dev.guardrail.{ Target, UserError }
 class AkkaHttpServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
-  val apply = ModuleLoadResult.buildFrom(
-    ModuleLoadResult.forProduct2(Seq(AkkaHttpVersion.unapply _), Seq(CirceModelGenerator.unapply _, JacksonModelGenerator.unapply _))
-  ) { case (akkaHttpVersion, collectionVersion) => AkkaHttpServerGenerator(akkaHttpVersion, collectionVersion) }
+  val apply =
+    ModuleLoadResult.forProduct2(Seq(AkkaHttpVersion.unapply _), Seq(CirceModelGenerator.unapply _, JacksonModelGenerator.unapply _)) {
+      (akkaHttpVersion, collectionVersion) => AkkaHttpServerGenerator(akkaHttpVersion, collectionVersion)
+    }
 }
 
 object AkkaHttpServerGenerator {
