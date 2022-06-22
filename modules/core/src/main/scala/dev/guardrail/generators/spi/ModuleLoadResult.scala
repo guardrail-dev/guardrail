@@ -12,29 +12,30 @@ object ModuleLoadResult {
     def ap[A, B](ff: ModuleLoadResult[A => B])(fa: ModuleLoadResult[A]): ModuleLoadResult[B] = ff match {
       case f: ModuleLoadSuccess[A => B] =>
         fa match {
-          case a: ModuleLoadSuccess[A] => new ModuleLoadSuccess[B](ff.attempted ++ fa.attempted, f.consumed ++ a.consumed, f.result(a.result))
+          case a: ModuleLoadSuccess[A] => new ModuleLoadSuccess[B](ff.attempted.combine(fa.attempted), f.consumed.combine(a.consumed), f.result(a.result))
           case fail: ModuleLoadFailed  => fail
         }
       case ffail: ModuleLoadFailed =>
         fa match {
-          case afail: ModuleLoadFailed => new ModuleLoadFailed(ffail.attempted ++ afail.attempted, ffail.missing ++ afail.missing)
-          case _                       => ffail
+          case afail: ModuleLoadFailed =>
+            new ModuleLoadFailed(ffail.attempted.combine(afail.attempted), ffail.missing.combine(afail.missing))
+          case _ => ffail
         }
     }
   }
 
   implicit def moduleLoadResultSemigroup[A]: Monoid[ModuleLoadResult[A]] = new Monoid[ModuleLoadResult[A]] {
-    def empty: ModuleLoadResult[A] = new ModuleLoadFailed(Set.empty, Set.empty)
+    def empty: ModuleLoadResult[A] = new ModuleLoadFailed(Set.empty, Set.empty, Map.empty)
     def combine(a: ModuleLoadResult[A], b: ModuleLoadResult[A]): ModuleLoadResult[A] =
       (a, b) match {
         case (a: ModuleLoadSuccess[A], b: ModuleLoadSuccess[A]) =>
-          new ModuleLoadSuccess(a.attempted ++ b.attempted, a.consumed ++ b.consumed, a.result)
+          new ModuleLoadSuccess(a.attempted.combine(b.attempted), a.consumed.combine(b.consumed), a.result)
         case (a: ModuleLoadFailed, b: ModuleLoadSuccess[A]) =>
-          new ModuleLoadSuccess(a.attempted ++ b.attempted, b.consumed, b.result)
+          new ModuleLoadSuccess(a.attempted.combine(b.attempted), b.consumed, b.result)
         case (a: ModuleLoadSuccess[A], b: ModuleLoadFailed) =>
           new ModuleLoadSuccess(Set.empty, Set.empty, a.result)
         case (a: ModuleLoadFailed, b: ModuleLoadFailed) =>
-          new ModuleLoadFailed(a.attempted ++ b.attempted, a.missing ++ b.missing)
+          new ModuleLoadFailed(a.attempted.combine(b.attempted), a.missing.combine(b.missing))
       }
   }
 
@@ -58,7 +59,7 @@ object ModuleLoadResult {
       acc.combine(
         next
           .get(module)
-          .fold[ModuleLoadResult[A]](new ModuleLoadFailed(Set(module), Set(label))) { res =>
+          .fold[ModuleLoadResult[A]](new ModuleLoadFailed(Set(module), Set.empty)) { res =>
             new ModuleLoadSuccess[A](Set(module), Set(module), res)
           }
       )
@@ -72,14 +73,21 @@ object ModuleLoadResult {
     wrapper(module => work[A](a)(module))(_.map(combine)).map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a))))
   def forProduct2[A, B, Z](a: ModuleDescriptor[A], b: ModuleDescriptor[B])(combine: (A, B) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => (work[A](a)(module), work[B](b)(module)))(_.mapN(combine))
-      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b))))
+      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a).combine(extractLabel(b)))))
   def forProduct3[A, B, C, Z](
       a: ModuleDescriptor[A],
       b: ModuleDescriptor[B],
       c: ModuleDescriptor[C]
   )(combine: (A, B, C) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => (work[A](a)(module), work[B](b)(module), work[C](c)(module)))(_.mapN(combine))
-      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b) ++ extractLabel(c))))
+      .map(
+        _.getOrElse(
+          new ModuleLoadFailed(
+            Set.empty,
+            extractLabel(a).combine(extractLabel(b).combine(extractLabel(c)))
+          )
+        )
+      )
   def forProduct4[A, B, C, D, Z](
       a: ModuleDescriptor[A],
       b: ModuleDescriptor[B],
@@ -87,7 +95,14 @@ object ModuleLoadResult {
       d: ModuleDescriptor[D]
   )(combine: (A, B, C, D) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => (work[A](a)(module), work[B](b)(module), work[C](c)(module), work[D](d)(module)))(_.mapN(combine))
-      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b) ++ extractLabel(c) ++ extractLabel(d))))
+      .map(
+        _.getOrElse(
+          new ModuleLoadFailed(
+            Set.empty,
+            extractLabel(a).combine(extractLabel(b).combine(extractLabel(c).combine(extractLabel(d))))
+          )
+        )
+      )
   def forProduct5[A, B, C, D, E, Z](
       a: ModuleDescriptor[A],
       b: ModuleDescriptor[B],
@@ -96,7 +111,14 @@ object ModuleLoadResult {
       e: ModuleDescriptor[E]
   )(combine: (A, B, C, D, E) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => (work[A](a)(module), work[B](b)(module), work[C](c)(module), work[D](d)(module), work[E](e)(module)))(_.mapN(combine))
-      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b) ++ extractLabel(c) ++ extractLabel(d) ++ extractLabel(e))))
+      .map(
+        _.getOrElse(
+          new ModuleLoadFailed(
+            Set.empty,
+            extractLabel(a).combine(extractLabel(b).combine(extractLabel(c).combine(extractLabel(d).combine(extractLabel(e)))))
+          )
+        )
+      )
   def forProduct6[A, B, C, D, E, F, Z](
       a: ModuleDescriptor[A],
       b: ModuleDescriptor[B],
@@ -116,7 +138,10 @@ object ModuleLoadResult {
       )
     )(_.mapN(combine)).map(
       _.getOrElse(
-        new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b) ++ extractLabel(c) ++ extractLabel(d) ++ extractLabel(e) ++ extractLabel(f))
+        new ModuleLoadFailed(
+          Set.empty,
+          extractLabel(a).combine(extractLabel(b).combine(extractLabel(c).combine(extractLabel(d).combine(extractLabel(e).combine(extractLabel(f))))))
+        )
       )
     )
 
