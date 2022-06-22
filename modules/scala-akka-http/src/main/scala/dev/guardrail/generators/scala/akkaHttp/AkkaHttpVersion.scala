@@ -4,10 +4,10 @@ sealed abstract class AkkaHttpVersion(val value: String)
 object AkkaHttpVersion {
   case object V10_1 extends AkkaHttpVersion("akka-http-v10.1")
   case object V10_2 extends AkkaHttpVersion("akka-http-v10.2")
-  def unapply(version: String): Option[AkkaHttpVersion] = version match {
-    case "akka-http" => Some(V10_2)
-    case V10_1.value => Some(V10_1)
-    case V10_2.value => Some(V10_2)
-    case _           => None
-  }
+
+  val mapping: Map[String, AkkaHttpVersion] = Map(
+    "akka-http" -> V10_2,
+    V10_1.value -> V10_1,
+    V10_2.value -> V10_2
+  )
 }

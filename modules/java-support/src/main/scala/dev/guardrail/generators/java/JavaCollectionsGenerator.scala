@@ -22,10 +22,9 @@ class JavaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
 
 object JavaCollectionsGenerator {
   def apply(): CollectionsLibTerms[JavaLanguage, Target] = new JavaCollectionsGenerator
-  def unapply(value: String): Option[JavaCollectionsGenerator] = value match {
-    case "java-stdlib" => Some(new JavaCollectionsGenerator)
-    case _             => None
-  }
+  val mapping: Map[String, JavaCollectionsGenerator] = Map(
+    "java-stdlib" -> new JavaCollectionsGenerator
+  )
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))

@@ -29,10 +29,10 @@ class ScalaGeneratorLoader extends LanguageLoader {
 object ScalaGenerator {
   def apply(): LanguageTerms[ScalaLanguage, Target] =
     new ScalaGenerator
-  def unapply(value: String): Option[LanguageTerms[ScalaLanguage, Target]] = value match {
-    case "scala-language" => Some(apply())
-    case _                => None
-  }
+
+  val mapping: Map[String, LanguageTerms[ScalaLanguage, Target]] = Map(
+    "scala-language" -> apply()
+  )
 }
 
 class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {

@@ -389,8 +389,7 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
 }
 
 object JavaStdLibCollections extends JavaStdLibCollections {
-  def unapply(value: String): Option[JavaStdLibCollections] = value match {
-    case "java-stdlib" => Some(JavaStdLibCollections)
-    case _             => None
-  }
+  val mapping: Map[String, JavaStdLibCollections] = Map(
+    "java-stdlib" -> JavaStdLibCollections
+  )
 }

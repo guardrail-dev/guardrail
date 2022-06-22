@@ -20,10 +20,9 @@ object CirceModelGenerator {
     def print: Term.Name                    = q"print"
   }
 
-  def unapply(version: String): Option[CirceModelGenerator] = version match {
-    case "circe"    => Some(V012)
-    case V011.value => Some(V011)
-    case V012.value => Some(V012)
-    case _          => None
-  }
+  val mapping: Map[String, CirceModelGenerator] = Map(
+    "circe" -> V012,
+    V011.value -> V011,
+    V012.value -> V012
+  )
 }

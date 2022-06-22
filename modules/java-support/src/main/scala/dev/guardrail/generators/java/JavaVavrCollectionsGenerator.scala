@@ -20,10 +20,9 @@ class JavaVavrCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
 object JavaVavrCollectionsGenerator {
   def apply(): CollectionsLibTerms[JavaLanguage, Target] =
     new JavaVavrCollectionsGenerator
-  def unapply(value: String): Option[JavaVavrCollectionsGenerator] = value match {
-    case "java-vavr" => Some(new JavaVavrCollectionsGenerator)
-    case _           => None
-  }
+  val mapping: Map[String, JavaVavrCollectionsGenerator] = Map(
+    "java-vavr" -> new JavaVavrCollectionsGenerator
+  )
 }
 
 class JavaVavrCollectionsGenerator private extends CollectionsLibTerms[JavaLanguage, Target] {

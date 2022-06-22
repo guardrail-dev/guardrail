@@ -199,8 +199,7 @@ trait JavaVavrCollections extends CollectionsAbstraction[JavaLanguage] {
 }
 
 object JavaVavrCollections extends JavaVavrCollections {
-  def unapply(value: String): Option[JavaVavrCollections] = value match {
-    case "java-vavr" => Some(JavaVavrCollections)
-    case _           => None
-  }
+  val mapping: Map[String, JavaVavrCollections] = Map(
+    "java-vavr" -> JavaVavrCollections
+  )
 }

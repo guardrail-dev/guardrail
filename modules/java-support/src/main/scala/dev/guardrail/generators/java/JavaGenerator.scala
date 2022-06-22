@@ -42,10 +42,9 @@ class JavaGeneratorLoader extends LanguageLoader {
 object JavaGenerator {
   def apply(): LanguageTerms[JavaLanguage, Target] =
     new JavaGenerator
-  def unapply(value: String): Option[LanguageTerms[JavaLanguage, Target]] = value match {
-    case "java-language" => Some(apply())
-    case _               => None
-  }
+  val mapping: Map[String, LanguageTerms[JavaLanguage, Target]] = Map(
+    "java-language" -> apply()
+  )
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))

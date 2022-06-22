@@ -18,10 +18,10 @@ class ScalaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
 object ScalaCollectionsGenerator {
   def apply(): CollectionsLibTerms[ScalaLanguage, Target] =
     new ScalaCollectionsGenerator
-  def unapply(value: String): Option[ScalaCollectionsGenerator] = value match {
-    case "scala-stdlib" => Some(new ScalaCollectionsGenerator)
-    case _              => None
-  }
+
+  val mapping: Map[String, ScalaCollectionsGenerator] = Map(
+    "scala-stdlib" -> new ScalaCollectionsGenerator
+  )
 }
 
 class ScalaCollectionsGenerator private extends CollectionsLibTerms[ScalaLanguage, Target] {
