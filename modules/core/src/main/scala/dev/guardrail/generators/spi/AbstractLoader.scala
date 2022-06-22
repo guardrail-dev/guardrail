@@ -14,6 +14,7 @@ trait AbstractGeneratorLoader[A[_ <: LA, _[_]]] {
 }
 
 abstract class AbstractGeneratorLoaderCompanion[A[_ <: LA, _[_]], B <: AbstractGeneratorLoader[A]](implicit ct: ClassTag[B]) {
+  val label: String
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def loader: ServiceLoader[B] = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[B]])
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
