@@ -2,7 +2,7 @@ package dev.guardrail.generators.spi
 
 import cats.data.NonEmptyList
 import cats.implicits._
-import dev.guardrail.Target
+import dev.guardrail.{ Target, UnspecifiedModules }
 import dev.guardrail.generators.Framework
 import dev.guardrail.generators.SwaggerGenerator
 import dev.guardrail.languages.LA
@@ -52,12 +52,7 @@ object FrameworkLoader {
         Target.raiseException(s"No framework loaders found for ${tt}! please report this to https://github.com/guardrail-dev/guardrail")
       )(_.reduce match {
         case fail: ModuleLoadFailed =>
-          val result =
-            fail.choices.foldLeft(Seq.empty[String]) { case (acc, (module, choices)) =>
-              val nextLabel = Option(choices).filter(_.nonEmpty).fold("<no choices found>")(_.mkString(", "))
-              acc :+ s"${module}: [${nextLabel}]"
-            }
-          Target.raiseException(s"Unsatisfied module(s): ${result.mkString(", ")}")
+          Target.raiseError(UnspecifiedModules(fail.choices))
         case succ: ModuleLoadSuccess[Framework[L, Target]] =>
           Target.pure(succ.result)
       })

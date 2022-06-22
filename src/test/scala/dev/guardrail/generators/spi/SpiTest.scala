@@ -6,7 +6,6 @@ import org.scalatest.matchers.should.Matchers
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe.TypeTag
 
-import dev.guardrail.MissingDependency
 import dev.guardrail.Target
 import dev.guardrail.terms.ProtocolTerms
 import dev.guardrail.generators.java

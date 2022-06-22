@@ -214,6 +214,14 @@ trait CLICommon extends GuardrailRunner {
           case UnparseableArgument(name, message) =>
             println(s"${AnsiColor.RED}Unparseable argument: --$name, $message${AnsiColor.RESET}")
             fallback
+          case UnspecifiedModules(choices) =>
+            val result =
+              choices.foldLeft(Seq.empty[String]) { case (acc, (module, choices)) =>
+                val nextLabel = Option(choices).filter(_.nonEmpty).fold("<no choices found>")(_.toSeq.sorted.mkString(", "))
+                acc :+ s"${AnsiColor.BOLD}${AnsiColor.WHITE}${module}:${AnsiColor.RESET} [${AnsiColor.BLUE}${nextLabel}${AnsiColor.RESET}]"
+              }
+            println(s"${AnsiColor.RED}Unsatisfied module(s):${AnsiColor.RESET} ${result.mkString(", ")}")
+            fallback
           case RuntimeFailure(message) =>
             println(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
             fallback

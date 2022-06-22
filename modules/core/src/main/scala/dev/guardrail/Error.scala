@@ -5,6 +5,7 @@ case class MissingArg(arg: Args, name: Error.ArgName)            extends Error
 case class UnknownArguments(args: List[String])                  extends Error
 case class UnknownFramework(name: String)                        extends Error
 case class MissingDependency(name: String)                       extends Error
+case class UnspecifiedModules(choices: Map[String, Set[String]]) extends Error
 case class UnparseableArgument(name: String, message: String)    extends Error
 case object NoArgsSpecified                                      extends Error
 case object NoFramework                                          extends Error
