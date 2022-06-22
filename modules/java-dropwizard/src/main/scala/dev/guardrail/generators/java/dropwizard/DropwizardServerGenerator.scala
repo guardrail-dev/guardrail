@@ -27,7 +27,7 @@ import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.{ ModuleLoadResult, ServerGeneratorLoader }
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult, ServerGeneratorLoader }
 import dev.guardrail.generators.{ CustomExtractionField, RenderedRoutes, TracingField }
 import dev.guardrail.javaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
@@ -55,9 +55,9 @@ class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
   override def reified = typeTag[Target[JavaLanguage]]
   val apply =
     ModuleLoadResult.forProduct3(
-      Seq(DropwizardVersion.unapply _),
-      Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _),
-      Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _)
+      "DropwizardVersion"              -> Seq(DropwizardVersion.mapping),
+      CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
+      "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
     )((_, cl, ca) => DropwizardServerGenerator()(cl, ca))
 }
 

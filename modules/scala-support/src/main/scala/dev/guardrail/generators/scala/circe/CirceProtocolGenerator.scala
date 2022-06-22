@@ -22,7 +22,8 @@ import dev.guardrail.{ SwaggerUtil, Target, UserError }
 class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply   = ModuleLoadResult.forProduct1(Seq(CirceModelGenerator.unapply _))(circeVersion => CirceProtocolGenerator(circeVersion))
+  val apply =
+    ModuleLoadResult.forProduct1(ProtocolGeneratorLoader.label -> Seq(CirceModelGenerator.mapping))(circeVersion => CirceProtocolGenerator(circeVersion))
 }
 
 object CirceProtocolGenerator {

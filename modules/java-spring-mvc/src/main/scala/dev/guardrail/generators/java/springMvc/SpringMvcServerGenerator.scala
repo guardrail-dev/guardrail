@@ -27,7 +27,7 @@ import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.{ ModuleLoadResult, ServerGeneratorLoader }
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult, ServerGeneratorLoader }
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import dev.guardrail.terms.server._
 import dev.guardrail.shims.OperationExt
@@ -56,9 +56,9 @@ class SpringMvcServerGeneratorLoader extends ServerGeneratorLoader {
   override def reified = typeTag[Target[JavaLanguage]]
   val apply =
     ModuleLoadResult.forProduct3(
-      Seq(SpringMvcVersion.unapply _),
-      Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _),
-      Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _)
+      "SpringMvcVersion"               -> Seq(SpringMvcVersion.mapping),
+      CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
+      "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
     )((_, cl, ca) => SpringMvcServerGenerator()(cl, ca))
 }
 

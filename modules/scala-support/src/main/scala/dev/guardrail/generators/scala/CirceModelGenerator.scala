@@ -21,7 +21,7 @@ object CirceModelGenerator {
   }
 
   val mapping: Map[String, CirceModelGenerator] = Map(
-    "circe" -> V012,
+    "circe"    -> V012,
     V011.value -> V011,
     V012.value -> V012
   )

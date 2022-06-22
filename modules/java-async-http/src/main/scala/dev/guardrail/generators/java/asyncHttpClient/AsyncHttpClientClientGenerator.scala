@@ -24,7 +24,7 @@ import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.asyncHttpClient.AsyncHttpClientHelpers._
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.{ ClientGeneratorLoader, ModuleLoadResult }
+import dev.guardrail.generators.spi.{ ClientGeneratorLoader, CollectionsGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import dev.guardrail.javaext.helpers.ResponseHelpers
 import scala.reflect.runtime.universe.typeTag
@@ -51,9 +51,9 @@ class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
   val apply = ModuleLoadResult.forProduct3(
-    Seq(AsyncHttpClientVersion.unapply _),
-    Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _),
-    Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _)
+    "AsyncHttpClientVersion"         -> Seq(AsyncHttpClientVersion.mapping),
+    CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
+    "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
   )((_, cl, ca) => AsyncHttpClientClientGenerator()(cl, ca))
 }
 

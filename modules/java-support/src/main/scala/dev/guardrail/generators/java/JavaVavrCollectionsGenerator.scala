@@ -14,7 +14,7 @@ import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResu
 class JavaVavrCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  val apply   = ModuleLoadResult.forProduct1(Seq(JavaVavrCollectionsGenerator.unapply _))(identity _)
+  val apply   = ModuleLoadResult.forProduct1(CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping))(identity _)
 }
 
 object JavaVavrCollectionsGenerator {

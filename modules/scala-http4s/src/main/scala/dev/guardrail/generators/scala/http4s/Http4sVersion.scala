@@ -8,6 +8,6 @@ object Http4sVersion {
   val mapping: Map[String, Http4sVersion] = Map(
     "http4s"    -> V0_23,
     V0_22.value -> V0_22,
-    V0_23.value -> V0_23,
+    V0_23.value -> V0_23
   )
 }

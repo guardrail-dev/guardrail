@@ -13,7 +13,7 @@ import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult }
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, FrameworkGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.terms.collections.{ JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.framework._
 
@@ -22,9 +22,9 @@ class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
   def reified = typeTag[Target[JavaLanguage]]
   val apply =
     ModuleLoadResult.forProduct3(
-      Seq(DropwizardVersion.unapply _),
-      Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _),
-      Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _)
+      "DropwizardVersion"              -> Seq(DropwizardVersion.mapping),
+      CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
+      "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
     )((_, _, _) => DropwizardGenerator())
 }
 

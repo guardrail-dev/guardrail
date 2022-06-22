@@ -24,7 +24,7 @@ import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.protocol.PropertyRequirement
@@ -38,9 +38,9 @@ class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
 
   def apply =
     ModuleLoadResult.forProduct3(
-      Seq(JacksonVersion.unapply _),
-      Seq(JavaStdLibCollections.unapply _, JavaVavrCollections.unapply _),
-      Seq(JavaCollectionsGenerator.unapply _, JavaVavrCollectionsGenerator.unapply _)
+      ProtocolGeneratorLoader.label    -> Seq(JacksonVersion.mapping),
+      "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping),
+      CollectionsGeneratorLoader.label -> Seq(JavaCollectionsGenerator.mapping, JavaVavrCollectionsGenerator.mapping)
     )((_, ca, cl) => JacksonGenerator()(cl, ca))
 }
 

@@ -8,7 +8,7 @@ import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.syntax.{ safeParseName, safeParseType }
-import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult }
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, FrameworkGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 
@@ -17,8 +17,8 @@ class SpringMvcGeneratorLoader extends FrameworkGeneratorLoader {
   def reified = typeTag[Target[JavaLanguage]]
   val apply =
     ModuleLoadResult.forProduct2(
-      Seq(SpringMvcVersion.unapply _),
-      Seq(JavaVavrCollectionsGenerator.unapply _, JavaCollectionsGenerator.unapply _)
+      "SpringMvcVersion"               -> Seq(SpringMvcVersion.mapping),
+      CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping)
     )((_, cl) => SpringMvcGenerator()(cl))
 }
 

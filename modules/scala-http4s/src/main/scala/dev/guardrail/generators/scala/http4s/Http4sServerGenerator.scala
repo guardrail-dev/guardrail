@@ -34,7 +34,7 @@ import dev.guardrail.AuthImplementation.Custom
 class Http4sServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
-  val apply            = ModuleLoadResult.forProduct1(Seq(Http4sVersion.unapply _))(http4sVersion => Http4sServerGenerator(http4sVersion))
+  val apply            = ModuleLoadResult.forProduct1("Http4sVersion" -> Seq(Http4sVersion.mapping))(http4sVersion => Http4sServerGenerator(http4sVersion))
 }
 
 object Http4sServerGenerator {
