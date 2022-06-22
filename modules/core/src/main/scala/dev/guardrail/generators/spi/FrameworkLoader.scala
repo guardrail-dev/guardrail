@@ -46,8 +46,11 @@ object FrameworkLoader {
       .map(_.apply(params).asInstanceOf[ModuleLoadResult[Framework[L, Target]]])
       .toList
 
-    NonEmptyList.fromList(found)
-      .fold[Target[Framework[L, Target]]](Target.raiseException(s"No framework loaders found for ${tt}! please report this to https://github.com/guardrail-dev/guardrail"))(_.reduce match {
+    NonEmptyList
+      .fromList(found)
+      .fold[Target[Framework[L, Target]]](
+        Target.raiseException(s"No framework loaders found for ${tt}! please report this to https://github.com/guardrail-dev/guardrail")
+      )(_.reduce match {
         case fail: ModuleLoadFailed =>
           Target.raiseException(s"Unsatisfied module(s): ${fail.missing.mkString(", ")}")
         case succ: ModuleLoadSuccess[Framework[L, Target]] =>

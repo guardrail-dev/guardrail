@@ -36,7 +36,7 @@ import dev.guardrail.terms.protocol._
 class JavaGeneratorLoader extends LanguageLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  val apply   = ModuleLoadResult.forProduct1(LanguageLoader.label -> Seq(JavaGenerator.mapping))(identity _)
+  val apply   = ModuleLoadResult.emitDefault(JavaGenerator())
 }
 
 object JavaGenerator {

@@ -23,7 +23,7 @@ import dev.guardrail.terms.protocol._
 class ScalaGeneratorLoader extends LanguageLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply   = ModuleLoadResult.forProduct1(LanguageLoader.label -> Seq(ScalaGenerator.mapping))(identity _)
+  val apply   = ModuleLoadResult.emitDefault(ScalaGenerator())
 }
 
 object ScalaGenerator {

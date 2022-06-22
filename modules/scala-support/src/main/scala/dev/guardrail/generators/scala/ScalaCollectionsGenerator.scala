@@ -12,7 +12,7 @@ import dev.guardrail.Target
 class ScalaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply   = ModuleLoadResult.forProduct1(CollectionsGeneratorLoader.label -> Seq(ScalaCollectionsGenerator.mapping))(identity _)
+  val apply   = ModuleLoadResult.emitDefault(ScalaCollectionsGenerator())
 }
 
 object ScalaCollectionsGenerator {

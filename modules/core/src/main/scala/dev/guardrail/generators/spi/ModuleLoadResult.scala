@@ -50,7 +50,9 @@ object ModuleLoadResult {
       }
   }
 
-  private[this] def work[A](a: (String, Seq[Map[String, A]])): String => ModuleLoadResult[A] = { module =>
+  type ModuleDescriptor[A] = (String, Seq[Map[String, A]])
+
+  private[this] def work[A](a: ModuleDescriptor[A]): String => ModuleLoadResult[A] = { module =>
     val (label, mappings) = a
     mappings.foldLeft[ModuleLoadResult[A]](new ModuleLoadFailed(Set.empty, Set(label))) { case (acc, next) =>
       acc.combine(
@@ -63,41 +65,45 @@ object ModuleLoadResult {
     }
   }
 
-  def forProduct1[A, Z](a: (String, Seq[Map[String, A]]))(combine: A => Z): Set[String] => ModuleLoadResult[Z] =
-    wrapper(module => work[A](a)(module))(_.map(combine)).map(_.getOrElse(new ModuleLoadFailed(Set.empty, Set(a._1))))
-  def forProduct2[A, B, Z](a: (String, Seq[Map[String, A]]), b: (String, Seq[Map[String, B]]))(combine: (A, B) => Z): Set[String] => ModuleLoadResult[Z] =
-    wrapper(module => (work[A](a)(module), work[B](b)(module)))(_.mapN(combine)).map(_.getOrElse(new ModuleLoadFailed(Set.empty, Set(a._1, b._1))))
+  private[this] def extractLabel[A](descriptor: ModuleDescriptor[A]): Set[String] = Set(descriptor._1)
+
+  def emitDefault[A](a: A): Set[String] => ModuleLoadResult[A] = _ => new ModuleLoadSuccess[A](Set.empty, Set.empty, a)
+  def forProduct1[A, Z](a: ModuleDescriptor[A])(combine: A => Z): Set[String] => ModuleLoadResult[Z] =
+    wrapper(module => work[A](a)(module))(_.map(combine)).map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a))))
+  def forProduct2[A, B, Z](a: ModuleDescriptor[A], b: ModuleDescriptor[B])(combine: (A, B) => Z): Set[String] => ModuleLoadResult[Z] =
+    wrapper(module => (work[A](a)(module), work[B](b)(module)))(_.mapN(combine))
+      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b))))
   def forProduct3[A, B, C, Z](
-      a: (String, Seq[Map[String, A]]),
-      b: (String, Seq[Map[String, B]]),
-      c: (String, Seq[Map[String, C]])
+      a: ModuleDescriptor[A],
+      b: ModuleDescriptor[B],
+      c: ModuleDescriptor[C]
   )(combine: (A, B, C) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => (work[A](a)(module), work[B](b)(module), work[C](c)(module)))(_.mapN(combine))
-      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, Set(a._1, b._1, c._1))))
+      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b) ++ extractLabel(c))))
   def forProduct4[A, B, C, D, Z](
-      a: (String, Seq[Map[String, A]]),
-      b: (String, Seq[Map[String, B]]),
-      c: (String, Seq[Map[String, C]]),
-      d: (String, Seq[Map[String, D]])
+      a: ModuleDescriptor[A],
+      b: ModuleDescriptor[B],
+      c: ModuleDescriptor[C],
+      d: ModuleDescriptor[D]
   )(combine: (A, B, C, D) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => (work[A](a)(module), work[B](b)(module), work[C](c)(module), work[D](d)(module)))(_.mapN(combine))
-      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, Set(a._1, b._1, c._1, d._1))))
+      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b) ++ extractLabel(c) ++ extractLabel(d))))
   def forProduct5[A, B, C, D, E, Z](
-      a: (String, Seq[Map[String, A]]),
-      b: (String, Seq[Map[String, B]]),
-      c: (String, Seq[Map[String, C]]),
-      d: (String, Seq[Map[String, D]]),
-      e: (String, Seq[Map[String, E]])
+      a: ModuleDescriptor[A],
+      b: ModuleDescriptor[B],
+      c: ModuleDescriptor[C],
+      d: ModuleDescriptor[D],
+      e: ModuleDescriptor[E]
   )(combine: (A, B, C, D, E) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => (work[A](a)(module), work[B](b)(module), work[C](c)(module), work[D](d)(module), work[E](e)(module)))(_.mapN(combine))
-      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, Set(a._1, b._1, c._1, d._1, e._1))))
+      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b) ++ extractLabel(c) ++ extractLabel(d) ++ extractLabel(e))))
   def forProduct6[A, B, C, D, E, F, Z](
-      a: (String, Seq[Map[String, A]]),
-      b: (String, Seq[Map[String, B]]),
-      c: (String, Seq[Map[String, C]]),
-      d: (String, Seq[Map[String, D]]),
-      e: (String, Seq[Map[String, E]]),
-      f: (String, Seq[Map[String, F]])
+      a: ModuleDescriptor[A],
+      b: ModuleDescriptor[B],
+      c: ModuleDescriptor[C],
+      d: ModuleDescriptor[D],
+      e: ModuleDescriptor[E],
+      f: ModuleDescriptor[F]
   )(combine: (A, B, C, D, E, F) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module =>
       (
@@ -108,7 +114,11 @@ object ModuleLoadResult {
         work[E](e)(module),
         work[F](f)(module)
       )
-    )(_.mapN(combine)).map(_.getOrElse(new ModuleLoadFailed(Set.empty, Set(a._1, b._1, c._1, d._1, e._1, f._1))))
+    )(_.mapN(combine)).map(
+      _.getOrElse(
+        new ModuleLoadFailed(Set.empty, extractLabel(a) ++ extractLabel(b) ++ extractLabel(c) ++ extractLabel(d) ++ extractLabel(e) ++ extractLabel(f))
+      )
+    )
 
   def buildFrom[Modules, Extracted[_]](extract: String => Extracted[Modules])(implicit ev1: Monoid[Extracted[Modules]]): Set[String] => Extracted[Modules] = {
     parameters =>
