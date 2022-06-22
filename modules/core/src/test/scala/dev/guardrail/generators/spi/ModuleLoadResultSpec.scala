@@ -40,6 +40,49 @@ class ModuleLoadResultSpec extends AnyFunSuite with Matchers with OptionValues {
     getMissing(extractor(Set("a", "b", "c", "d"))) should contain theSameElementsAs (Set("A Component", "B Component"))
   }
 
+  test("ModuleLoadResult forProduct4") {
+    val a: Map[String, Boolean] = Map("false" -> false)
+    val b: Map[String, Long]    = Map("1" -> 1L)
+    val c: Map[String, Int]     = Map("1" -> 2)
+    val d: Map[String, Char]    = Map("c" -> 'c')
+    val extractor = ModuleLoadResult.forProduct4(
+      ("A Component", Seq(a)),
+      ("B Component", Seq(b)),
+      ("C Component", Seq(c)),
+      ("D Component", Seq(d))
+    )((a, b, c, d) => (a, b, c, d))
+
+    getMissing(extractor(Set.empty)) should contain theSameElementsAs (Set(
+      "A Component",
+      "B Component",
+      "C Component",
+      "D Component"
+    ))
+  }
+
+  test("ModuleLoadResult forProduct5") {
+    val a: Map[String, Boolean] = Map("false" -> false)
+    val b: Map[String, Long]    = Map("1" -> 1L)
+    val c: Map[String, Int]     = Map("1" -> 2)
+    val d: Map[String, Char]    = Map("c" -> 'c')
+    val e: Map[String, Float]   = Map("pi" -> 3.14f)
+    val extractor = ModuleLoadResult.forProduct5(
+      ("A Component", Seq(a)),
+      ("B Component", Seq(b)),
+      ("C Component", Seq(c)),
+      ("D Component", Seq(d)),
+      ("E Component", Seq(e))
+    )((a, b, c, d, e) => (a, b, c, d, e))
+
+    getMissing(extractor(Set.empty)) should contain theSameElementsAs (Set(
+      "A Component",
+      "B Component",
+      "C Component",
+      "D Component",
+      "E Component"
+    ))
+  }
+
   test("ModuleLoadResult forProduct6") {
     val a: Map[String, Boolean] = Map("false" -> false)
     val b: Map[String, Long]    = Map("1" -> 1L)
