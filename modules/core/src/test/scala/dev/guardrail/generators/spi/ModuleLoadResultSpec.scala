@@ -7,7 +7,7 @@ import org.scalatest.OptionValues
 
 class ModuleLoadResultSpec extends AnyFunSuite with Matchers with OptionValues {
   private def getMissing[A](value: ModuleLoadResult[A]): Set[String] = value match {
-    case x: ModuleLoadFailed => x.missing
+    case x: ModuleLoadFailed => x.choices.keys.toSet
     case _                   => fail("Expected failure")
   }
 
@@ -17,8 +17,8 @@ class ModuleLoadResultSpec extends AnyFunSuite with Matchers with OptionValues {
   }
 
   test("Combine Tuple2") {
-    val a: ModuleLoadResult[Long]   = new ModuleLoadFailed(Set.empty, Set("foo"))
-    val b: ModuleLoadResult[String] = new ModuleLoadFailed(Set.empty, Set("bar"))
+    val a: ModuleLoadResult[Long]   = new ModuleLoadFailed(Set.empty, Map("foo" -> Set.empty))
+    val b: ModuleLoadResult[String] = new ModuleLoadFailed(Set.empty, Map("bar" -> Set.empty))
     val c: ModuleLoadResult[String] = new ModuleLoadSuccess(Set.empty, Set("c"), "woo")
     val d: ModuleLoadResult[String] = new ModuleLoadSuccess(Set.empty, Set("d"), "woo")
 

@@ -53,13 +53,9 @@ object FrameworkLoader {
       )(_.reduce match {
         case fail: ModuleLoadFailed =>
           val result =
-            fail.missing.foldLeft(Seq.empty[String]) { case (acc, nextModule) =>
-              val nextLabel =
-                fail.choices
-                  .get(nextModule)
-                  .filter(_.nonEmpty)
-                  .fold("<no choices found>")(_.mkString(", "))
-              acc :+ s"${nextModule}: [${nextLabel}]"
+            fail.choices.foldLeft(Seq.empty[String]) { case (acc, (module, choices)) =>
+              val nextLabel = Option(choices).filter(_.nonEmpty).fold("<no choices found>")(_.mkString(", "))
+              acc :+ s"${module}: [${nextLabel}]"
             }
           Target.raiseException(s"Unsatisfied module(s): ${result.mkString(", ")}")
         case succ: ModuleLoadSuccess[Framework[L, Target]] =>

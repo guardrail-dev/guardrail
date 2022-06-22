@@ -18,14 +18,14 @@ object ModuleLoadResult {
       case ffail: ModuleLoadFailed =>
         fa match {
           case afail: ModuleLoadFailed =>
-            new ModuleLoadFailed(ffail.attempted.combine(afail.attempted), ffail.missing.combine(afail.missing), ffail.choices.combine(afail.choices))
+            new ModuleLoadFailed(ffail.attempted.combine(afail.attempted), ffail.choices.combine(afail.choices))
           case _ => ffail
         }
     }
   }
 
   implicit def moduleLoadResultSemigroup[A]: Monoid[ModuleLoadResult[A]] = new Monoid[ModuleLoadResult[A]] {
-    def empty: ModuleLoadResult[A] = new ModuleLoadFailed(Set.empty, Set.empty, Map.empty)
+    def empty: ModuleLoadResult[A] = new ModuleLoadFailed(Set.empty, Map.empty)
     def combine(a: ModuleLoadResult[A], b: ModuleLoadResult[A]): ModuleLoadResult[A] =
       (a, b) match {
         case (a: ModuleLoadSuccess[A], b: ModuleLoadSuccess[A]) =>
@@ -35,7 +35,7 @@ object ModuleLoadResult {
         case (a: ModuleLoadSuccess[A], b: ModuleLoadFailed) =>
           new ModuleLoadSuccess(Set.empty, Set.empty, a.result)
         case (a: ModuleLoadFailed, b: ModuleLoadFailed) =>
-          new ModuleLoadFailed(a.attempted.combine(b.attempted), a.missing.combine(b.missing), a.choices.combine(b.choices))
+          new ModuleLoadFailed(a.attempted.combine(b.attempted), a.choices.combine(b.choices))
       }
   }
 
@@ -56,11 +56,11 @@ object ModuleLoadResult {
   private[this] def work[A](a: ModuleDescriptor[A]): String => ModuleLoadResult[A] = { module =>
     val (label, mappings) = a
     val choices           = Map(label -> mappings.flatMap(_.keys).toSet)
-    mappings.foldLeft[ModuleLoadResult[A]](new ModuleLoadFailed(Set.empty, Set(label), choices)) { case (acc, next) =>
+    mappings.foldLeft[ModuleLoadResult[A]](new ModuleLoadFailed(Set.empty, choices)) { case (acc, next) =>
       acc.combine(
         next
           .get(module)
-          .fold[ModuleLoadResult[A]](new ModuleLoadFailed(Set(module), Set.empty, Map.empty)) { res =>
+          .fold[ModuleLoadResult[A]](new ModuleLoadFailed(Set(module), Map.empty)) { res =>
             new ModuleLoadSuccess[A](Set(module), Set(module), res)
           }
       )
@@ -72,10 +72,10 @@ object ModuleLoadResult {
 
   def emitDefault[A](a: A): Set[String] => ModuleLoadResult[A] = _ => new ModuleLoadSuccess[A](Set.empty, Set.empty, a)
   def forProduct1[A, Z](a: ModuleDescriptor[A])(combine: A => Z): Set[String] => ModuleLoadResult[Z] =
-    wrapper(module => work[A](a)(module))(_.map(combine)).map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a), extractChoices(a))))
+    wrapper(module => work[A](a)(module))(_.map(combine)).map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractChoices(a))))
   def forProduct2[A, B, Z](a: ModuleDescriptor[A], b: ModuleDescriptor[B])(combine: (A, B) => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => (work[A](a)(module), work[B](b)(module)))(_.mapN(combine))
-      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractLabel(a).combine(extractLabel(b)), extractChoices(a).combine(extractChoices(b)))))
+      .map(_.getOrElse(new ModuleLoadFailed(Set.empty, extractChoices(a).combine(extractChoices(b)))))
   def forProduct3[A, B, C, Z](
       a: ModuleDescriptor[A],
       b: ModuleDescriptor[B],
@@ -86,7 +86,6 @@ object ModuleLoadResult {
         _.getOrElse(
           new ModuleLoadFailed(
             Set.empty,
-            extractLabel(a).combine(extractLabel(b).combine(extractLabel(c))),
             extractChoices(a).combine(extractChoices(b)).combine(extractChoices(c))
           )
         )
@@ -102,7 +101,6 @@ object ModuleLoadResult {
         _.getOrElse(
           new ModuleLoadFailed(
             Set.empty,
-            extractLabel(a).combine(extractLabel(b).combine(extractLabel(c).combine(extractLabel(d)))),
             extractChoices(a).combine(extractChoices(b)).combine(extractChoices(c)).combine(extractChoices(d))
           )
         )
@@ -119,7 +117,6 @@ object ModuleLoadResult {
         _.getOrElse(
           new ModuleLoadFailed(
             Set.empty,
-            extractLabel(a).combine(extractLabel(b).combine(extractLabel(c).combine(extractLabel(d).combine(extractLabel(e))))),
             extractChoices(a).combine(extractChoices(b)).combine(extractChoices(c)).combine(extractChoices(d)).combine(extractChoices(e))
           )
         )
@@ -145,7 +142,6 @@ object ModuleLoadResult {
       _.getOrElse(
         new ModuleLoadFailed(
           Set.empty,
-          extractLabel(a).combine(extractLabel(b).combine(extractLabel(c).combine(extractLabel(d).combine(extractLabel(e).combine(extractLabel(f)))))),
           extractChoices(a)
             .combine(extractChoices(b))
             .combine(extractChoices(c))
@@ -170,8 +166,8 @@ object ModuleLoadResult {
 // - attempted: All mapping keys for the current stage
 sealed abstract class ModuleLoadResult[+A](val attempted: Set[String])
 
-class ModuleLoadFailed(attempted: Set[String], val missing: Set[String], val choices: Map[String, Set[String]]) extends ModuleLoadResult[Nothing](attempted) {
-  override def toString(): String = s"ModuleLoadFailed($attempted, $missing, $choices)"
+class ModuleLoadFailed(attempted: Set[String], val choices: Map[String, Set[String]]) extends ModuleLoadResult[Nothing](attempted) {
+  override def toString(): String = s"ModuleLoadFailed($attempted, $choices)"
 }
 
 class ModuleLoadSuccess[A](attempted: Set[String], val consumed: Set[String], val result: A) extends ModuleLoadResult[A](attempted) {
