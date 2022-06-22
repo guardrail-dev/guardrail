@@ -10,7 +10,7 @@ import dev.guardrail.{ MissingDependency, UnparseableArgument }
 object JavaGeneratorMappings {
   implicit def javaInterpreter = new CoreTermInterp[JavaLanguage](
     "dropwizard",
-    xs => FrameworkLoader.load[JavaLanguage](xs, MissingDependency(xs.mkString(", "))),
+    FrameworkLoader.load[JavaLanguage](_),
     frameworkName => ModuleMapperLoader.load[JavaLanguage](frameworkName, MissingDependency(frameworkName)),
     { str =>
       Try(StaticJavaParser.parseImport(s"import ${str};")) match {

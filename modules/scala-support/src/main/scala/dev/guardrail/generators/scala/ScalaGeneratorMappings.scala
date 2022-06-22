@@ -10,7 +10,7 @@ import dev.guardrail.{ MissingDependency, UnparseableArgument }
 object ScalaGeneratorMappings {
   implicit def scalaInterpreter = new CoreTermInterp[ScalaLanguage](
     "akka-http",
-    xs => FrameworkLoader.load[ScalaLanguage](xs, MissingDependency(xs.mkString(", "))),
+    FrameworkLoader.load[ScalaLanguage](_),
     frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName, MissingDependency(frameworkName)),
     _.parse[Importer].toEither.bimap(err => UnparseableArgument("import", err.toString), importer => Import(List(importer)))
   )
