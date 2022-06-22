@@ -14,7 +14,7 @@ import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, Tracker,
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.generators.scala.syntax._
-import dev.guardrail.generators.spi.ServerGeneratorLoader
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader, ServerGeneratorLoader }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
 import dev.guardrail.shims._
@@ -27,17 +27,13 @@ import dev.guardrail.{ Target, UserError }
 class AkkaHttpServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      akkaHttpVersion <- parameters.collectFirst { case AkkaHttpVersion(version) =>
-        version
-      }
-      collectionVersion <- parameters.collectFirst {
-        case CirceModelGenerator(version)   => version
-        case JacksonModelGenerator(version) => version
-      }
-    } yield AkkaHttpServerGenerator(akkaHttpVersion, collectionVersion)
+  val apply =
+    ModuleLoadResult.forProduct2(
+      "AkkaHttpVersion"             -> Seq(AkkaHttpVersion.mapping),
+      ProtocolGeneratorLoader.label -> Seq(CirceModelGenerator.mapping, JacksonModelGenerator.mapping)
+    ) { (akkaHttpVersion, collectionVersion) =>
+      AkkaHttpServerGenerator(akkaHttpVersion, collectionVersion)
+    }
 }
 
 object AkkaHttpServerGenerator {

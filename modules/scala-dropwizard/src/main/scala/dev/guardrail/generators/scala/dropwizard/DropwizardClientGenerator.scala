@@ -9,7 +9,7 @@ import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.core.SupportDefinition
 import dev.guardrail.generators.{ LanguageParameters, RenderedClientOperation }
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.spi.ClientGeneratorLoader
+import dev.guardrail.generators.spi.{ ClientGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
@@ -19,11 +19,7 @@ import dev.guardrail.{ RuntimeFailure, Target }
 class DropwizardClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      _ <- parameters.collectFirst { case DropwizardVersion(version) => version }
-    } yield DropwizardClientGenerator()
+  val apply   = ModuleLoadResult.forProduct1("DropwizardVersion" -> Seq(DropwizardVersion.mapping))(_ => DropwizardClientGenerator())
 }
 
 object DropwizardClientGenerator {

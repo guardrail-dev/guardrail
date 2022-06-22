@@ -14,7 +14,7 @@ import dev.guardrail.Common.resolveFile
 import dev.guardrail._
 import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.generators.scala.syntax._
-import dev.guardrail.generators.spi.LanguageLoader
+import dev.guardrail.generators.spi.{ LanguageLoader, ModuleLoadResult }
 import dev.guardrail.generators.syntax.RichString
 import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.terms._
@@ -23,19 +23,16 @@ import dev.guardrail.terms.protocol._
 class ScalaGeneratorLoader extends LanguageLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  def apply(parameters: Set[String]): Option[LanguageTerms[ScalaLanguage, Target]] =
-    for {
-      generator <- parameters.collectFirst { case ScalaGenerator(version) => version }
-    } yield generator
+  val apply   = ModuleLoadResult.emitDefault(ScalaGenerator())
 }
 
 object ScalaGenerator {
   def apply(): LanguageTerms[ScalaLanguage, Target] =
     new ScalaGenerator
-  def unapply(value: String): Option[LanguageTerms[ScalaLanguage, Target]] = value match {
-    case "scala-language" => Some(apply())
-    case _                => None
-  }
+
+  val mapping: Map[String, LanguageTerms[ScalaLanguage, Target]] = Map(
+    "scala-language" -> apply()
+  )
 }
 
 class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {

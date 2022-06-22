@@ -12,7 +12,7 @@ import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.spi.ServerGeneratorLoader
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ServerGeneratorLoader }
 import dev.guardrail.scalaext.helpers.ResponseHelpers
 import dev.guardrail.shims.OperationExt
 import dev.guardrail.terms.protocol.StrictProtocolElems
@@ -35,13 +35,7 @@ import dev.guardrail.terms.{
 class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      _ <- parameters.collectFirst { case DropwizardVersion(version) =>
-        version
-      }
-    } yield DropwizardServerGenerator()
+  val apply            = ModuleLoadResult.forProduct1("DropwizardVersion" -> Seq(DropwizardVersion.mapping))(_ => DropwizardServerGenerator())
 }
 
 object DropwizardServerGenerator {

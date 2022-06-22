@@ -4,7 +4,7 @@ import cats.Monad
 import dev.guardrail.{ Target, UserError }
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.generators.spi.FrameworkGeneratorLoader
+import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult }
 
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
@@ -13,11 +13,7 @@ import scala.util.Try
 class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      dropwizardVersion <- parameters.collectFirst { case DropwizardVersion(version) => version }
-    } yield DropwizardGenerator()
+  val apply   = ModuleLoadResult.forProduct1("DropwizardVersion" -> Seq(DropwizardVersion.mapping))(_ => DropwizardGenerator())
 }
 
 object DropwizardGenerator {

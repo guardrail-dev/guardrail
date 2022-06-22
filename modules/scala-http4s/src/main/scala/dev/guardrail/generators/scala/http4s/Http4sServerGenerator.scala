@@ -17,7 +17,7 @@ import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.scala.{ CirceModelGenerator, ModelGeneratorType, ResponseADTHelper }
 import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.spi.ServerGeneratorLoader
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ServerGeneratorLoader }
 import dev.guardrail.terms.{ ContentType, Header, Response, Responses }
 import dev.guardrail.terms.server._
 import dev.guardrail.shims._
@@ -34,11 +34,7 @@ import dev.guardrail.AuthImplementation.Custom
 class Http4sServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      http4sVersion <- parameters.collectFirst { case Http4sVersion(version) => version }
-    } yield Http4sServerGenerator(http4sVersion)
+  val apply            = ModuleLoadResult.forProduct1("Http4sVersion" -> Seq(Http4sVersion.mapping))(http4sVersion => Http4sServerGenerator(http4sVersion))
 }
 
 object Http4sServerGenerator {

@@ -9,27 +9,20 @@ import dev.guardrail.Target
 import dev.guardrail.core
 import dev.guardrail.generators.java.syntax.{ buildMethodCall, _ }
 import dev.guardrail.terms.CollectionsLibTerms
-import dev.guardrail.generators.spi.CollectionsGeneratorLoader
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult }
 
 class JavaVavrCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      cl <- parameters.collectFirst { case JavaVavrCollectionsGenerator(version) =>
-        version
-      }
-    } yield cl
+  val apply   = ModuleLoadResult.forProduct1(CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping))(identity _)
 }
 
 object JavaVavrCollectionsGenerator {
   def apply(): CollectionsLibTerms[JavaLanguage, Target] =
     new JavaVavrCollectionsGenerator
-  def unapply(value: String): Option[JavaVavrCollectionsGenerator] = value match {
-    case "java-vavr" => Some(new JavaVavrCollectionsGenerator)
-    case _           => None
-  }
+  val mapping: Map[String, JavaVavrCollectionsGenerator] = Map(
+    "java-vavr" -> new JavaVavrCollectionsGenerator
+  )
 }
 
 class JavaVavrCollectionsGenerator private extends CollectionsLibTerms[JavaLanguage, Target] {

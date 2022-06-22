@@ -27,7 +27,7 @@ import dev.guardrail._
 import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.generators.java.JavaLanguage.JavaTypeName
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.LanguageLoader
+import dev.guardrail.generators.spi.{ LanguageLoader, ModuleLoadResult }
 import dev.guardrail.generators.syntax.RichString
 import dev.guardrail.generators.{ Client, Server }
 import dev.guardrail.terms._
@@ -36,19 +36,15 @@ import dev.guardrail.terms.protocol._
 class JavaGeneratorLoader extends LanguageLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  def apply(parameters: Set[String]): Option[LanguageTerms[JavaLanguage, Target]] =
-    for {
-      generator <- parameters.collectFirst { case JavaGenerator(version) => version }
-    } yield generator
+  val apply   = ModuleLoadResult.emitDefault(JavaGenerator())
 }
 
 object JavaGenerator {
   def apply(): LanguageTerms[JavaLanguage, Target] =
     new JavaGenerator
-  def unapply(value: String): Option[LanguageTerms[JavaLanguage, Target]] = value match {
-    case "java-language" => Some(apply())
-    case _               => None
-  }
+  val mapping: Map[String, LanguageTerms[JavaLanguage, Target]] = Map(
+    "java-language" -> apply()
+  )
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))

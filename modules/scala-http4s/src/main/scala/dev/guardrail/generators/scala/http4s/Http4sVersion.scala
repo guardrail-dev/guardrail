@@ -5,10 +5,9 @@ object Http4sVersion {
   case object V0_22 extends Http4sVersion("http4s-v0.22")
   case object V0_23 extends Http4sVersion("http4s-v0.23")
 
-  def unapply(version: String): Option[Http4sVersion] = version match {
-    case "http4s"    => Some(V0_23)
-    case V0_22.value => Some(V0_22)
-    case V0_23.value => Some(V0_23)
-    case _           => None
-  }
+  val mapping: Map[String, Http4sVersion] = Map(
+    "http4s"    -> V0_23,
+    V0_22.value -> V0_22,
+    V0_23.value -> V0_23
+  )
 }

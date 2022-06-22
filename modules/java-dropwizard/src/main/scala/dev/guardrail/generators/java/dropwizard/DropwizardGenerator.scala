@@ -13,27 +13,19 @@ import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.FrameworkGeneratorLoader
-import dev.guardrail.terms.CollectionsLibTerms
-import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, FrameworkGeneratorLoader, ModuleLoadResult }
+import dev.guardrail.terms.collections.{ JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.framework._
 
 class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      _ <- parameters.collectFirst { case DropwizardVersion(version) => version }
-      implicit0(cl: CollectionsLibTerms[JavaLanguage, Target]) <- parameters.collectFirst {
-        case JavaVavrCollectionsGenerator(version) => version
-        case JavaCollectionsGenerator(version)     => version
-      }
-      implicit0(ca: CollectionsAbstraction[JavaLanguage]) <- parameters.collectFirst {
-        case JavaVavrCollections(version)   => version
-        case JavaStdLibCollections(version) => version
-      }
-    } yield DropwizardGenerator()
+  val apply =
+    ModuleLoadResult.forProduct3(
+      "DropwizardVersion"              -> Seq(DropwizardVersion.mapping),
+      CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
+      "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
+    )((_, _, _) => DropwizardGenerator())
 }
 
 object DropwizardGenerator {

@@ -24,7 +24,7 @@ import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.asyncHttpClient.AsyncHttpClientHelpers._
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.ClientGeneratorLoader
+import dev.guardrail.generators.spi.{ ClientGeneratorLoader, CollectionsGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
 import dev.guardrail.javaext.helpers.ResponseHelpers
 import scala.reflect.runtime.universe.typeTag
@@ -50,19 +50,11 @@ import dev.guardrail.terms.{
 class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      _ <- parameters.collectFirst { case AsyncHttpClientVersion(version) => version }
-      implicit0(cl: CollectionsLibTerms[JavaLanguage, Target]) <- parameters.collectFirst {
-        case JavaVavrCollectionsGenerator(version) => version
-        case JavaCollectionsGenerator(version)     => version
-      }
-      implicit0(ca: CollectionsAbstraction[JavaLanguage]) <- parameters.collectFirst {
-        case JavaVavrCollections(version)   => version
-        case JavaStdLibCollections(version) => version
-      }
-    } yield AsyncHttpClientClientGenerator()
+  val apply = ModuleLoadResult.forProduct3(
+    "AsyncHttpClientVersion"         -> Seq(AsyncHttpClientVersion.mapping),
+    CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
+    "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
+  )((_, cl, ca) => AsyncHttpClientClientGenerator()(cl, ca))
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))

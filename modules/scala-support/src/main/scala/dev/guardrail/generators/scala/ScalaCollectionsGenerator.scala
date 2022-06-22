@@ -5,29 +5,23 @@ import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core
-import dev.guardrail.generators.spi.CollectionsGeneratorLoader
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.Target
 
 class ScalaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      cl <- parameters.collectFirst { case ScalaCollectionsGenerator(version) =>
-        version
-      }
-    } yield cl
+  val apply   = ModuleLoadResult.emitDefault(ScalaCollectionsGenerator())
 }
 
 object ScalaCollectionsGenerator {
   def apply(): CollectionsLibTerms[ScalaLanguage, Target] =
     new ScalaCollectionsGenerator
-  def unapply(value: String): Option[ScalaCollectionsGenerator] = value match {
-    case "scala-stdlib" => Some(new ScalaCollectionsGenerator)
-    case _              => None
-  }
+
+  val mapping: Map[String, ScalaCollectionsGenerator] = Map(
+    "scala-stdlib" -> new ScalaCollectionsGenerator
+  )
 }
 
 class ScalaCollectionsGenerator private extends CollectionsLibTerms[ScalaLanguage, Target] {

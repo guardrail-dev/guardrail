@@ -12,26 +12,19 @@ import dev.guardrail.Target
 import dev.guardrail.core
 import dev.guardrail.generators.java.syntax._
 import dev.guardrail.terms.CollectionsLibTerms
-import dev.guardrail.generators.spi.CollectionsGeneratorLoader
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult }
 
 class JavaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      cl <- parameters.collectFirst { case JavaCollectionsGenerator(version) =>
-        version
-      }
-    } yield cl
+  val apply   = ModuleLoadResult.forProduct1(CollectionsGeneratorLoader.label -> Seq(JavaCollectionsGenerator.mapping))(identity _)
 }
 
 object JavaCollectionsGenerator {
   def apply(): CollectionsLibTerms[JavaLanguage, Target] = new JavaCollectionsGenerator
-  def unapply(value: String): Option[JavaCollectionsGenerator] = value match {
-    case "java-stdlib" => Some(new JavaCollectionsGenerator)
-    case _             => None
-  }
+  val mapping: Map[String, JavaCollectionsGenerator] = Map(
+    "java-stdlib" -> new JavaCollectionsGenerator
+  )
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))

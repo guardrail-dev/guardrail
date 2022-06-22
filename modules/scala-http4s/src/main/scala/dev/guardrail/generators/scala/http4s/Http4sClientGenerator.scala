@@ -13,7 +13,7 @@ import dev.guardrail.Target
 import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.scala.{ ResponseADTHelper, ScalaLanguage }
-import dev.guardrail.generators.spi.ClientGeneratorLoader
+import dev.guardrail.generators.spi.{ ClientGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
 import dev.guardrail.shims._
@@ -24,11 +24,7 @@ import dev.guardrail.terms.{ ApplicationJson, ContentType, Header, MultipartForm
 class Http4sClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      version <- parameters.collectFirst { case Http4sVersion(version) => version }
-    } yield Http4sClientGenerator(version)
+  val apply   = ModuleLoadResult.forProduct1("Http4sVersion" -> Seq(Http4sVersion.mapping))(version => Http4sClientGenerator(version))
 }
 
 object Http4sClientGenerator {

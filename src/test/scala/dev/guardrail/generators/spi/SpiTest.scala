@@ -34,9 +34,15 @@ import dev.guardrail.generators.scala.http4s.Http4sServerGenerator
 import dev.guardrail.languages.LA
 
 class SpiTest extends AnyFunSuite with Matchers {
+  implicit class ModuleLoadResultSyntax[A](value: ModuleLoadResult[A]) {
+    def valueOr(func: ModuleLoadFailed => A): A = value match {
+      case fail: ModuleLoadFailed => func(fail)
+      case succ: ModuleLoadSuccess[A] => succ.result
+    }
+  }
   def testLanguageLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
     LanguageLoader
-      .load[L](params, MissingDependency(label))
+      .load[L](params)
       .valueOr(err => fail(err.toString()))
       .shouldBe(a[B])
 
@@ -50,7 +56,7 @@ class SpiTest extends AnyFunSuite with Matchers {
 
   def testCollectionsGeneratorLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
     CollectionsGeneratorLoader
-      .load[L](params, MissingDependency(label))
+      .load[L](params)
       .valueOr(err => fail(err.toString()))
       .shouldBe(a[B])
 
@@ -65,12 +71,12 @@ class SpiTest extends AnyFunSuite with Matchers {
 
   def testFrameworkLoader[L <: LA](label: String, params: Set[String])(implicit tt: TypeTag[L], pos: Position): Unit =
     FrameworkLoader
-      .load[L](params, MissingDependency(label))
+      .load[L](params)
       .valueOr(err => fail(err.toString()))
 
   def testModuleMapperLoader[L <: LA](name: String)(implicit tt: TypeTag[L], pos: Position): Unit = {
     val label = s"ModuleMapperLoader > $name"
-    val params = ModuleMapperLoader.load[L](name, MissingDependency(label)).valueOr(err => fail(err.toString()))
+    val params = ModuleMapperLoader.load[L](name).valueOr(err => fail(err.toString()))
     testFrameworkLoader[L](label, params)
   }
 
@@ -92,7 +98,7 @@ class SpiTest extends AnyFunSuite with Matchers {
 
   def testClientGeneratorLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
     ClientGeneratorLoader
-      .load[L](params, MissingDependency(label))
+      .load[L](params)
       .valueOr(err => fail(err.toString()))
       .shouldBe(a[B])
 
@@ -109,7 +115,7 @@ class SpiTest extends AnyFunSuite with Matchers {
 
   def testServerGeneratorLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
     ServerGeneratorLoader
-      .load[L](params, MissingDependency(label))
+      .load[L](params)
       .valueOr(err => fail(err.toString()))
       .shouldBe(a[B])
 
@@ -125,7 +131,7 @@ class SpiTest extends AnyFunSuite with Matchers {
 
   def testFrameworkGeneratorLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
     FrameworkGeneratorLoader
-      .load[L](params, MissingDependency(label))
+      .load[L](params)
       .valueOr(err => fail(err.toString()))
       .shouldBe(a[B])
 
@@ -141,7 +147,7 @@ class SpiTest extends AnyFunSuite with Matchers {
 
   def testProtocolGeneratorLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
     ProtocolGeneratorLoader
-      .load[L](params, MissingDependency(label))
+      .load[L](params)
       .valueOr(err => fail(err.toString()))
       .shouldBe(a[B])
 

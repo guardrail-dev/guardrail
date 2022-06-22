@@ -5,17 +5,13 @@ import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Target
 import dev.guardrail.generators.scala._
-import dev.guardrail.generators.spi.FrameworkGeneratorLoader
+import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.terms.framework._
 
 class Http4sGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-
-  def apply(parameters: Set[String]) =
-    for {
-      http4sVersion <- parameters.collectFirst { case Http4sVersion(version) => version }
-    } yield Http4sGenerator()
+  val apply   = ModuleLoadResult.forProduct1("Http4sVersion" -> Seq(Http4sVersion.mapping))(_ => Http4sGenerator())
 }
 
 object Http4sGenerator {
