@@ -51,9 +51,9 @@ class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
   val apply = ModuleLoadResult.forProduct3(
-    "AsyncHttpClientVersion"         -> Seq(AsyncHttpClientVersion.mapping),
+    ClientGeneratorLoader.label      -> Seq(AsyncHttpClientVersion.mapping),
     CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
-    "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
+    CollectionsGeneratorLoader.label -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
   )((_, cl, ca) => AsyncHttpClientClientGenerator()(cl, ca))
 }
 

@@ -13,8 +13,8 @@ class AkkaHttpGeneratorLoader extends FrameworkGeneratorLoader {
   def reified = typeTag[Target[ScalaLanguage]]
   val apply =
     ModuleLoadResult.forProduct2(
-      "AkkaHttpVersion"             -> Seq(AkkaHttpVersion.mapping),
-      ProtocolGeneratorLoader.label -> Seq(CirceModelGenerator.mapping, JacksonModelGenerator.mapping)
+      FrameworkGeneratorLoader.label -> Seq(AkkaHttpVersion.mapping),
+      ProtocolGeneratorLoader.label  -> Seq(CirceModelGenerator.mapping, JacksonModelGenerator.mapping)
     ) { (akkaHttpVersion, collectionVersion) =>
       AkkaHttpGenerator(akkaHttpVersion, collectionVersion)
     }

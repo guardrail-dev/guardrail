@@ -35,7 +35,7 @@ import dev.guardrail.terms.{
 class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
-  val apply            = ModuleLoadResult.forProduct1("DropwizardVersion" -> Seq(DropwizardVersion.mapping))(_ => DropwizardServerGenerator())
+  val apply            = ModuleLoadResult.forProduct1(ServerGeneratorLoader.label -> Seq(DropwizardVersion.mapping))(_ => DropwizardServerGenerator())
 }
 
 object DropwizardServerGenerator {

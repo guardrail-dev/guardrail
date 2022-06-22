@@ -29,7 +29,7 @@ class AkkaHttpServerGeneratorLoader extends ServerGeneratorLoader {
   override def reified = typeTag[Target[ScalaLanguage]]
   val apply =
     ModuleLoadResult.forProduct2(
-      "AkkaHttpVersion"             -> Seq(AkkaHttpVersion.mapping),
+      ServerGeneratorLoader.label   -> Seq(AkkaHttpVersion.mapping),
       ProtocolGeneratorLoader.label -> Seq(CirceModelGenerator.mapping, JacksonModelGenerator.mapping)
     ) { (akkaHttpVersion, collectionVersion) =>
       AkkaHttpServerGenerator(akkaHttpVersion, collectionVersion)

@@ -22,9 +22,9 @@ class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
   def reified = typeTag[Target[JavaLanguage]]
   val apply =
     ModuleLoadResult.forProduct3(
-      "DropwizardVersion"              -> Seq(DropwizardVersion.mapping),
+      FrameworkGeneratorLoader.label   -> Seq(DropwizardVersion.mapping),
       CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
-      "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
+      CollectionsGeneratorLoader.label -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
     )((_, _, _) => DropwizardGenerator())
 }
 
