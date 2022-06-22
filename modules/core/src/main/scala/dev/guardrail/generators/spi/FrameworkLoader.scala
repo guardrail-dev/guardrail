@@ -52,7 +52,16 @@ object FrameworkLoader {
         Target.raiseException(s"No framework loaders found for ${tt}! please report this to https://github.com/guardrail-dev/guardrail")
       )(_.reduce match {
         case fail: ModuleLoadFailed =>
-          Target.raiseException(s"Unsatisfied module(s): ${fail.missing.mkString(", ")}")
+          val result =
+            fail.missing.foldLeft(Seq.empty[String]) { case (acc, nextModule) =>
+              val nextLabel =
+                fail.choices
+                  .get(nextModule)
+                  .filter(_.nonEmpty)
+                  .fold("<no choices found>")(_.mkString(", "))
+              acc :+ s"${nextModule}: [${nextLabel}]"
+            }
+          Target.raiseException(s"Unsatisfied module(s): ${result.mkString(", ")}")
         case succ: ModuleLoadSuccess[Framework[L, Target]] =>
           Target.pure(succ.result)
       })
