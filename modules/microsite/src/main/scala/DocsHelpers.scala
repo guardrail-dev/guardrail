@@ -22,8 +22,8 @@ object DocsHelpers {
   def sampleSpec = "modules/microsite/docs/sample-user.json"
   def renderScalaSnippet(framework: String, identifier: SnippetComponent)(prefix: String, suffix: String): Unit = {
     val generator: Framework[ScalaLanguage, Target] = Target.unsafeExtract(for {
-      modules   <- ModuleMapperLoader.load[ScalaLanguage](framework, MissingDependency("framework"))
-      framework <- FrameworkLoader.load[ScalaLanguage](modules, MissingDependency(framework))
+      modules   <- ModuleMapperLoader.load[ScalaLanguage](framework)
+      framework <- FrameworkLoader.load[ScalaLanguage](modules)
     } yield framework)
     import generator._
     val parseOpts = new ParseOptions

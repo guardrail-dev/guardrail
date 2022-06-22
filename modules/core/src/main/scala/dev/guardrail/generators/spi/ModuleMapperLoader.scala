@@ -1,6 +1,6 @@
 package dev.guardrail.generators.spi
 
-import dev.guardrail.{ MissingDependency, Target }
+import dev.guardrail.Target
 import dev.guardrail.languages.LA
 import java.util.ServiceLoader
 import scala.jdk.CollectionConverters._
@@ -15,7 +15,7 @@ trait ModuleMapperLoader {
 object ModuleMapperLoader {
   def moduleMapperLoader: ServiceLoader[ModuleMapperLoader] = ServiceLoader.load(classOf[ModuleMapperLoader])
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def load[L <: LA](frameworkName: String, error: MissingDependency)(implicit tt: TypeTag[Target[L]]): Target[Set[String]] = {
+  def load[L <: LA](frameworkName: String)(implicit tt: TypeTag[Target[L]]): Target[Set[String]] = {
     val found = moduleMapperLoader
       .iterator()
       .asScala
@@ -24,6 +24,6 @@ object ModuleMapperLoader {
       .toSeq
       .headOption
 
-    Target.fromOption(found, error)
+    found.fold[Target[Set[String]]](Target.raiseException(s"Unable to find ModuleMapperLoader for ${frameworkName}"))(Target.pure _)
   }
 }
