@@ -33,7 +33,7 @@ object ModuleLoadResult {
         case (a: ModuleLoadFailed, b: ModuleLoadSuccess[A]) =>
           new ModuleLoadSuccess(a.attempted.combine(b.attempted), b.consumed, b.result)
         case (a: ModuleLoadSuccess[A], b: ModuleLoadFailed) =>
-          new ModuleLoadSuccess(Set.empty, Set.empty, a.result)
+          a
         case (a: ModuleLoadFailed, b: ModuleLoadFailed) =>
           new ModuleLoadFailed(a.attempted.combine(b.attempted), a.choices.combine(b.choices))
       }
