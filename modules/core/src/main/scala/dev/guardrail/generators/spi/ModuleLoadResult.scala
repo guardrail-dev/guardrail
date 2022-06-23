@@ -12,7 +12,7 @@ object ModuleLoadResult {
     def ap[A, B](ff: ModuleLoadResult[A => B])(fa: ModuleLoadResult[A]): ModuleLoadResult[B] = ff match {
       case f: ModuleLoadSuccess[A => B] =>
         fa match {
-          case a: ModuleLoadSuccess[A] => new ModuleLoadSuccess[B](ff.attempted.combine(fa.attempted), f.consumed.combine(a.consumed), f.result(a.result))
+          case a: ModuleLoadSuccess[A] => new ModuleLoadSuccess[B](f.attempted.combine(a.attempted), f.consumed.combine(a.consumed), f.result(a.result))
           case fail: ModuleLoadFailed  => fail
         }
       case ffail: ModuleLoadFailed =>
