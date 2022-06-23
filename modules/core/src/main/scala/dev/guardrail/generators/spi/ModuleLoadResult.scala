@@ -12,15 +12,18 @@ object ModuleLoadResult {
     def ap[A, B](ff: ModuleLoadResult[A => B])(fa: ModuleLoadResult[A]): ModuleLoadResult[B] = ff match {
       case f: ModuleLoadSuccess[A => B] =>
         fa match {
-          case a: ModuleLoadSuccess[A] => new ModuleLoadSuccess[B](f.attempted.combine(a.attempted), f.consumed.combine(a.consumed), f.result(a.result))
-          case fail: ModuleLoadFailed  => fail
+          case a: ModuleLoadSuccess[A]      => new ModuleLoadSuccess[B](f.attempted.combine(a.attempted), f.consumed.combine(a.consumed), f.result(a.result))
+          case fail: ModuleLoadFailed       => fail
+          case conflict: ModuleLoadConflict => conflict
         }
       case ffail: ModuleLoadFailed =>
         fa match {
+          case _: ModuleLoadSuccess[_] => ffail
           case afail: ModuleLoadFailed =>
             new ModuleLoadFailed(ffail.attempted.combine(afail.attempted), ffail.choices.combine(afail.choices))
-          case _ => ffail
+          case conflict: ModuleLoadConflict => conflict
         }
+      case conflict: ModuleLoadConflict => conflict
     }
   }
 
@@ -28,8 +31,15 @@ object ModuleLoadResult {
     def empty: ModuleLoadResult[A] = new ModuleLoadFailed(Set.empty, Map.empty)
     def combine(a: ModuleLoadResult[A], b: ModuleLoadResult[A]): ModuleLoadResult[A] =
       (a, b) match {
+        case (a: ModuleLoadConflict, _) =>
+          a
+        case (_, b: ModuleLoadConflict) =>
+          b
         case (a: ModuleLoadSuccess[A], b: ModuleLoadSuccess[A]) =>
-          new ModuleLoadSuccess(a.attempted.combine(b.attempted), a.consumed.combine(b.consumed), a.result)
+          a.consumed.intersect(b.consumed).toSeq match {
+            case Seq(only) => new ModuleLoadConflict(only)
+            case other     => new ModuleLoadConflict(other.mkString(", "))
+          }
         case (a: ModuleLoadFailed, b: ModuleLoadSuccess[A]) =>
           new ModuleLoadSuccess(a.attempted.combine(b.attempted), b.consumed, b.result)
         case (a: ModuleLoadSuccess[A], b: ModuleLoadFailed) =>
@@ -61,7 +71,7 @@ object ModuleLoadResult {
         next
           .get(module)
           .fold[ModuleLoadResult[A]](new ModuleLoadFailed(Set(module), Map.empty)) { res =>
-            new ModuleLoadSuccess[A](Set(module), Set(module), res)
+            new ModuleLoadSuccess[A](Set(module), Set(label), res)
           }
       )
     }
@@ -165,6 +175,10 @@ object ModuleLoadResult {
 // Parameters:
 // - attempted: All mapping keys for the current stage
 sealed abstract class ModuleLoadResult[+A]
+
+class ModuleLoadConflict(val section: String) extends ModuleLoadResult[Nothing] {
+  override def toString(): String = s"ModuleLoadConflict($section)"
+}
 
 class ModuleLoadFailed(val attempted: Set[String], val choices: Map[String, Set[String]]) extends ModuleLoadResult[Nothing] {
   override def toString(): String = s"ModuleLoadFailed($attempted, $choices)"
