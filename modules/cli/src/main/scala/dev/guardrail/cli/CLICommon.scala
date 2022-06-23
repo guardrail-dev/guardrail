@@ -1,17 +1,36 @@
 package dev.guardrail.cli
 
-import java.nio.file.Path
+import cats.FlatMap
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import scala.io.AnsiColor
-import cats.FlatMap
+import java.nio.file.Path
+import scala.language.reflectiveCalls
 
 import dev.guardrail._
 import dev.guardrail.core.{ LogLevel, LogLevels }
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.runner.GuardrailRunner
 
-object CLICommon {
+case class CommandLineResult(exitStatus: Int)
+
+object CommandLineResult {
+  val failure: CommandLineResult = CommandLineResult(1)
+  val success: CommandLineResult = CommandLineResult(0)
+}
+
+trait CLICommon extends GuardrailRunner {
+  def putErrLn(string: String): Unit
+  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]]
+
+  def AnsiColor: {
+    val BLUE: String
+    val BOLD: String
+    val CYAN: String
+    val RED: String
+    val RESET: String
+    val WHITE: String
+  }
+
   def unsafePrintHelp(): Unit = {
     val text = s"""
     | ${AnsiColor.CYAN}guardrail${AnsiColor.RESET}
@@ -45,18 +64,9 @@ object CLICommon {
     |      --server --specPath client-specs/account-events-api.json --outputPath src/main/scala --packageName com.twilio.messaging.console.clients.events
     |""".stripMargin
 
-    System.err.println(text)
+    putErrLn(text)
   }
-}
 
-case class CommandLineResult(exitStatus: Int)
-
-object CommandLineResult {
-  val failure: CommandLineResult = CommandLineResult(1)
-  val success: CommandLineResult = CommandLineResult(0)
-}
-
-trait CLICommon extends GuardrailRunner {
   def processArgs(args: Array[String]): CommandLineResult = {
     val (languages, strippedArgs) = args.span(!_.startsWith("-"))
     val language                  = languages.headOption.getOrElse("scala")
@@ -182,71 +192,67 @@ trait CLICommon extends GuardrailRunner {
       }
 
     val fallback = List.empty[Path]
-    import CLICommon.unsafePrintHelp
     val paths: List[Path] = result
       .fold(
         {
           case MissingArg(args, Error.ArgName(arg)) =>
-            println(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
+            putErrLn(s"${AnsiColor.RED}Missing argument:${AnsiColor.RESET} ${AnsiColor.BOLD}${arg}${AnsiColor.RESET} (In block ${args})")
             unsafePrintHelp()
             fallback
           case MissingDependency(dependency) =>
-            println(s"${AnsiColor.RED}Missing dependency:${AnsiColor.RESET} ${AnsiColor.BOLD}${dependency}${AnsiColor.RESET} not found on classpath")
+            putErrLn(s"${AnsiColor.RED}Missing dependency:${AnsiColor.RESET} ${AnsiColor.BOLD}${dependency}${AnsiColor.RESET} not found on classpath")
             fallback
           case NoArgsSpecified =>
-            println(s"${AnsiColor.RED}No arguments specified${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}No arguments specified${AnsiColor.RESET}")
             unsafePrintHelp()
             fallback
           case NoFramework =>
-            println(s"${AnsiColor.RED}No framework specified${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}No framework specified${AnsiColor.RESET}")
             unsafePrintHelp()
             fallback
           case PrintHelp =>
             unsafePrintHelp()
             fallback
           case UnknownArguments(args) =>
-            println(s"${AnsiColor.RED}Unknown arguments: ${args.mkString(" ")}${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}Unknown arguments: ${args.mkString(" ")}${AnsiColor.RESET}")
             unsafePrintHelp()
             fallback
           case UnknownFramework(name) =>
-            println(s"${AnsiColor.RED}Unknown framework specified: $name${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}Unknown framework specified: $name${AnsiColor.RESET}")
             fallback
           case UnparseableArgument(name, message) =>
-            println(s"${AnsiColor.RED}Unparseable argument: --$name, $message${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}Unparseable argument: --$name, $message${AnsiColor.RESET}")
             fallback
           case UnspecifiedModules(choices) =>
             val result =
-              choices.foldLeft(Seq.empty[String]) { case (acc, (module, choices)) =>
+              choices.toSeq.sortBy(_._1).foldLeft(Seq.empty[String]) { case (acc, (module, choices)) =>
                 val nextLabel = Option(choices).filter(_.nonEmpty).fold("<no choices found>")(_.toSeq.sorted.mkString(", "))
                 acc :+ s"  ${AnsiColor.BOLD}${AnsiColor.WHITE}${module}:${AnsiColor.RESET} [${AnsiColor.BLUE}${nextLabel}${AnsiColor.RESET}]"
               }
-            println(s"${AnsiColor.RED}Unsatisfied module(s):${AnsiColor.RESET}")
-            result.foreach(println)
+            putErrLn(s"${AnsiColor.RED}Unsatisfied module(s):${AnsiColor.RESET}")
+            result.foreach(putErrLn)
             fallback
           case UnusedModules(unused) =>
-            println(s"${AnsiColor.RED}Unused modules specified:${AnsiColor.RESET} ${unused.toList.mkString(", ")}")
+            putErrLn(s"${AnsiColor.RED}Unused modules specified:${AnsiColor.RESET} ${unused.toList.mkString(", ")}")
             fallback
           case RuntimeFailure(message) =>
-            println(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
             fallback
           case UserError(message) =>
-            println(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
             unsafePrintHelp()
             fallback
-          case UnconsumedModules(modules) =>
-            println(s"${AnsiColor.RED}Error: Unconsumed modules: ${modules.mkString(", ")}${AnsiColor.RESET}")
-            fallback
           case MissingModule(section, choices) =>
-            println(s"${AnsiColor.RED}Error: Missing module ${section} (options are: ${choices.mkString(",")})${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}Error: Missing module ${section} (options are: ${choices.mkString(",")})${AnsiColor.RESET}")
             fallback
           case ModuleConflict(section) =>
-            println(s"${AnsiColor.RED}Error: Too many modules specified for ${section}${AnsiColor.RESET}")
+            putErrLn(s"${AnsiColor.RED}Error: Too many modules specified for ${section}${AnsiColor.RESET}")
             fallback
         },
         identity
       )
 
-    println(result.logEntries.show)
+    putErrLn(result.logEntries.show)
 
     if (paths.isEmpty) {
       CommandLineResult.failure
