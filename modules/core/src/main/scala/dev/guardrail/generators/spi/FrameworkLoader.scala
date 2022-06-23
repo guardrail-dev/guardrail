@@ -2,7 +2,7 @@ package dev.guardrail.generators.spi
 
 import cats.data.NonEmptyList
 import cats.implicits._
-import dev.guardrail.{ Target, UnspecifiedModules }
+import dev.guardrail.{ Target, UnspecifiedModules, UnusedModules }
 import dev.guardrail.generators.Framework
 import dev.guardrail.generators.SwaggerGenerator
 import dev.guardrail.languages.LA
@@ -54,7 +54,9 @@ object FrameworkLoader {
         case fail: ModuleLoadFailed =>
           Target.raiseError(UnspecifiedModules(fail.choices))
         case succ: ModuleLoadSuccess[Framework[L, Target]] =>
-          Target.pure(succ.result)
+          NonEmptyList.fromList(params.diff(succ.consumed).toList).fold(Target.pure(succ.result)) { unused =>
+            Target.raiseError(UnusedModules(unused))
+          }
       })
   }
 }

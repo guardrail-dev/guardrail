@@ -223,6 +223,9 @@ trait CLICommon extends GuardrailRunner {
             println(s"${AnsiColor.RED}Unsatisfied module(s):${AnsiColor.RESET}")
             result.foreach(println)
             fallback
+          case UnusedModules(unused) =>
+            println(s"${AnsiColor.RED}Unused modules specified:${AnsiColor.RESET} ${unused.toList.mkString(", ")}")
+            fallback
           case RuntimeFailure(message) =>
             println(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
             fallback
