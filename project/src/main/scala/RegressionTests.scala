@@ -23,6 +23,8 @@ object RegressionTests {
 
   def sampleResource(name: String): java.io.File = file(s"modules/sample/src/main/resources/${name}")
   val exampleCases: List[ExampleCase] = List(
+    ExampleCase(sampleResource("validation/example.yaml"), "validation").args("--module", "akka-http", "--module", "circe-refined").frameworks("scala" -> Set("akka-http")),
+    ExampleCase(sampleResource("validation/example.yaml"), "validation").args("--module", "http4s", "--module", "circe-refined").frameworks("scala" -> Set("http4s")),
     ExampleCase(sampleResource("department.yaml"), "department").args("--package-from-tags"),
     ExampleCase(sampleResource("additional-properties.yaml"), "additionalProperties"),
     ExampleCase(sampleResource("alias.yaml"), "alias"),
