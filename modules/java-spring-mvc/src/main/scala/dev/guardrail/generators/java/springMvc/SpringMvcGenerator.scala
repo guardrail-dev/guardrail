@@ -17,7 +17,7 @@ class SpringMvcGeneratorLoader extends FrameworkGeneratorLoader {
   def reified = typeTag[Target[JavaLanguage]]
   val apply =
     ModuleLoadResult.forProduct2(
-      "SpringMvcVersion"               -> Seq(SpringMvcVersion.mapping),
+      FrameworkGeneratorLoader.label   -> Seq(SpringMvcVersion.mapping),
       CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping)
     )((_, cl) => SpringMvcGenerator()(cl))
 }

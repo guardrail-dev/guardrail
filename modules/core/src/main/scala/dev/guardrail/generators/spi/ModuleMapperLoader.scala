@@ -1,6 +1,6 @@
 package dev.guardrail.generators.spi
 
-import dev.guardrail.Target
+import dev.guardrail.{ Target, UnknownFramework }
 import dev.guardrail.languages.LA
 import java.util.ServiceLoader
 import scala.jdk.CollectionConverters._
@@ -24,6 +24,6 @@ object ModuleMapperLoader {
       .toSeq
       .headOption
 
-    found.fold[Target[Set[String]]](Target.raiseException(s"Unable to find ModuleMapperLoader for ${frameworkName}"))(Target.pure _)
+    found.fold[Target[Set[String]]](Target.raiseError(UnknownFramework(frameworkName)))(Target.pure _)
   }
 }

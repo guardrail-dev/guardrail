@@ -11,7 +11,7 @@ import dev.guardrail.terms.framework._
 class Http4sGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply   = ModuleLoadResult.forProduct1("Http4sVersion" -> Seq(Http4sVersion.mapping))(_ => Http4sGenerator())
+  val apply   = ModuleLoadResult.forProduct1(FrameworkGeneratorLoader.label -> Seq(Http4sVersion.mapping))(_ => Http4sGenerator())
 }
 
 object Http4sGenerator {

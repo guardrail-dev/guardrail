@@ -8,8 +8,8 @@ class JavaModuleMapper extends ModuleMapperLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
   def apply(frameworkName: String): Option[Set[String]] = frameworkName match {
-    case "dropwizard" => Some(Set("java-language", "dropwizard", "jackson", "java-stdlib", "async-http-client"))
-    case "spring-mvc" => Some(Set("java-language", "spring-mvc", "jackson", "java-stdlib", "async-http-client"))
+    case "dropwizard" => Some(Set("dropwizard", "jackson", "java-stdlib", "async-http-client"))
+    case "spring-mvc" => Some(Set("spring-mvc", "jackson", "java-stdlib", "async-http-client"))
     case _            => None
   }
 }

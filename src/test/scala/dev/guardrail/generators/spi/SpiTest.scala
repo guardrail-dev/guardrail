@@ -6,7 +6,6 @@ import org.scalatest.matchers.should.Matchers
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe.TypeTag
 
-import dev.guardrail.MissingDependency
 import dev.guardrail.Target
 import dev.guardrail.terms.ProtocolTerms
 import dev.guardrail.generators.java
@@ -35,9 +34,10 @@ import dev.guardrail.languages.LA
 
 class SpiTest extends AnyFunSuite with Matchers {
   implicit class ModuleLoadResultSyntax[A](value: ModuleLoadResult[A]) {
-    def valueOr(func: ModuleLoadFailed => A): A = value match {
+    def valueOr(func: ModuleLoadResult[Nothing] => A): A = value match {
       case fail: ModuleLoadFailed => func(fail)
       case succ: ModuleLoadSuccess[A] => succ.result
+      case conflict: ModuleLoadConflict => func(conflict)
     }
   }
   def testLanguageLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
@@ -85,15 +85,15 @@ class SpiTest extends AnyFunSuite with Matchers {
     testModuleMapperLoader[ScalaLanguage]("http4s")
     testModuleMapperLoader[ScalaLanguage]("dropwizard")
 
-    testFrameworkLoader[ScalaLanguage]("akka-http", Set("scala-language", "akka-http", "circe", "scala-stdlib"))
+    testFrameworkLoader[ScalaLanguage]("akka-http", Set("akka-http", "circe"))
   }
 
   test("FrameworkLoader: Java") {
     testModuleMapperLoader[JavaLanguage]("dropwizard")
     testModuleMapperLoader[JavaLanguage]("spring-mvc")
 
-    testFrameworkLoader[JavaLanguage]("dropwizard-vavr", Set("java-language", "dropwizard", "jackson", "java-stdlib", "async-http-client"))
-    testFrameworkLoader[JavaLanguage]("dropwizard-vavr", Set("java-language", "dropwizard", "jackson", "java-vavr", "async-http-client"))
+    testFrameworkLoader[JavaLanguage]("dropwizard-vavr", Set("dropwizard", "jackson", "java-stdlib", "async-http-client"))
+    testFrameworkLoader[JavaLanguage]("dropwizard-vavr", Set("dropwizard", "jackson", "java-vavr", "async-http-client"))
   }
 
   def testClientGeneratorLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =

@@ -39,7 +39,7 @@ class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   def apply =
     ModuleLoadResult.forProduct3(
       ProtocolGeneratorLoader.label    -> Seq(JacksonVersion.mapping),
-      "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping),
+      CollectionsGeneratorLoader.label -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping),
       CollectionsGeneratorLoader.label -> Seq(JavaCollectionsGenerator.mapping, JavaVavrCollectionsGenerator.mapping)
     )((_, ca, cl) => JacksonGenerator()(cl, ca))
 }

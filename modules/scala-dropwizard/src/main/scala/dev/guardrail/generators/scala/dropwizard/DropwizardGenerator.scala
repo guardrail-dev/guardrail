@@ -13,7 +13,7 @@ import scala.util.Try
 class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply   = ModuleLoadResult.forProduct1("DropwizardVersion" -> Seq(DropwizardVersion.mapping))(_ => DropwizardGenerator())
+  val apply   = ModuleLoadResult.forProduct1(FrameworkGeneratorLoader.label -> Seq(DropwizardVersion.mapping))(_ => DropwizardGenerator())
 }
 
 object DropwizardGenerator {

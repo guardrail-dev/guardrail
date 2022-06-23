@@ -51,6 +51,7 @@ object Args {
   def isEmpty: Args => Boolean = { args =>
     args.specPath.isEmpty &&
     args.outputPath.isEmpty &&
-    args.packageName.isEmpty
+    args.packageName.isEmpty &&
+    !args.printHelp
   }
 }

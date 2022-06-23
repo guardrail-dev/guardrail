@@ -13,7 +13,7 @@ object RegressionTests {
     ),
     "java" -> List(
       ExampleFramework("dropwizard", "dropwizard"),
-      ExampleFramework("dropwizard-vavr", "dropwizardVavr", modules = List("java-language", "java-vavr", "jackson", "async-http-client", "dropwizard")),
+      ExampleFramework("dropwizard-vavr", "dropwizardVavr", modules = List("java-vavr", "jackson", "async-http-client", "dropwizard")),
       ExampleFramework("spring-mvc", "springMvc", List("server"))
     )
   )

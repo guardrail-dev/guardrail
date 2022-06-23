@@ -2,7 +2,7 @@ package dev.guardrail.generators.spi
 
 import cats.data.NonEmptyList
 import cats.implicits._
-import dev.guardrail.Target
+import dev.guardrail.{ ModuleConflict, Target, UnspecifiedModules, UnusedModules }
 import dev.guardrail.generators.Framework
 import dev.guardrail.generators.SwaggerGenerator
 import dev.guardrail.languages.LA
@@ -52,9 +52,13 @@ object FrameworkLoader {
         Target.raiseException(s"No framework loaders found for ${tt}! please report this to https://github.com/guardrail-dev/guardrail")
       )(_.reduce match {
         case fail: ModuleLoadFailed =>
-          Target.raiseException(s"Unsatisfied module(s): ${fail.missing.mkString(", ")}")
+          Target.raiseError(UnspecifiedModules(fail.choices))
+        case conflict: ModuleLoadConflict =>
+          Target.raiseError(ModuleConflict(conflict.section))
         case succ: ModuleLoadSuccess[Framework[L, Target]] =>
-          Target.pure(succ.result)
+          NonEmptyList.fromList(params.diff(succ.modulesConsumed).toList).fold(Target.pure(succ.result)) { unused =>
+            Target.raiseError(UnusedModules(unused))
+          }
       })
   }
 }

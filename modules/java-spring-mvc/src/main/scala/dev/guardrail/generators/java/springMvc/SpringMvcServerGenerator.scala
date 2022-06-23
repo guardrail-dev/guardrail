@@ -56,9 +56,9 @@ class SpringMvcServerGeneratorLoader extends ServerGeneratorLoader {
   override def reified = typeTag[Target[JavaLanguage]]
   val apply =
     ModuleLoadResult.forProduct3(
-      "SpringMvcVersion"               -> Seq(SpringMvcVersion.mapping),
+      ServerGeneratorLoader.label      -> Seq(SpringMvcVersion.mapping),
       CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
-      "CollectionsAbstraction"         -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
+      CollectionsGeneratorLoader.label -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
     )((_, cl, ca) => SpringMvcServerGenerator()(cl, ca))
 }
 
