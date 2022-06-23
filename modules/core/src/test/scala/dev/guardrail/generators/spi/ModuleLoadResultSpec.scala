@@ -17,8 +17,8 @@ class ModuleLoadResultSpec extends AnyFunSuite with Matchers with OptionValues {
   }
 
   test("Combine Tuple2") {
-    val a: ModuleLoadResult[Long]   = new ModuleLoadFailed(Set.empty, Map("foo" -> Set.empty))
-    val b: ModuleLoadResult[String] = new ModuleLoadFailed(Set.empty, Map("bar" -> Set.empty))
+    val a: ModuleLoadResult[Long]   = new ModuleLoadFailed(Set.empty, Set.empty, Map("foo" -> Set.empty))
+    val b: ModuleLoadResult[String] = new ModuleLoadFailed(Set.empty, Set.empty, Map("bar" -> Set.empty))
     val c: ModuleLoadResult[String] = new ModuleLoadSuccess(Set("c"), Set("C"), "woo")
     val d: ModuleLoadResult[String] = new ModuleLoadSuccess(Set("d"), Set("D"), "woo")
 

@@ -28,6 +28,6 @@ abstract class AbstractGeneratorLoaderCompanion[A[_ <: LA, _[_]], B <: AbstractG
       .map(_.apply(params).asInstanceOf[ModuleLoadResult[A[L, Target]]])
 
     // TODO: Can we alert if there are multiple matches for the same slot?
-    NonEmptyList.fromList(found).fold[ModuleLoadResult[A[L, Target]]](new ModuleLoadFailed(Set.empty, Map(label -> Set.empty)))(_.reduce)
+    NonEmptyList.fromList(found).fold[ModuleLoadResult[A[L, Target]]](new ModuleLoadFailed(Set.empty, Set.empty, Map(label -> Set.empty)))(_.reduce)
   }
 }
