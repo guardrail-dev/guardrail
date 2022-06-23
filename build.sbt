@@ -126,6 +126,9 @@ lazy val core = modules.core.project
 lazy val cli = modules.cli.project
   .customDependsOn(core)
   .settings(run / fork := true)
+  .dependsOn(scalaSupport % "test->compile")
+  .dependsOn(scalaAkkaHttp % "test->compile")
+  .dependsOn(scalaHttp4s % "test->compile")
 
 lazy val javaSupport = modules.javaSupport.project
   .customDependsOn(core)
