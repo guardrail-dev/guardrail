@@ -164,12 +164,12 @@ object ModuleLoadResult {
 
 // Parameters:
 // - attempted: All mapping keys for the current stage
-sealed abstract class ModuleLoadResult[+A](val attempted: Set[String])
+sealed abstract class ModuleLoadResult[+A]
 
-class ModuleLoadFailed(attempted: Set[String], val choices: Map[String, Set[String]]) extends ModuleLoadResult[Nothing](attempted) {
+class ModuleLoadFailed(val attempted: Set[String], val choices: Map[String, Set[String]]) extends ModuleLoadResult[Nothing] {
   override def toString(): String = s"ModuleLoadFailed($attempted, $choices)"
 }
 
-class ModuleLoadSuccess[A](attempted: Set[String], val consumed: Set[String], val result: A) extends ModuleLoadResult[A](attempted) {
+class ModuleLoadSuccess[A](val attempted: Set[String], val consumed: Set[String], val result: A) extends ModuleLoadResult[A] {
   override def toString(): String = s"ModuleLoadSuccess($attempted, $consumed, $result)"
 }
