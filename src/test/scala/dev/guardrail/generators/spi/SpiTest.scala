@@ -34,9 +34,10 @@ import dev.guardrail.languages.LA
 
 class SpiTest extends AnyFunSuite with Matchers {
   implicit class ModuleLoadResultSyntax[A](value: ModuleLoadResult[A]) {
-    def valueOr(func: ModuleLoadFailed => A): A = value match {
+    def valueOr(func: ModuleLoadResult[Nothing] => A): A = value match {
       case fail: ModuleLoadFailed => func(fail)
       case succ: ModuleLoadSuccess[A] => succ.result
+      case conflict: ModuleLoadConflict => func(conflict)
     }
   }
   def testLanguageLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
