@@ -183,7 +183,7 @@ trait CLICommon extends GuardrailRunner {
 
     val fallback = List.empty[Path]
     import CLICommon.unsafePrintHelp
-    val paths = result
+    val paths: List[Path] = result
       .fold(
         {
           case MissingArg(args, Error.ArgName(arg)) =>
