@@ -56,7 +56,7 @@ object FrameworkLoader {
         case conflict: ModuleLoadConflict =>
           Target.raiseError(ModuleConflict(conflict.section))
         case succ: ModuleLoadSuccess[Framework[L, Target]] =>
-          NonEmptyList.fromList(params.diff(succ.consumed).toList).fold(Target.pure(succ.result)) { unused =>
+          NonEmptyList.fromList(params.diff(succ.modulesConsumed).toList).fold(Target.pure(succ.result)) { unused =>
             Target.raiseError(UnusedModules(unused))
           }
       })

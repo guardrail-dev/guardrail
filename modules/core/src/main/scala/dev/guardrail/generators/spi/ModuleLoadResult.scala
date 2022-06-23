@@ -12,7 +12,8 @@ object ModuleLoadResult {
     def ap[A, B](ff: ModuleLoadResult[A => B])(fa: ModuleLoadResult[A]): ModuleLoadResult[B] = ff match {
       case f: ModuleLoadSuccess[A => B] =>
         fa match {
-          case a: ModuleLoadSuccess[A]      => new ModuleLoadSuccess[B](f.attempted.combine(a.attempted), f.consumed.combine(a.consumed), f.result(a.result))
+          case a: ModuleLoadSuccess[A] =>
+            new ModuleLoadSuccess[B](f.modulesConsumed.combine(a.modulesConsumed), f.componentsConsumed.combine(a.componentsConsumed), f.result(a.result))
           case fail: ModuleLoadFailed       => fail
           case conflict: ModuleLoadConflict => conflict
         }
@@ -36,12 +37,12 @@ object ModuleLoadResult {
         case (_, b: ModuleLoadConflict) =>
           b
         case (a: ModuleLoadSuccess[A], b: ModuleLoadSuccess[A]) =>
-          a.consumed.intersect(b.consumed).toSeq match {
+          a.componentsConsumed.intersect(b.componentsConsumed).toSeq match {
             case Seq(only) => new ModuleLoadConflict(only)
             case other     => new ModuleLoadConflict(other.mkString(", "))
           }
         case (a: ModuleLoadFailed, b: ModuleLoadSuccess[A]) =>
-          new ModuleLoadSuccess(a.attempted.combine(b.attempted), b.consumed, b.result)
+          b
         case (a: ModuleLoadSuccess[A], b: ModuleLoadFailed) =>
           a
         case (a: ModuleLoadFailed, b: ModuleLoadFailed) =>
@@ -184,6 +185,6 @@ class ModuleLoadFailed(val attempted: Set[String], val choices: Map[String, Set[
   override def toString(): String = s"ModuleLoadFailed($attempted, $choices)"
 }
 
-class ModuleLoadSuccess[A](val attempted: Set[String], val consumed: Set[String], val result: A) extends ModuleLoadResult[A] {
-  override def toString(): String = s"ModuleLoadSuccess($attempted, $consumed, $result)"
+class ModuleLoadSuccess[A](val modulesConsumed: Set[String], val componentsConsumed: Set[String], val result: A) extends ModuleLoadResult[A] {
+  override def toString(): String = s"ModuleLoadSuccess($modulesConsumed, $componentsConsumed, $result)"
 }
