@@ -78,8 +78,11 @@ object ModuleLoadResult {
     }
   }
 
-  private[this] def extractLabel[A](descriptor: ModuleDescriptor[A]): Set[String]                = Set(descriptor._1)
-  private[this] def extractChoices[A](descriptor: ModuleDescriptor[A]): Map[String, Set[String]] = Map(descriptor).mapValues(_.flatMap(_.keys).toSet)
+  private[this] def extractLabel[A](descriptor: ModuleDescriptor[A]): Set[String] = Set(descriptor._1)
+  private[this] def extractChoices[A](descriptor: ModuleDescriptor[A]): Map[String, Set[String]] = {
+    val (label, mappings) = descriptor
+    Map(label -> mappings.flatMap(_.keys).toSet)
+  }
 
   def emitDefault[A](a: A): Set[String] => ModuleLoadResult[A] = _ => new ModuleLoadSuccess[A](Set.empty, Set.empty, a)
   def forProduct1[A, Z](a: ModuleDescriptor[A])(combine: A => Z): Set[String] => ModuleLoadResult[Z] =
