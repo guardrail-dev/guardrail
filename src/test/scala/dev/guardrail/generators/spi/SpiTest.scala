@@ -84,15 +84,15 @@ class SpiTest extends AnyFunSuite with Matchers {
     testModuleMapperLoader[ScalaLanguage]("http4s")
     testModuleMapperLoader[ScalaLanguage]("dropwizard")
 
-    testFrameworkLoader[ScalaLanguage]("akka-http", Set("scala-language", "akka-http", "circe", "scala-stdlib"))
+    testFrameworkLoader[ScalaLanguage]("akka-http", Set("akka-http", "circe"))
   }
 
   test("FrameworkLoader: Java") {
     testModuleMapperLoader[JavaLanguage]("dropwizard")
     testModuleMapperLoader[JavaLanguage]("spring-mvc")
 
-    testFrameworkLoader[JavaLanguage]("dropwizard-vavr", Set("java-language", "dropwizard", "jackson", "java-stdlib", "async-http-client"))
-    testFrameworkLoader[JavaLanguage]("dropwizard-vavr", Set("java-language", "dropwizard", "jackson", "java-vavr", "async-http-client"))
+    testFrameworkLoader[JavaLanguage]("dropwizard-vavr", Set("dropwizard", "jackson", "java-stdlib", "async-http-client"))
+    testFrameworkLoader[JavaLanguage]("dropwizard-vavr", Set("dropwizard", "jackson", "java-vavr", "async-http-client"))
   }
 
   def testClientGeneratorLoader[L <: LA, B](label: String, params: Set[String])(implicit tt: TypeTag[L], ct: ClassTag[B], pos: Position): Unit =
