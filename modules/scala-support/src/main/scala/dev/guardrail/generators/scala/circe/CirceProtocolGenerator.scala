@@ -28,10 +28,14 @@ class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
 
 object CirceProtocolGenerator {
   def apply(circeVersion: CirceModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
-    new CirceProtocolGenerator(circeVersion)
+    new CirceProtocolGenerator(circeVersion, (tpe, _) => Target.pure(tpe))
+  def withValidations(circeVersion: CirceModelGenerator, applyValidations: (Type, Tracker[Schema[_]]) => Target[Type]): ProtocolTerms[ScalaLanguage, Target] =
+    new CirceProtocolGenerator(circeVersion, applyValidations)
 }
 
-class CirceProtocolGenerator private (circeVersion: CirceModelGenerator) extends ProtocolTerms[ScalaLanguage, Target] {
+class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyValidations: (Type, Tracker[Schema[_]]) => Target[Type])
+    extends ProtocolTerms[ScalaLanguage, Target] {
+
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def suffixClsName(prefix: String, clsName: String): Pat.Var = Pat.Var(Term.Name(s"${prefix}${clsName}"))
@@ -166,27 +170,37 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator) extends
 
         dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
-        (tpe, classDep, rawType) = meta match {
+        (tpe, classDep, rawType) <- meta match {
           case core.Resolved(declType, classDep, _, rawType @ LiteralRawType(Some(rawTypeStr), rawFormat))
               if SwaggerUtil.isFile(rawTypeStr, rawFormat) && !isCustomType =>
             // assume that binary data are represented as a string. allow users to override.
-            (t"String", classDep, rawType)
+            Target.pure((t"String", classDep, rawType))
           case core.Resolved(declType, classDep, _, rawType) =>
-            (declType, classDep, rawType)
+            for {
+              validatedType <- applyValidations(declType, property)
+            } yield (validatedType, classDep, rawType)
           case core.Deferred(tpeName) =>
             val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
               println(s"Unable to find definition for ${tpeName}, just inlining")
               Type.Name(tpeName)
             }
-            (tpe, Option.empty, fallbackRawType)
+            for {
+              validatedType <- applyValidations(tpe, property)
+            } yield (validatedType, Option.empty, fallbackRawType)
           case core.DeferredArray(tpeName, containerTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-            (t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[$innerType]", Option.empty, ReifiedRawType.ofVector(fallbackRawType))
+            val tpe          = t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[$innerType]"
+            for {
+              validatedType <- applyValidations(tpe, property)
+            } yield (validatedType, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
           case core.DeferredMap(tpeName, customTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
-            (t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]", Option.empty, ReifiedRawType.ofMap(fallbackRawType))
+            val tpe          = t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]"
+            for {
+              validatedType <- applyValidations(tpe, property)
+            } yield (validatedType, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
         presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))

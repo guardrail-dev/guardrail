@@ -4,7 +4,7 @@ import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.{ RuntimeFailure, Target }
-import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, CirceRefinedModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.terms.framework._
 
@@ -14,7 +14,11 @@ class AkkaHttpGeneratorLoader extends FrameworkGeneratorLoader {
   val apply =
     ModuleLoadResult.forProduct2(
       FrameworkGeneratorLoader.label -> Seq(AkkaHttpVersion.mapping),
-      ProtocolGeneratorLoader.label  -> Seq(CirceModelGenerator.mapping, JacksonModelGenerator.mapping)
+      ProtocolGeneratorLoader.label -> Seq(
+        CirceModelGenerator.mapping,
+        CirceRefinedModelGenerator.mapping.view.mapValues(_.toCirce).toMap,
+        JacksonModelGenerator.mapping
+      )
     ) { (akkaHttpVersion, collectionVersion) =>
       AkkaHttpGenerator(akkaHttpVersion, collectionVersion)
     }
