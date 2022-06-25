@@ -80,7 +80,8 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
         .value
       val cmp = companionForStaticDefns(staticDefns)
 
-      val expected = q"""case class ValidatedObject(v1: Option[Int Refined Interval.Closed[Witness.`1`.T, Witness.`100`.T]] = Option(10))"""
+      val expected =
+        q"""case class ValidatedObject(v1: Option[Int Refined _root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`100`.T]] = Option(10))"""
 
       cls.structure should equal(expected.structure)
     }

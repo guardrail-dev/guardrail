@@ -27,18 +27,18 @@ object CirceRefinedProtocolGenerator {
     import scala.meta._
     tpe match {
       case t"Int" =>
-        def refine(decimal: BigDecimal): Type = Type.Select(Term.Select(q"Witness", Term.Name(decimal.toInt.toString)), t"T")
+        def refine(decimal: BigDecimal): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                            = prop.downField("maximum", _.getMaximum).unwrapTracker.map(refine(_)) // Can't use ETA since we need ...
         val minOpt                            = prop.downField("mimimum", _.getMinimum).unwrapTracker.map(refine(_)) // Scala's BigDecimal, not java.math
         val rawType = (maxOpt, minOpt) match {
           case (Some(max), Some(min)) =>
-            val refined = t"Interval.Closed[$min, $max]"
+            val refined = t"_root_.eu.timepit.refined.numeric.Interval.Closed[$min, $max]"
             t"""$tpe Refined $refined"""
           case (Some(max), None) =>
-            val refined = t"LessEqual[$max]"
+            val refined = t"_root_.eu.timepit.refined.numeric.LessEqual[$max]"
             t"""$tpe Refined $refined"""
           case (None, Some(min)) =>
-            val refined = t"GreaterEqual[$min]"
+            val refined = t"_root_.eu.timepit.refined.numeric.GreaterEqual[$min]"
             t"""$tpe Refined $refined"""
           case _ => tpe
         }
@@ -56,9 +56,7 @@ object CirceRefinedProtocolGenerator {
             imports ++ List(
               q"import io.circe.refined._",
               q"import eu.timepit.refined.api.Refined",
-              q"import eu.timepit.refined.auto._",
-              q"import eu.timepit.refined.numeric._",
-              q"import shapeless.Witness"
+              q"import eu.timepit.refined.auto._"
             )
           )
       },
@@ -70,9 +68,7 @@ object CirceRefinedProtocolGenerator {
             q"import cats.data.EitherT",
             q"import io.circe.refined._",
             q"import eu.timepit.refined.api.Refined",
-            q"import eu.timepit.refined.auto._",
-            q"import eu.timepit.refined.numeric._",
-            q"import shapeless.Witness"
+            q"import eu.timepit.refined.auto._"
           ) :+ q"import $implicitsRef._"
         )
       }
