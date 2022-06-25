@@ -10,23 +10,29 @@ definitions:
     type: object
     required:
       - id
-      - address
+      - validated
     properties:
       id:
         type: string
-      address:
-        $ref: '#/definitions/UserAddress'
-  UserAddress:
+      validated:
+        $ref: '#/definitions/Validated'
+  Validated:
     type: object
     properties:
-      number:
+      max_validation:
         type: integer
         format: int32
         maximum: 100
-      line2:
-        type: string
-      line3:
-        type: string
+      min_validation:
+        type: integer
+        format: int32
+        minimum: 1
+      range_validation:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 100
+        default: 0
 paths:
   /user/{id}:
     get:
