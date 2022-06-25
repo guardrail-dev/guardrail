@@ -79,7 +79,6 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       |           format: int32
       |           description: the size of the pack the dog is from
       |           default: 0
-      |           minimum: 0
       |       required:
       |       - packSize""".stripMargin
 
@@ -264,7 +263,6 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
      |           format: int32
      |           description: the size of the pack the dog is from
      |           default: 0
-     |           minimum: 0
      |       required:
      |       - packSize""".stripMargin
 
