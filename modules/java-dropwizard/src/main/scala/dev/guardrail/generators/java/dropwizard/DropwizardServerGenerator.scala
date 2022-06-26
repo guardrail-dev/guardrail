@@ -237,6 +237,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
     List(
       "javax.inject.Inject",
       "javax.validation.constraints.NotNull",
+      "javax.validation.valueextraction.Unwrapping",
       "javax.ws.rs.Consumes",
       "javax.ws.rs.DELETE",
       "javax.ws.rs.FormParam",
@@ -255,7 +256,6 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       "javax.ws.rs.core.MediaType",
       "javax.ws.rs.core.Response",
       "org.glassfish.jersey.media.multipart.FormDataParam",
-      "org.hibernate.validator.valuehandling.UnwrapValidatedValue",
       "org.slf4j.Logger",
       "org.slf4j.LoggerFactory"
     ).traverse(safeParseRawImport)
@@ -349,7 +349,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
               def transform(to: Type): Target[Parameter] = {
                 parameter.setType(if (isOptional) to.liftOptionalType else to)
                 if (!isOptional) {
-                  parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
+                  parameter.getAnnotations.add(0, new MarkerAnnotationExpr("Unwrapping"))
                 }
                 Target.pure(parameter)
               }
@@ -391,7 +391,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
                 // Vavr's validation support for some reason requires this.
                 if (param.param.getTypeAsString.startsWith("io.vavr.collection.")) {
-                  parameter.getAnnotations.add(1, new MarkerAnnotationExpr("UnwrapValidatedValue"))
+                  parameter.getAnnotations.add(1, new MarkerAnnotationExpr("Unwrapping"))
                 }
               }
               parameter
