@@ -15,13 +15,17 @@ object scalaHttp4s {
   val dependenciesV0_22 = {
     val catsEffectVersion      = "2.5.4"
     val http4sVersion          = "0.22.7"
+    val refinedVersion         = "0.9.29"
 
     Seq(
       "javax.annotation" %  "javax.annotation-api"  % javaxAnnotationVersion, // for jdk11
       "javax.xml.bind"   % "jaxb-api"               % jaxbApiVersion, // for jdk11
     ) ++ Seq(
+      "eu.timepit"       %% "refined"               % refinedVersion,
+      "eu.timepit"       %% "refined-cats"          % refinedVersion,
       "io.circe"         %% "circe-core"            % circeVersion,
       "io.circe"         %% "circe-parser"          % circeVersion,
+      "io.circe"         %% "circe-refined"         % circeVersion,
       "org.http4s"       %% "http4s-blaze-client"   % http4sVersion,
       "org.http4s"       %% "http4s-blaze-server"   % http4sVersion,
       "org.http4s"       %% "http4s-circe"          % http4sVersion,
@@ -35,13 +39,17 @@ object scalaHttp4s {
   val dependencies = {
     val catsEffectVersion      = "3.3.12"
     val http4sVersion          = "0.23.12"
+    val refinedVersion         = "0.9.29"
 
     Seq(
       "javax.annotation" %  "javax.annotation-api"  % javaxAnnotationVersion, // for jdk11
       "javax.xml.bind"   % "jaxb-api"               % jaxbApiVersion, // for jdk11
     ) ++ Seq(
+      "eu.timepit"       %% "refined"               % refinedVersion,
+      "eu.timepit"       %% "refined-cats"          % refinedVersion,
       "io.circe"         %% "circe-core"            % circeVersion,
       "io.circe"         %% "circe-parser"          % circeVersion,
+      "io.circe"         %% "circe-refined"         % circeVersion,
       "org.http4s"       %% "http4s-blaze-client"   % http4sVersion,
       "org.http4s"       %% "http4s-blaze-server"   % http4sVersion,
       "org.http4s"       %% "http4s-circe"          % http4sVersion,

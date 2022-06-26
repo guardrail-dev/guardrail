@@ -16,6 +16,7 @@ object scalaAkkaHttp {
   val javaxAnnotationVersion = "1.3.2"
   val javaxElVersion         = "3.0.0"
   val jaxbApiVersion         = "2.3.1"
+  val refinedVersion         = "0.9.29"
   val scalatestVersion       = "3.2.12"
 
   val dependencies = Seq(
@@ -26,9 +27,12 @@ object scalaAkkaHttp {
     "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion,
     "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
     "com.typesafe.akka" %% "akka-testkit"         % akkaVersion,
+    "eu.timepit"        %% "refined"              % refinedVersion,
+    "eu.timepit"        %% "refined-cats"         % refinedVersion,
     "io.circe"          %% "circe-core"           % circeVersion,
     "io.circe"          %% "circe-jawn"           % circeVersion,
     "io.circe"          %% "circe-parser"         % circeVersion,
+    "io.circe"          %% "circe-refined"        % circeVersion,
     "org.scalatest"     %% "scalatest"            % scalatestVersion % Test,
     "org.typelevel"     %% "cats-core"            % catsVersion
   ).map(_.cross(CrossVersion.for3Use2_13))

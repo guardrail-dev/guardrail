@@ -1,0 +1,54 @@
+swagger: "2.0"
+info:
+  title: Whatever
+  version: 1.0.0
+host: localhost:1234
+schemes:
+  - http
+definitions:
+  User:
+    type: object
+    required:
+      - id
+      - validated
+    properties:
+      id:
+        type: string
+      validated:
+        $ref: '#/definitions/Validated'
+  Validated:
+    type: object
+    properties:
+      max_validation:
+        type: integer
+        format: int32
+        maximum: 100
+      min_validation:
+        type: integer
+        format: int32
+        minimum: 1
+      range_validation:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 100
+        default: 0
+paths:
+  /user/{id}:
+    get:
+      operationId: getUser
+      x-jvm-package: users
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/User'
+        '404':
+          description: Not found
