@@ -3,7 +3,6 @@ tag-template: 'scala-http4s-v$RESOLVED_VERSION'
 tag-prefix: scala-http4s-v
 include-paths:
   - "modules/scala-http4s/src/main/"
-  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/scalaHttp4s.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:

@@ -3,7 +3,6 @@ tag-template: 'java-support-v$RESOLVED_VERSION'
 tag-prefix: java-support-v
 include-paths:
   - "modules/java-support/src/main/"
-  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/javaSupport.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
