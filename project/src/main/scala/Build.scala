@@ -50,7 +50,6 @@ object Build {
       .settings(commonSettings)
       .settings(codegenSettings)
       .settings(libraryDependencies += "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0")
-      .settings(libraryDependencies += "eu.timepit" %% "refined" % "0.9.29")
       .settings(
         libraryDependencies ++= extraLibraryDependencies,
         Compile / unmanagedSourceDirectories += baseDirectory.value / "target" / "generated",
@@ -161,9 +160,6 @@ object Build {
       .settings(versionPolicyIntention := { if (useStableVersions) Compatibility.BinaryCompatible else Compatibility.None })
       .settings(name := moduleName)
       .settings(codegenSettings)
-      .settings(
-        libraryDependencies += "eu.timepit" %% "refined" % "0.9.29"
-      )
       .settings(libraryDependencies ++= Dependencies.testDependencies)
       .settings(
         scalacOptions ++= List(

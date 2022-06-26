@@ -151,13 +151,13 @@ write() {
 reinitialize_release
 reinitialize_release_drafter
 
-write core              guardrail-core              modules/core/src/main/              project/src/main/scala/Build.scala  project/src/main/scala/modules/core.scala
-write java-async-http   guardrail-java-async-http   modules/java-async-http/src/main/   project/src/main/scala/Build.scala  project/src/main/scala/modules/javaAsyncHttp.scala
-write java-dropwizard   guardrail-java-dropwizard   modules/java-dropwizard/src/main/   project/src/main/scala/Build.scala  project/src/main/scala/modules/javaDropwizard.scala
-write java-spring-mvc   guardrail-java-spring-mvc   modules/java-spring-mvc/src/main/   project/src/main/scala/Build.scala  project/src/main/scala/modules/javaSpringMvc.scala
-write java-support      guardrail-java-support      modules/java-support/src/main/      project/src/main/scala/Build.scala  project/src/main/scala/modules/javaSupport.scala
-write scala-akka-http   guardrail-scala-akka-http   modules/scala-akka-http/src/main/   project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaAkkaHttp.scala
-write scala-dropwizard  guardrail-scala-dropwizard  modules/scala-dropwizard/src/main/  project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaDropwizard.scala
-write scala-http4s      guardrail-scala-http4s      modules/scala-http4s/src/main/      project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaHttp4s.scala
-write scala-support     guardrail-scala-support     modules/scala-support/src/main/     project/src/main/scala/Build.scala  project/src/main/scala/modules/scalaSupport.scala
-write cli               guardrail-cli               modules/cli/src/main/               project/src/main/scala/Build.scala  project/src/main/scala/modules/cli.scala
+write core              guardrail-core              modules/core/src/main/              project/src/main/scala/modules/core.scala
+write java-async-http   guardrail-java-async-http   modules/java-async-http/src/main/   project/src/main/scala/modules/javaAsyncHttp.scala
+write java-dropwizard   guardrail-java-dropwizard   modules/java-dropwizard/src/main/   project/src/main/scala/modules/javaDropwizard.scala
+write java-spring-mvc   guardrail-java-spring-mvc   modules/java-spring-mvc/src/main/   project/src/main/scala/modules/javaSpringMvc.scala
+write java-support      guardrail-java-support      modules/java-support/src/main/      project/src/main/scala/modules/javaSupport.scala
+write scala-akka-http   guardrail-scala-akka-http   modules/scala-akka-http/src/main/   project/src/main/scala/modules/scalaAkkaHttp.scala
+write scala-dropwizard  guardrail-scala-dropwizard  modules/scala-dropwizard/src/main/  project/src/main/scala/modules/scalaDropwizard.scala
+write scala-http4s      guardrail-scala-http4s      modules/scala-http4s/src/main/      project/src/main/scala/modules/scalaHttp4s.scala
+write scala-support     guardrail-scala-support     modules/scala-support/src/main/     project/src/main/scala/modules/scalaSupport.scala
+write cli               guardrail-cli               modules/cli/src/main/               project/src/main/scala/modules/cli.scala

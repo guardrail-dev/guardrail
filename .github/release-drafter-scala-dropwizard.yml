@@ -3,7 +3,6 @@ tag-template: 'scala-dropwizard-v$RESOLVED_VERSION'
 tag-prefix: scala-dropwizard-v
 include-paths:
   - "modules/scala-dropwizard/src/main/"
-  - "project/src/main/scala/Build.scala"
   - "project/src/main/scala/modules/scalaDropwizard.scala"
 # NB: Managed by support/regenerate-release-drafter.sh
 categories:
