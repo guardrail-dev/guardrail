@@ -30,6 +30,7 @@ object javaDropwizard {
     "com.github.sbt"             %  "junit-interface"        % "0.13.3"           % Test,
     "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
     "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
+    "org.assertj"                %  "assertj-core"           % "3.23.1"           % Test,
     "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
   ) ++ Seq(
     "org.mockito"                %% "mockito-scala"          % "1.17.5"           % Test,
