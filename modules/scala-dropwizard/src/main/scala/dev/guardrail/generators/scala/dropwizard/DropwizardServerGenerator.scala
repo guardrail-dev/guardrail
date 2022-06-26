@@ -107,9 +107,9 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
     private def addValidation(param: Term.Param): Term.Param = param.copy(
       mods = List(mod"@(NotNull @param @field)") ++
         param.decltpe.flatMap {
-          case Type.Select(Term.Select(q"java", q"time"), Type.Name(_))                     => Some(mod"@Unwrapping")
-          case Type.Select(Term.Select(q"GuardrailJerseySupport", q"Jsr310"), Type.Name(_)) => Some(mod"@Unwrapping")
-          case _                                                                            => None
+          // case Type.Select(Term.Select(q"java", q"time"), Type.Name(_))                     => Some(mod"@Unwrapping")
+          // case Type.Select(Term.Select(q"GuardrailJerseySupport", q"Jsr310"), Type.Name(_)) => Some(mod"@Unwrapping")
+          case _ => None
         }.toList ++ param.mods
     )
 

@@ -348,9 +348,9 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
               def transform(to: Type): Target[Parameter] = {
                 parameter.setType(if (isOptional) to.liftOptionalType else to)
-                if (!isOptional) {
-                  parameter.getAnnotations.add(0, new MarkerAnnotationExpr("Unwrapping"))
-                }
+                // if (!isOptional) {
+                //   parameter.getAnnotations.add(0, new MarkerAnnotationExpr("Unwrapping"))
+                // }
                 Target.pure(parameter)
               }
 
@@ -390,9 +390,9 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
                 parameter.getAnnotations.add(0, new MarkerAnnotationExpr("NotNull"))
 
                 // Vavr's validation support for some reason requires this.
-                if (param.param.getTypeAsString.startsWith("io.vavr.collection.")) {
-                  parameter.getAnnotations.add(1, new MarkerAnnotationExpr("Unwrapping"))
-                }
+                // if (param.param.getTypeAsString.startsWith("io.vavr.collection.")) {
+                //   parameter.getAnnotations.add(1, new MarkerAnnotationExpr("Unwrapping"))
+                // }
               }
               parameter
             }
