@@ -28,12 +28,12 @@ class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
 
 object CirceProtocolGenerator {
   def apply(circeVersion: CirceModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
-    new CirceProtocolGenerator(circeVersion, (tpe, _) => Target.pure(tpe))
-  def withValidations(circeVersion: CirceModelGenerator, applyValidations: (Type, Tracker[Schema[_]]) => Target[Type]): ProtocolTerms[ScalaLanguage, Target] =
+    new CirceProtocolGenerator(circeVersion, (tpe, _, _) => Target.pure(tpe))
+  def withValidations(circeVersion: CirceModelGenerator, applyValidations: (Type, Tracker[Schema[_]], String) => Target[Type]): ProtocolTerms[ScalaLanguage, Target] =
     new CirceProtocolGenerator(circeVersion, applyValidations)
 }
 
-class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyValidations: (Type, Tracker[Schema[_]]) => Target[Type])
+class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyValidations: (Type, Tracker[Schema[_]], String) => Target[Type])
     extends ProtocolTerms[ScalaLanguage, Target] {
 
   override implicit def MonadF: Monad[Target] = Target.targetInstances
@@ -177,7 +177,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             Target.pure((t"String", classDep, rawType))
           case core.Resolved(declType, classDep, _, rawType) =>
             for {
-              validatedType <- applyValidations(declType, property)
+              validatedType <- applyValidations(declType, property, clsName)
             } yield (validatedType, classDep, rawType)
           case core.Deferred(tpeName) =>
             val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
@@ -185,21 +185,21 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               Type.Name(tpeName)
             }
             for {
-              validatedType <- applyValidations(tpe, property)
+              validatedType <- applyValidations(tpe, property, clsName)
             } yield (validatedType, Option.empty, fallbackRawType)
           case core.DeferredArray(tpeName, containerTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
             val tpe          = t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[$innerType]"
             for {
-              validatedType <- applyValidations(tpe, property)
+              validatedType <- applyValidations(tpe, property, clsName)
             } yield (validatedType, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
           case core.DeferredMap(tpeName, customTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
             val tpe          = t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]"
             for {
-              validatedType <- applyValidations(tpe, property)
+              validatedType <- applyValidations(tpe, property, clsName)
             } yield (validatedType, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
         pattern <- Target.pure(property.downField("pattern", _.getPattern).unwrapTracker)
@@ -462,25 +462,18 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       q"import ${term}._"
     }
 
-    val hacks: List[Stat] = protocolParameters.map(_.propertyValidation).collect { case Some(v) => v }.distinct.map { pattern =>
-//      import scala.meta.Lit
-//      import scala.meta.Pat
-//      import scala.meta.Term
-//      Defn.Val(
-//        mods = Nil,
-//        pats = List(Pat.Var(name = Term.Name(s"""`"$pattern"`"""))),
-//        decltpe = None,
-//        rhs = Lit.Int(value = 1)
-//      )
+    val helperRegexTypes: List[Defn.Val] = protocolParameters.flatMap(_.propertyValidation).distinct.map { pattern: String =>
+      val name = Term.Name(s""""${pattern}"""")
+      val witness = Term.Apply(q"_root_.shapeless.Witness", List(s""""${pattern}"""".parse[Term].get))
 
-      q"""val `"$pattern"` = shapeless.Witness("$pattern")""".parse[Stat].get
+      q"val ${Pat.Var(name)} = $witness"
     }
 
     Target.pure(
       StaticDefns[ScalaLanguage](
         className = clsName,
         extraImports = extraImports,
-        definitions = List(encoder, decoder).flatten
+        definitions = helperRegexTypes ++ List(encoder, decoder).flatten
       )
     )
   }

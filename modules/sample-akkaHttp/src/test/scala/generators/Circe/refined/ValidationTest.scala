@@ -9,6 +9,17 @@ import validation.client.akkaHttp.definitions.Validated
 
 class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
 
+  "regex validation" - {
+    "should succeed on correct input" in {
+      Validated.decodeValidated(parse("""{ "pattern_validation": "123" }""").right.get.hcursor).right.value shouldBe Validated(None, None, None, Some("123"))
+    }
+
+    "should fail on non matching input" in {
+      Validated.decodeValidated(parse("""{ "pattern_validation": "123notanumber" }""").right.get.hcursor).isLeft shouldBe true
+    }
+
+  }
+
   "maximum validation" - {
     "should be inclusive" in {
       Validated.decodeValidated(parse("""{ "max_validation": 100 }""").value.hcursor).value shouldBe Validated(Some(100), None, None)

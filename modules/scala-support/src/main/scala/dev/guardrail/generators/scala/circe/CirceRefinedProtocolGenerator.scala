@@ -23,13 +23,13 @@ object CirceRefinedProtocolGenerator {
   def apply(circeRefinedVersion: CirceRefinedModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
     fromGenerator(CirceProtocolGenerator.withValidations(circeRefinedVersion.toCirce, applyValidations _))
 
-  def applyValidations(tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
+  def applyValidations(tpe: Type, prop: Tracker[Schema[_]], className: String): Target[Type] = {
     import scala.meta._
     tpe match {
       case t"String" =>
         val pattern = prop.downField("pattern", _.getPattern).unwrapTracker
         Target.pure(pattern.fold(tpe){ pat =>
-          val refined = s"""_root_.eu.timepit.refined.string.MatchesRegex[`"$pat"`.T]""".parse[Type].get
+          val refined = s"""_root_.eu.timepit.refined.string.MatchesRegex[$className.`"$pat"`.T]""".parse[Type].get
           t"""String Refined $refined"""
         })
       case t"Int" =>
