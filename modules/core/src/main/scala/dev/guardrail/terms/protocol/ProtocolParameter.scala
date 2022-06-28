@@ -14,5 +14,6 @@ case class ProtocolParameter[L <: LA](
     emptyToNull: EmptyToNullBehaviour,
     dataRedaction: RedactionBehaviour,
     propertyRequirement: PropertyRequirement,
-    defaultValue: Option[L#Term]
+    defaultValue: Option[L#Term],
+    propertyValidation: Option[String] = None //temporary
 )

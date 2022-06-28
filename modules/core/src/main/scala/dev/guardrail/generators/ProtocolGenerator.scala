@@ -351,7 +351,14 @@ object ProtocolGenerator {
       decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
       tpe         <- parseTypeName(clsName.last)
       fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
-      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder)
+      staticDefns <- {
+        renderDTOStaticDefns(
+          clsName.last, List.empty,
+          encoder,
+          decoder,
+          params
+        )
+      }
       result <-
         if (parents.isEmpty && props.isEmpty) (Left("Entity isn't model"): Either[String, ClassDefinition[L]]).pure[F]
         else {

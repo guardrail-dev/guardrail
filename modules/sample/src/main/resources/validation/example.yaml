@@ -32,6 +32,9 @@ definitions:
         format: int32
         minimum: 0
         maximum: 100
+      pattern_validation:
+        type: string
+        pattern: "[0-9]+"
 paths:
   /user/{id}:
     get:

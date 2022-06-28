@@ -1,23 +1,23 @@
 package dev.guardrail.generators.scala.circe
 
-import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
+import _root_.io.swagger.v3.oas.models.media.{Discriminator => _, _}
 import cats.Monad
-import cats.data.{ NonEmptyList, NonEmptyVector }
+import cats.data.{NonEmptyList, NonEmptyVector}
 import cats.syntax.all._
-import scala.meta._
-import scala.reflect.runtime.universe.typeTag
 
+import scala.meta.{Defn, _}
+import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.core
-import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
+import dev.guardrail.core.extract.{DataRedaction, EmptyValueIsNull}
 import dev.guardrail.core.implicits._
-import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
-import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
-import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
+import dev.guardrail.core.{DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, ReifiedRawType, ResolvedType, SupportDefinition, Tracker}
+import dev.guardrail.generators.spi.{ModuleLoadResult, ProtocolGeneratorLoader}
+import dev.guardrail.generators.scala.{CirceModelGenerator, ScalaGenerator, ScalaLanguage}
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{ ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
-import dev.guardrail.{ SwaggerUtil, Target, UserError }
+import dev.guardrail.terms.{ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum}
+import dev.guardrail.{SwaggerUtil, Target, UserError}
 
 class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
@@ -202,6 +202,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               validatedType <- applyValidations(tpe, property)
             } yield (validatedType, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
+        pattern <- Target.pure(property.downField("pattern", _.getPattern).unwrapTracker)
         presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
 
@@ -231,7 +232,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         emptyToNull,
         dataRedaction,
         requirement,
-        finalDefaultValue
+        finalDefaultValue,
+        pattern
       )
     }
 
@@ -342,7 +344,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       supportPackage: List[String],
       selfParams: List[ProtocolParameter[ScalaLanguage]],
       parents: List[SuperClass[ScalaLanguage]] = Nil
-  ) = {
+  ): Target[Option[Defn.Val]] = {
     val discriminators            = parents.flatMap(_.discriminators)
     val discriminatorNames        = discriminators.map(_.propertyName).toSet
     val params                    = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(param => discriminatorNames.contains(param.name.value))
@@ -453,11 +455,27 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       clsName: String,
       deps: List[scala.meta.Term.Name],
       encoder: Option[scala.meta.Defn.Val],
-      decoder: Option[scala.meta.Defn.Val]
+      decoder: Option[scala.meta.Defn.Val],
+      protocolParameters: List[ProtocolParameter[ScalaLanguage]]
   ) = {
     val extraImports: List[Import] = deps.map { term =>
       q"import ${term}._"
     }
+
+    val hacks: List[Stat] = protocolParameters.map(_.propertyValidation).collect { case Some(v) => v }.distinct.map { pattern =>
+//      import scala.meta.Lit
+//      import scala.meta.Pat
+//      import scala.meta.Term
+//      Defn.Val(
+//        mods = Nil,
+//        pats = List(Pat.Var(name = Term.Name(s"""`"$pattern"`"""))),
+//        decltpe = None,
+//        rhs = Lit.Int(value = 1)
+//      )
+
+      q"""val `"$pattern"` = shapeless.Witness("$pattern")""".parse[Stat].get
+    }
+
     Target.pure(
       StaticDefns[ScalaLanguage](
         className = clsName,

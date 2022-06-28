@@ -26,6 +26,12 @@ object CirceRefinedProtocolGenerator {
   def applyValidations(tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
+      case t"String" =>
+        val pattern = prop.downField("pattern", _.getPattern).unwrapTracker
+        Target.pure(pattern.fold(tpe){ pat =>
+          val refined = s"""_root_.eu.timepit.refined.string.MatchesRegex[`"$pat"`.T]""".parse[Type].get
+          t"""String Refined $refined"""
+        })
       case t"Int" =>
         def refine(decimal: BigDecimal): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                            = prop.downField("maximum", _.getMaximum).unwrapTracker.map(refine(_)) // Can't use ETA since we need ...
@@ -49,6 +55,7 @@ object CirceRefinedProtocolGenerator {
 
   def fromGenerator(generator: ProtocolTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
     generator.copy(
+
       protocolImports = { () =>
         generator
           .protocolImports()

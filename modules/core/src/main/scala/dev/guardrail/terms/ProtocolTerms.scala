@@ -1,12 +1,12 @@
 package dev.guardrail.terms
 
 import cats.Monad
-
-import io.swagger.v3.oas.models.media.{ ComposedSchema, Schema }
-
-import dev.guardrail.core.{ ResolvedType, SupportDefinition, Tracker }
+import io.swagger.v3.oas.models.media.{ComposedSchema, Schema}
+import dev.guardrail.core.{ResolvedType, SupportDefinition, Tracker}
 import dev.guardrail.languages.LA
-import dev.guardrail.terms.protocol.{ Discriminator, PropMeta, PropertyRequirement, ProtocolParameter, StaticDefns, SuperClass }
+import dev.guardrail.terms.protocol.{Discriminator, PropMeta, PropertyRequirement, ProtocolParameter, StaticDefns, SuperClass}
+
+import scala.collection.immutable.List
 
 abstract class ProtocolTerms[L <: LA, F[_]] { self =>
   def MonadF: Monad[F]
@@ -45,7 +45,11 @@ abstract class ProtocolTerms[L <: LA, F[_]] { self =>
       params: List[ProtocolParameter[L]],
       parents: List[SuperClass[L]] = Nil
   ): F[Option[L#ValueDefinition]]
-  def renderDTOStaticDefns(clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]): F[StaticDefns[L]]
+  def renderDTOStaticDefns(clsName: String, deps: List[L#TermName],
+                           encoder: Option[L#ValueDefinition],
+                           decoder: Option[L#ValueDefinition],
+                           protocolParameters: List[ProtocolParameter[L]] = List.empty //fixme: remove the default value
+                          ): F[StaticDefns[L]]
 
   // ArrayProtocolTerms
   def extractArrayType(arr: ResolvedType[L], concreteTypes: List[PropMeta[L]]): F[L#Type]
@@ -106,7 +110,7 @@ abstract class ProtocolTerms[L <: LA, F[_]] { self =>
       renderDTOClass: (String, List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[L#ClassDefinition] = self.renderDTOClass _,
       decodeModel: (String, List[String], List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = self.decodeModel _,
       encodeModel: (String, List[String], List[ProtocolParameter[L]], List[SuperClass[L]]) => F[Option[L#ValueDefinition]] = self.encodeModel _,
-      renderDTOStaticDefns: (String, List[L#TermName], Option[L#ValueDefinition], Option[L#ValueDefinition]) => F[StaticDefns[L]] = self.renderDTOStaticDefns _,
+      renderDTOStaticDefns: (String, List[L#TermName], Option[L#ValueDefinition], Option[L#ValueDefinition], List[ProtocolParameter[L]]) => F[StaticDefns[L]] = self.renderDTOStaticDefns _,
       extractArrayType: (ResolvedType[L], List[PropMeta[L]]) => F[L#Type] = self.extractArrayType _,
       extractSuperClass: (Tracker[ComposedSchema], List[(String, Tracker[Schema[_]])]) => F[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
         self.extractSuperClass _,
@@ -204,8 +208,10 @@ abstract class ProtocolTerms[L <: LA, F[_]] { self =>
           parents: List[SuperClass[L]] = Nil
       ) =
         newDecodeModel(clsName, dtoPackage, supportPackage, params, parents)
-      def renderDTOStaticDefns(clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition], decoder: Option[L#ValueDefinition]) =
-        newRenderDTOStaticDefns(clsName, deps, encoder, decoder)
+
+      def renderDTOStaticDefns(clsName: String, deps: List[L#TermName], encoder: Option[L#ValueDefinition],
+                               decoder: Option[L#ValueDefinition], params: List[ProtocolParameter[L]]) =
+        newRenderDTOStaticDefns(clsName, deps, encoder, decoder, params)
 
       def extractArrayType(arr: ResolvedType[L], concreteTypes: List[PropMeta[L]]) = newExtractArrayType(arr, concreteTypes)
 
