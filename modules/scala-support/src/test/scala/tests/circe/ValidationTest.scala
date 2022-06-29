@@ -79,12 +79,13 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
         )
         .value
 
-//      val expected =
-//        q"""case class ValidatedObject(v1: Int Refined _root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`100`.T] = 10)"""
-//           v2: Option[String Refined _root_.eu.timepit.refined.string.MatchesRegex[\"[0-9]+\"]] = None)"""
+      staticDefns.definitions.head.toString() shouldBe """val `"[0-9]+"` = _root_.shapeless.Witness("[0-9]+")"""
 
-      print(cls.structure)
-//      cls.structure should equal(expected.structure)
+      val expected =
+        q"""case class ValidatedObject(v1: Int Refined _root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`100`.T] = 10,
+           v2: Option[String Refined _root_.eu.timepit.refined.string.MatchesRegex[ValidatedObject.`"[0-9]+"`.T]] = None)"""
+
+      cls.structure should equal(expected.structure)
     }
 
   }

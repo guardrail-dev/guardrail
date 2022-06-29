@@ -346,19 +346,12 @@ object ProtocolGenerator {
         defaultPropertyRequirement,
         components
       )
-      defn        <- renderDTOClass(clsName.last, supportPackage, params, parents)
-      encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
-      decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
-      tpe         <- parseTypeName(clsName.last)
-      fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
-      staticDefns <- {
-        renderDTOStaticDefns(
-          clsName.last, List.empty,
-          encoder,
-          decoder,
-          params
-        )
-      }
+      defn     <- renderDTOClass(clsName.last, supportPackage, params, parents)
+      encoder  <- encodeModel(clsName.last, dtoPackage, params, parents)
+      decoder  <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
+      tpe      <- parseTypeName(clsName.last)
+      fullType <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
+      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
       result <-
         if (parents.isEmpty && props.isEmpty) (Left("Entity isn't model"): Either[String, ClassDefinition[L]]).pure[F]
         else {
@@ -493,7 +486,8 @@ object ProtocolGenerator {
                 emptyToNull,
                 redactionBehaviour,
                 a.propertyRequirement,
-                newDefaultValue
+                newDefaultValue,
+                a.propertyValidation
               )
               mergedParameter :: s.filter(_.name != a.name)
             }
@@ -522,7 +516,8 @@ object ProtocolGenerator {
             param.emptyToNull,
             param.dataRedaction,
             param.propertyRequirement,
-            param.defaultValue
+            param.defaultValue,
+            param.propertyValidation
           )
         } else {
           param.pure[F]

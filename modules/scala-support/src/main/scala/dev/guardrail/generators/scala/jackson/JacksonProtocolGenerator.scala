@@ -5,15 +5,15 @@ import cats.syntax.all._
 
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
-import dev.guardrail.core.{EmptyIsNull, SupportDefinition}
-import dev.guardrail.generators.scala.{CirceModelGenerator, JacksonModelGenerator, ScalaGenerator, ScalaLanguage}
+import dev.guardrail.core.{ EmptyIsNull, SupportDefinition }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
-import dev.guardrail.generators.spi.{ModuleLoadResult, ProtocolGeneratorLoader}
-import dev.guardrail.terms.protocol.PropertyRequirement.{Optional, RequiredNullable}
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
+import dev.guardrail.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.protocol.{Discriminator, PropertyRequirement}
+import dev.guardrail.terms.protocol.{ Discriminator, PropertyRequirement }
 import dev.guardrail.terms.ProtocolTerms
-import dev.guardrail.{RuntimeFailure, Target}
+import dev.guardrail.{ RuntimeFailure, Target }
 
 class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage

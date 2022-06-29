@@ -21,14 +21,14 @@ class CirceRefinedProtocolGeneratorLoader extends ProtocolGeneratorLoader {
 
 object CirceRefinedProtocolGenerator {
   def apply(circeRefinedVersion: CirceRefinedModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
-    fromGenerator(CirceProtocolGenerator.withValidations(circeRefinedVersion.toCirce, applyValidations _))
+    fromGenerator(CirceProtocolGenerator.withValidations(circeRefinedVersion.toCirce, applyValidations))
 
-  def applyValidations(tpe: Type, prop: Tracker[Schema[_]], className: String): Target[Type] = {
+  def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
       case t"String" =>
         val pattern = prop.downField("pattern", _.getPattern).unwrapTracker
-        Target.pure(pattern.fold(tpe){ pat =>
+        Target.pure(pattern.fold(tpe) { pat =>
           val refined = s"""_root_.eu.timepit.refined.string.MatchesRegex[$className.`"$pat"`.T]""".parse[Type].get
           t"""String Refined $refined"""
         })
@@ -55,7 +55,6 @@ object CirceRefinedProtocolGenerator {
 
   def fromGenerator(generator: ProtocolTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
     generator.copy(
-
       protocolImports = { () =>
         generator
           .protocolImports()

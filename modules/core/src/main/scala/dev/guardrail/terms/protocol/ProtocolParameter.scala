@@ -15,5 +15,7 @@ case class ProtocolParameter[L <: LA](
     dataRedaction: RedactionBehaviour,
     propertyRequirement: PropertyRequirement,
     defaultValue: Option[L#Term],
-    propertyValidation: Option[String] = None //temporary
+    propertyValidation: PropertyValidations
 )
+
+case class PropertyValidations(regex: Option[String])
