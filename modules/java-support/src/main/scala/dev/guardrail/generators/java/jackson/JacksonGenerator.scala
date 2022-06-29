@@ -1,36 +1,36 @@
 package dev.guardrail.generators.java.jackson
 
-import _root_.io.swagger.v3.oas.models.media.{Discriminator => _, _}
-import cats.{FlatMap, Monad}
+import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
+import cats.{ FlatMap, Monad }
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.`type`.{ClassOrInterfaceType, PrimitiveType, Type, UnknownType}
-import com.github.javaparser.ast.Modifier.Keyword.{FINAL, PRIVATE, PROTECTED, PUBLIC}
+import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type, UnknownType }
+import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.{Node, NodeList}
+import com.github.javaparser.ast.{ Node, NodeList }
 import com.github.javaparser.ast.body._
-import com.github.javaparser.ast.expr.{MethodCallExpr, _}
+import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
 
 import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.core
-import dev.guardrail.core.{LiteralRawType, ReifiedRawType, Tracker}
-import dev.guardrail.core.extract.{DataRedaction, EmptyValueIsNull}
+import dev.guardrail.core.{ LiteralRawType, ReifiedRawType, Tracker }
+import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
-import dev.guardrail.core.{DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour}
+import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, EmptyToNullBehaviour, RedactionBehaviour }
 import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.{CollectionsGeneratorLoader, ModuleLoadResult, ProtocolGeneratorLoader}
+import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.generators.RawParameterName
-import dev.guardrail.terms.collections.{CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections}
+import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum}
-import dev.guardrail.{RuntimeFailure, Target, UserError}
+import dev.guardrail.terms.{ CollectionsLibTerms, ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
+import dev.guardrail.{ RuntimeFailure, Target, UserError }
 
 class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = JavaLanguage
