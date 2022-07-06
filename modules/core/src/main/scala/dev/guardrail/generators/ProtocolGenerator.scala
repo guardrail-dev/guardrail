@@ -265,7 +265,7 @@ object ProtocolGenerator {
             )
             .orRefine { case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x }(identity _)
             .toOption
-        } yield (cls -> result)
+        } yield cls -> result
         val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
         val classMapping = (for {
           (cls, schema) <- concreteInterfacesWithClass

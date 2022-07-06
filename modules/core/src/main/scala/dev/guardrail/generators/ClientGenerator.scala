@@ -75,7 +75,7 @@ object ClientGenerator {
             clientOperations.flatMap(_.supportDefinitions),
             context.tracing
           )
-        } yield Client[L](className, clientName, (clientImports ++ frameworkImports ++ clientExtraImports), staticDefns, client, responseDefinitions.flatten)
+        } yield Client[L](className, clientName, clientImports ++ frameworkImports ++ clientExtraImports, staticDefns, client, responseDefinitions.flatten)
       }
     } yield Clients[L](clients, supportDefinitions)
   }

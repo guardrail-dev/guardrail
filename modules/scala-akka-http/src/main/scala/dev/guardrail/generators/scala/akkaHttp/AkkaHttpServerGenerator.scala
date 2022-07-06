@@ -365,11 +365,11 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         q"${term.copy(fun = Term.Name("pathPrefix"))} & pathEndOrSingleSlash"
       else term
 
-    ((basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
+    (basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
       case "" => Target.pure(NonEmptyList.one((q"pathEndOrSingleSlash", List.empty)))
       case fullPath =>
         AkkaHttpServerGenerator.generateUrlPathExtractors(Tracker.cloneHistory(path, fullPath), pathArgs, modelGeneratorType)
-    })
+    }
   }
 
   def findInnerTpe(rawType: ReifiedRawType): LiteralRawType = rawType match {
@@ -788,7 +788,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                           if (param.isFile) {
                             q"Future.successful(Option.empty[(File, Option[String], ContentType)])"
                           } else {
-                            val (realType, getFunc, transformResponse): (Type, Term.Name, (Term => Term)) = param.argType match {
+                            val (realType, getFunc, transformResponse): (Type, Term.Name, Term => Term) = param.argType match {
                               case t"Iterable[$x]"         => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
                               case t"Option[Iterable[$x]]" => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")
                               case t"List[$x]"             => (x, q"getAll", (x: Term) => q"${x}.map(Option.apply)")

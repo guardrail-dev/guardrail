@@ -453,7 +453,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
         if (tracing) {
           Target.raiseUserError(s"Tracing is not yet supported by this framework")
         } else Target.pure(List.empty)
-    } yield (customExtraction ::: tracing)
+    } yield customExtraction ::: tracing
 
   override def renderClass(
       resourceName: String,

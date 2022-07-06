@@ -46,30 +46,28 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
         case _: JacksonModelGenerator => Target.pure(List())
         case _                        => Target.raiseError(RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}"))
       }
-    } yield (
-      List(
-        q"import akka.http.scaladsl.model._",
-        q"import akka.http.scaladsl.model.headers.RawHeader",
-        q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller, FromRequestUnmarshaller, FromStringUnmarshaller}",
-        q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
-        q"import akka.http.scaladsl.server.Directives._",
-        q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MalformedFormFieldRejection, MalformedHeaderRejection, MissingFormFieldRejection, MalformedRequestContentRejection, Rejection, RejectionError, Route}",
-        q"import akka.http.scaladsl.util.FastFuture",
-        q"import akka.stream.{IOResult, Materializer}",
-        q"import akka.stream.scaladsl.{FileIO, Keep, Sink, Source}",
-        q"import akka.util.ByteString",
-        q"import cats.{Functor, Id}",
-        q"import cats.data.EitherT",
-        q"import cats.implicits._",
-        q"import scala.concurrent.{ExecutionContext, Future}",
-        q"import scala.language.higherKinds",
-        q"import scala.language.implicitConversions",
-        q"import java.io.File",
-        q"import java.security.MessageDigest",
-        q"import java.util.concurrent.atomic.AtomicReference",
-        q"import scala.util.{Failure, Success}"
-      ) ++ protocolImports
-    )
+    } yield List(
+      q"import akka.http.scaladsl.model._",
+      q"import akka.http.scaladsl.model.headers.RawHeader",
+      q"import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller, FromEntityUnmarshaller, FromRequestUnmarshaller, FromStringUnmarshaller}",
+      q"import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToEntityMarshaller, ToResponseMarshaller}",
+      q"import akka.http.scaladsl.server.Directives._",
+      q"import akka.http.scaladsl.server.{Directive, Directive0, Directive1, ExceptionHandler, MalformedFormFieldRejection, MalformedHeaderRejection, MissingFormFieldRejection, MalformedRequestContentRejection, Rejection, RejectionError, Route}",
+      q"import akka.http.scaladsl.util.FastFuture",
+      q"import akka.stream.{IOResult, Materializer}",
+      q"import akka.stream.scaladsl.{FileIO, Keep, Sink, Source}",
+      q"import akka.util.ByteString",
+      q"import cats.{Functor, Id}",
+      q"import cats.data.EitherT",
+      q"import cats.implicits._",
+      q"import scala.concurrent.{ExecutionContext, Future}",
+      q"import scala.language.higherKinds",
+      q"import scala.language.implicitConversions",
+      q"import java.io.File",
+      q"import java.security.MessageDigest",
+      q"import java.util.concurrent.atomic.AtomicReference",
+      q"import scala.util.{Failure, Success}"
+    ) ++ protocolImports
 
   override def getFrameworkImplicits() =
     for {

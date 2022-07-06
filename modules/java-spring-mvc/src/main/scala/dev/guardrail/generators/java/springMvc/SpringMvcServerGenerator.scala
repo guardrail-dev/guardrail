@@ -734,7 +734,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
         if (tracing) {
           Target.raiseUserError(s"Tracing is not yet supported by this framework")
         } else Target.pure(List.empty)
-    } yield (customExtraction ::: tracing)
+    } yield customExtraction ::: tracing
 
   override def generateResponseDefinitions(
       responseClsName: String,
