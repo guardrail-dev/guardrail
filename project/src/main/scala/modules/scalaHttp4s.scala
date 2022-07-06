@@ -38,7 +38,8 @@ object scalaHttp4s {
 
   val dependencies = {
     val catsEffectVersion      = "3.3.13"
-    val http4sVersion          = "0.23.12"
+    val http4sVersion          = "0.23.13"
+    val http4sBlazeVersion     = "0.23.12"
     val refinedVersion         = "0.10.1"
 
     Seq(
@@ -50,8 +51,8 @@ object scalaHttp4s {
       "io.circe"         %% "circe-core"            % circeVersion,
       "io.circe"         %% "circe-parser"          % circeVersion,
       "io.circe"         %% "circe-refined"         % circeVersion,
-      "org.http4s"       %% "http4s-blaze-client"   % http4sVersion,
-      "org.http4s"       %% "http4s-blaze-server"   % http4sVersion,
+      "org.http4s"       %% "http4s-blaze-client"   % http4sBlazeVersion,
+      "org.http4s"       %% "http4s-blaze-server"   % http4sBlazeVersion,
       "org.http4s"       %% "http4s-circe"          % http4sVersion,
       "org.http4s"       %% "http4s-dsl"            % http4sVersion,
       "org.scalatest"    %% "scalatest"             % scalatestVersion % Test,
