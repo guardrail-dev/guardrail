@@ -210,7 +210,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
-        pattern      <- Target.pure(property.downField("pattern", _.getPattern).map(PropertyValidations).unwrapTracker)
+        pattern      = property.downField("pattern", _.getPattern).map(PropertyValidations)
         presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
 
@@ -470,20 +470,31 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       q"import ${term}._"
     }
 
-    val helperRegexTypes: List[Defn.Val] = protocolParameters.flatMap(_.propertyValidation.regex).distinct.map { pattern: String =>
-      val name    = Term.Name(s""""${pattern}"""")
-      val witness = Term.Apply(q"_root_.shapeless.Witness", List(s""""${pattern}"""".parse[Term].get))
+    val helperRegexTypes: List[Target[Option[Defn.Val]]] = protocolParameters.map(_.propertyValidation.map(_.regex)).map { tracker: Tracker[Option[String]] =>
+      tracker.fold(Target.pure(Option.empty[Defn.Val])) { patternTracker =>
+        val pattern = patternTracker.unwrapTracker
+        scala.util.Try {
+          val name = Term.Name(s""""${pattern}"""")
+          val witness = Term.Apply(q"_root_.shapeless.Witness", List(s""""${pattern}"""".parse[Term].get))
 
-      q"val ${Pat.Var(name)} = $witness"
+          q"val ${Pat.Var(name)} = $witness"
+        }.fold(
+          th => Target.raiseException[Option[Defn.Val]](s"$th:${patternTracker.showHistory}"), v => Target.pure(Option.apply[Defn.Val](v))
+        )
+      }
     }
 
-    Target.pure(
+    val regexHelperTypesCombined: Target[List[Defn.Val]] = helperRegexTypes.sequence.map(_.flatten)
+
+    for {
+      helpers <- regexHelperTypesCombined
+    } yield {
       StaticDefns[ScalaLanguage](
         className = clsName,
         extraImports = extraImports,
-        definitions = helperRegexTypes ++ List(encoder, decoder).flatten
+        definitions = helpers ++ List(encoder, decoder).flatten
       )
-    )
+    }
   }
 
   override def extractArrayType(arr: core.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
