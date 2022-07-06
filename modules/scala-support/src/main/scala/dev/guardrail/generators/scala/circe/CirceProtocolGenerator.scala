@@ -1,24 +1,24 @@
 package dev.guardrail.generators.scala.circe
 
-import _root_.io.swagger.v3.oas.models.media.{Discriminator => _, _}
+import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Monad
-import cats.data.{NonEmptyList, NonEmptyVector}
+import cats.data.{ NonEmptyList, NonEmptyVector }
 import cats.syntax.all._
 
-import scala.meta.{Defn, _}
+import scala.meta.{ Defn, _ }
 import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.core
-import dev.guardrail.core.extract.{DataRedaction, EmptyValueIsNull}
+import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
-import dev.guardrail.core.{DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, ReifiedRawType, ResolvedType, SupportDefinition, Tracker}
-import dev.guardrail.generators.spi.{ModuleLoadResult, ProtocolGeneratorLoader}
-import dev.guardrail.generators.scala.{CirceModelGenerator, ScalaGenerator, ScalaLanguage}
+import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator.WithValidations
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum}
-import dev.guardrail.{SwaggerUtil, Target, UserError}
+import dev.guardrail.terms.{ ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
+import dev.guardrail.{ SwaggerUtil, Target, UserError }
 
 class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
@@ -41,8 +41,7 @@ object CirceProtocolGenerator {
   }
 }
 
-class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyValidations: WithValidations)
-    extends ProtocolTerms[ScalaLanguage, Target] {
+class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyValidations: WithValidations) extends ProtocolTerms[ScalaLanguage, Target] {
 
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
@@ -210,7 +209,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
-        pattern      = property.downField("pattern", _.getPattern).map(PropertyValidations)
+        pattern = property.downField("pattern", _.getPattern).map(PropertyValidations)
         presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
 
@@ -473,14 +472,17 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     val helperRegexTypes: List[Target[Option[Defn.Val]]] = protocolParameters.map(_.propertyValidation.map(_.regex)).map { tracker: Tracker[Option[String]] =>
       tracker.fold(Target.pure(Option.empty[Defn.Val])) { patternTracker =>
         val pattern = patternTracker.unwrapTracker
-        scala.util.Try {
-          val name = Term.Name(s""""${pattern}"""")
-          val witness = Term.Apply(q"_root_.shapeless.Witness", List(s""""${pattern}"""".parse[Term].get))
+        scala.util
+          .Try {
+            val name    = Term.Name(s""""${pattern}"""")
+            val witness = Term.Apply(q"_root_.shapeless.Witness", List(s""""${pattern}"""".parse[Term].get))
 
-          q"val ${Pat.Var(name)} = $witness"
-        }.fold(
-          th => Target.raiseException[Option[Defn.Val]](s"$th:${patternTracker.showHistory}"), v => Target.pure(Option.apply[Defn.Val](v))
-        )
+            q"val ${Pat.Var(name)} = $witness"
+          }
+          .fold(
+            th => Target.raiseException[Option[Defn.Val]](s"$th:${patternTracker.showHistory}"),
+            v => Target.pure(Option.apply[Defn.Val](v))
+          )
       }
     }
 
@@ -488,13 +490,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
     for {
       helpers <- regexHelperTypesCombined
-    } yield {
-      StaticDefns[ScalaLanguage](
-        className = clsName,
-        extraImports = extraImports,
-        definitions = helpers ++ List(encoder, decoder).flatten
-      )
-    }
+    } yield StaticDefns[ScalaLanguage](
+      className = clsName,
+      extraImports = extraImports,
+      definitions = helpers ++ List(encoder, decoder).flatten
+    )
   }
 
   override def extractArrayType(arr: core.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =

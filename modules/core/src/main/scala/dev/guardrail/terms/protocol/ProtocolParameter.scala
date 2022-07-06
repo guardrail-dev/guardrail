@@ -1,6 +1,6 @@
 package dev.guardrail.terms.protocol
 
-import dev.guardrail.core.{EmptyToNullBehaviour, RedactionBehaviour, ReifiedRawType, Tracker}
+import dev.guardrail.core.{ EmptyToNullBehaviour, RedactionBehaviour, ReifiedRawType, Tracker }
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.languages.LA
 

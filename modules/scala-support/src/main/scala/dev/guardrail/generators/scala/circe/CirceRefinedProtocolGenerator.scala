@@ -3,8 +3,8 @@ package dev.guardrail.generators.scala.circe
 import _root_.io.swagger.v3.oas.models.media.Schema
 import dev.guardrail.Target
 import dev.guardrail.core.Tracker
-import dev.guardrail.generators.scala.{CirceRefinedModelGenerator, ScalaLanguage}
-import dev.guardrail.generators.spi.{ModuleLoadResult, ProtocolGeneratorLoader}
+import dev.guardrail.generators.scala.{ CirceRefinedModelGenerator, ScalaLanguage }
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.terms.ProtocolTerms
 
 import scala.meta._
@@ -30,7 +30,7 @@ object CirceRefinedProtocolGenerator {
       case t"String" =>
         prop.downField("pattern", _.getPattern).fold(Target.pure(tpe)) { patternTracker =>
           Try {
-            val pat = patternTracker.unwrapTracker
+            val pat     = patternTracker.unwrapTracker
             val refined = s"""_root_.eu.timepit.refined.string.MatchesRegex[$className.`"$pat"`.T]""".parse[Type].get
             t"""String Refined $refined"""
           }.fold(th => Target.raiseUserError(s"$th: ${patternTracker.showHistory}"), Target.pure)

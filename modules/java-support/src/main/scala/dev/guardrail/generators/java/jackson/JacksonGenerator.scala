@@ -909,7 +909,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             }
         }
         term <- safeParseParameter(s"final ${finalDeclType} $fieldName")
-        dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
+        dep     = classDep.filterNot(_.asString == clsName) // Filter out our own class name
         pattern = property.downField("pattern", _.getPattern).map(PropertyValidations)
       } yield ProtocolParameter[JavaLanguage](
         term,
