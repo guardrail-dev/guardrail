@@ -157,7 +157,10 @@ object Build {
         }
       )
       .settings(commonSettings)
-      .settings(versionPolicyIntention := { if (useStableVersions) Compatibility.BinaryCompatible else Compatibility.None })
+      .settings(versionPolicyIntention := {
+        val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
+        if (isRelease) Compatibility.BinaryCompatible else Compatibility.None
+      })
       .settings(name := moduleName)
       .settings(codegenSettings)
       .settings(libraryDependencies ++= Dependencies.testDependencies)
