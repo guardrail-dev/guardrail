@@ -493,7 +493,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     } yield StaticDefns[ScalaLanguage](
       className = clsName,
       extraImports = extraImports,
-      definitions = helpers ++ List(encoder, decoder).flatten
+      definitions = (if (applyValidations == WithValidations.ignore) List.empty else helpers) ++ List(encoder, decoder).flatten
     )
   }
 
