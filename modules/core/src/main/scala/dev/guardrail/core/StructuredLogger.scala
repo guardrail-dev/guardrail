@@ -79,7 +79,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
               (if (showFullHistory) {
                  a
                } else {
-                 (" " * a.length)
+                 " " * a.length
                }) + " " + b
             }
 

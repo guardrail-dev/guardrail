@@ -748,11 +748,11 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             if (!parameterType.isOptionalType) {
               val newParameterName = s"optional${parameterName.unescapeIdentifier.capitalize}"
               for {
-                newParameterType <- (fieldType match {
+                newParameterType <- fieldType match {
                   case pt: PrimitiveType       => Cl.liftOptionalType(pt.toBoxedType)
                   case ft if ft.isOptionalType => Target.pure(ft)
                   case ft                      => Cl.liftOptionalType(ft)
-                })
+                }
               } yield builderClass
                 .addMethod(methodName, PUBLIC)
                 .setType(BUILDER_TYPE)
