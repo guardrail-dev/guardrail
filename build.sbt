@@ -82,9 +82,10 @@ lazy val root = modules.root.project
   .settings(libraryDependencies ++= Dependencies.testDependencies)
   .settings(evictionErrorLevel := Level.Debug)  // Suppress "found version conflict(s) in library dependencies; some are suspected to be binary incompatible" in aggregate project
   .dependsOn(core % "compile->compile;test->test")
-  .dependsOn(cli)
+  .dependsOn(javaSupport, scalaSupport)
   .dependsOn(javaAsyncHttp, javaDropwizard, javaSpringMvc)
   .dependsOn(scalaAkkaHttp, scalaDropwizard, scalaHttp4s)
+  .dependsOn(cli)
   .aggregate(allDeps, microsite)
   .aggregate(
     cli,
