@@ -85,6 +85,7 @@ lazy val root = modules.root.project
   .dependsOn(cli)
   .dependsOn(javaAsyncHttp, javaDropwizard, javaSpringMvc)
   .dependsOn(scalaAkkaHttp, scalaDropwizard, scalaHttp4s)
+  .dependsOn(scalaSupport % "test->compile")
   .aggregate(allDeps, microsite)
   .aggregate(
     cli,
