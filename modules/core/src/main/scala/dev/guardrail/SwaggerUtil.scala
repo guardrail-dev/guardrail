@@ -123,6 +123,23 @@ object SwaggerUtil {
             } yield (rendered, ReifiedRawType.of(rawType.unwrapTracker, rawFormat.unwrapTracker))
           }
           def const(value: F[L#Type]): Tracker[Schema[_]] => F[(L#Type, ReifiedRawType)] = extractFormat(_ => value)
+
+          // traverseArraySchema is broken out due to the complexity.
+          val traverseArraySchema: Tracker[ArraySchema] => F[(L#Type, ReifiedRawType)] = { schema =>
+            schema
+              .downField("items", _.getItems())
+              .cotraverse(itemsSchema =>
+                for {
+                  (found, innerRawType) <- determineTypeName(itemsSchema, Tracker.cloneHistory(schema, None), components)
+                  customArrayType <- SwaggerUtil
+                    .customArrayTypeName(schema.unwrapTracker)
+                    .flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(schema, x))))
+                  lifted <- liftVectorType(found, customArrayType)
+                } yield (lifted, ReifiedRawType.ofVector(innerRawType): ReifiedRawType)
+              )
+              .getOrElse(arrayType(None).map((_, ReifiedRawType.unsafeEmpty)))
+          }
+
           schemaProjection
             .refine[F[(L#Type, ReifiedRawType)]] { case SchemaRef(_, ref) => ref }(ref =>
               for {
@@ -158,20 +175,7 @@ object SwaggerUtil {
             .orRefine { case SchemaLiteral(x: IntegerSchema) if x.getFormat() == "int64" => x }(const(longType()))
             .orRefine { case SchemaLiteral(x: IntegerSchema) => x }(extractFormat(fmt => integerType(fmt).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: BooleanSchema) => x }(extractFormat(fmt => booleanType(fmt).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: ArraySchema) => x }(schema =>
-              schema
-                .downField("items", _.getItems())
-                .cotraverse(itemsSchema =>
-                  for {
-                    (found, innerRawType) <- determineTypeName(itemsSchema, Tracker.cloneHistory(schema, None), components)
-                    customArrayType <- SwaggerUtil
-                      .customArrayTypeName(schema.unwrapTracker)
-                      .flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(schema, x))))
-                    lifted <- liftVectorType(found, customArrayType)
-                  } yield (lifted, ReifiedRawType.ofVector(innerRawType): ReifiedRawType)
-                )
-                .getOrElse(arrayType(None).map((_, ReifiedRawType.unsafeEmpty)))
-            )
+            .orRefine { case SchemaLiteral(x: ArraySchema) => x }(traverseArraySchema)
             .orRefine { case SchemaLiteral(x: FileSchema) => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: BinarySchema) => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
