@@ -49,7 +49,7 @@ object Build {
     Project(s"sample-${name}", file(s"modules/sample-${name}"))
       .settings(commonSettings)
       .settings(codegenSettings)
-      .settings(libraryDependencies += "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0")
+      .settings(libraryDependencies += "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.0")
       .settings(
         libraryDependencies ++= extraLibraryDependencies,
         Compile / unmanagedSourceDirectories += baseDirectory.value / "target" / "generated",
