@@ -209,7 +209,10 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
             t"$presenceType[$tpe]" -> defaultValue.map(t => q"$presence.Present($t)").orElse(Some(q"$presence.Absent"))
           case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
-            t"Option[$tpe]" -> defaultValue.map(t => q"Option($t)").orElse(Some(q"None"))
+            defaultValue match {
+              case None        => t"Option[$tpe]" -> Some(q"None")
+              case Some(value) => tpe             -> Some(value)
+            }
           case PropertyRequirement.OptionalNullable =>
             t"$presenceType[Option[$tpe]]" -> defaultValue.map(t => q"$presence.Present($t)")
         }
