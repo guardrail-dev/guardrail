@@ -319,7 +319,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
 
     val (routeMethods, handlerMethodSigs) = routes.map {
       case GenerateRouteMeta(
-            operationId,
+            _,
             methodName,
             responseClsName,
             customExtractionFields,
@@ -348,7 +348,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
         val producesAnnotation = NonEmptyList
           .fromList(
             responses.value
-              .flatMap(ResponseHelpers.getBestProduces[ScalaLanguage](operationId, allProduces, _, isTypePlain))
+              .flatMap(ResponseHelpers.getBestProduces[ScalaLanguage](operation, allProduces, _, isTypePlain))
               .distinct
               .map(toJaxRsAnnotationName)
           )

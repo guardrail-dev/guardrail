@@ -541,7 +541,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       val allProduces = operation.unwrapTracker.produces.flatMap(ContentType.unapply).toList
       val produces =
         responses.value
-          .map(resp => (resp.statusCode, ResponseHelpers.getBestProduces[JavaLanguage](operation.unwrapTracker.getOperationId, allProduces, resp, _.isPlain)))
+          .map(resp => (resp.statusCode, ResponseHelpers.getBestProduces[JavaLanguage](operation, allProduces, resp, _.isPlain)))
           .toMap
 
       val builderMethodCalls: List[(LanguageParameter[JavaLanguage], Statement)] = builderParamsMethodNames
