@@ -8,3 +8,4 @@ vendor/
 .idea
 .bundle/
 metals.sbt
+.sbtopts
