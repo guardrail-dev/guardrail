@@ -2,6 +2,10 @@ swagger: '2.0'
 info:
   version: v1
   title: petStore
+consumes:
+  - application/json
+produces:
+  - application/json
 paths:
   /animals:
     get:
