@@ -160,7 +160,7 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
       q"""
           // Translate Json => HttpEntity
           implicit final def jsonMarshaller(
-              implicit printer: Printer = Printer.noSpaces
+              implicit printer: _root_.io.circe.Printer = _root_.io.circe.Printer.noSpaces
           ): ToEntityMarshaller[${jsonType}] =
             Marshaller.withFixedContentType(MediaTypes.`application/json`) { json =>
               HttpEntity(MediaTypes.`application/json`, ${Term.Select(q"printer", circeVersion.print)}(json))
@@ -170,7 +170,7 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
           // Translate [A: Encoder] => HttpEntity
           implicit final def jsonEntityMarshaller[A](
               implicit J: ${jsonEncoderTypeclass}[A],
-                       printer: Printer = Printer.noSpaces
+                       printer: _root_.io.circe.Printer = _root_.io.circe.Printer.noSpaces
           ): ToEntityMarshaller[A] =
             jsonMarshaller(printer).compose(J.apply)
        """,
@@ -183,7 +183,7 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
                 case ByteString.empty =>
                   throw Unmarshaller.NoContentException
                 case data =>
-                  Json.fromString(data.decodeString("utf-8"))
+                  _root_.io.circe.Json.fromString(data.decodeString("utf-8"))
               })
        """,
       q"""
@@ -198,8 +198,8 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
                   FastFuture.failed(Unmarshaller.NoContentException)
                 } else {
                   val parseResult = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
-                    case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
-                    case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
+                    case HttpCharsets.`UTF-8` => _root_.io.circe.jawn.parse(byteString.utf8String)
+                    case otherCharset => _root_.io.circe.jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
                   }
                   parseResult.fold(FastFuture.failed, FastFuture.successful)
                 }
@@ -207,7 +207,7 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
        """,
       q"""
           final val stringyJsonUnmarshaller: FromStringUnmarshaller[${jsonType}] =
-            Unmarshaller.strict(value => Json.fromString(value))
+            Unmarshaller.strict(value => _root_.io.circe.Json.fromString(value))
        """,
       q"""
           // Translate HttpEntity => Json (for `application/json`)
@@ -219,8 +219,8 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
                   FastFuture.failed(Unmarshaller.NoContentException)
                 } else {
                   val parseResult = Unmarshaller.bestUnmarshallingCharsetFor(httpEntity) match {
-                    case HttpCharsets.`UTF-8` => jawn.parse(byteString.utf8String)
-                    case otherCharset => jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
+                    case HttpCharsets.`UTF-8` => _root_.io.circe.jawn.parse(byteString.utf8String)
+                    case otherCharset => _root_.io.circe.jawn.parse(byteString.decodeString(otherCharset.nioCharset.name))
                   }
                   parseResult.fold(FastFuture.failed, FastFuture.successful)
                 }
@@ -243,14 +243,14 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
       q"""
           // Translate String => Json by parsing
           final val jsonParsingUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller {
-            _ => data => jawn.parse(data).fold(FastFuture.failed, FastFuture.successful)
+            _ => data => _root_.io.circe.jawn.parse(data).fold(FastFuture.failed, FastFuture.successful)
           }
        """,
       q"""
           // Translate String => Json by treaing as a JSON literal
           final val jsonStringyUnmarshaller: FromStringUnmarshaller[${jsonType}] = Unmarshaller.strict {
             case data =>
-              Json.fromString(data)
+              _root_.io.circe.Json.fromString(data)
           }
        """,
       q"""

@@ -290,7 +290,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     val typeName                      = Type.Name(clsName)
     val encVal = {
       def encodeStatic(param: ProtocolParameter[ScalaLanguage], clsName: String) =
-        q"""(${Lit.String(param.name.value)}, Json.fromString(${Lit.String(clsName)}))"""
+        q"""(${Lit.String(param.name.value)}, _root_.io.circe.Json.fromString(${Lit.String(clsName)}))"""
 
       def encodeRequired(param: ProtocolParameter[ScalaLanguage]) =
         q"""(${Lit.String(param.name.value)}, a.${Term.Name(param.term.name.value)}.asJson)"""
@@ -494,10 +494,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   override def protocolImports() =
     Target.pure(
       List(
-        q"import cats.syntax.either._",
-        q"import io.circe._",
-        q"import io.circe.syntax._",
-        q"import cats.implicits._"
+        q"import io.circe.syntax._"
       )
     )
 
@@ -629,7 +626,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                discriminatorCursor.as[String].flatMap {
                  ..case $childrenCases;
                  case tpe =>
-                   _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ ${Lit
+                   _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ ${Lit
           .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
                }
           })"""
@@ -641,7 +638,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       val discriminatorValue = discriminator.mapping
         .collectFirst { case (value, elem) if elem.name == child => value }
         .getOrElse(child)
-      p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, ${Lit.String(discriminatorValue)}.asJson).asJson"
+      p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString(${Lit.String(discriminatorValue)})).asJson"
     }
     val code =
       q"""implicit val encoder: _root_.io.circe.Encoder[${Type.Name(clsName)}] = _root_.io.circe.Encoder.instance {
