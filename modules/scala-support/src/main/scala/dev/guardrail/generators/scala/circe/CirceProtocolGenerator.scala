@@ -204,18 +204,21 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         }
         presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
-        (finalDeclType, finalDefaultValue) = requirement match {
-          case PropertyRequirement.Required => tpe -> defaultValue
-          case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
-            t"$presenceType[$tpe]" -> defaultValue.map(t => q"$presence.Present($t)").orElse(Some(q"$presence.Absent"))
-          case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
-            defaultValue match {
-              case None        => t"Option[$tpe]" -> Some(q"None")
-              case Some(value) => tpe             -> Some(value)
-            }
-          case PropertyRequirement.OptionalNullable =>
-            t"$presenceType[Option[$tpe]]" -> defaultValue.map(t => q"$presence.Present($t)")
-        }
+
+        (finalDeclType, finalDefaultValue) =
+          defaultValue match {
+            case Some(value) => tpe -> Some(value)
+            case None =>
+              requirement match {
+                case PropertyRequirement.Required => tpe -> None
+                case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
+                  t"$presenceType[$tpe]" -> Some(q"$presence.Absent")
+                case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
+                  t"Option[$tpe]" -> Some(q"None")
+                case PropertyRequirement.OptionalNullable =>
+                  t"$presenceType[Option[$tpe]]" -> None
+              }
+          }
         term = param"${Term.Name(fieldName)}: ${finalDeclType}".copy(default = finalDefaultValue)
         dep  = classDep.filterNot(_.value == clsName) // Filter out our own class name
       } yield ProtocolParameter[ScalaLanguage](
