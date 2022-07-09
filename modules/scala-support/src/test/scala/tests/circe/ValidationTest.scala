@@ -6,23 +6,19 @@ import dev.guardrail.core.Tracker
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.ProtocolGenerator
 import dev.guardrail.generators.SwaggerGenerator
+import dev.guardrail.generators.scala.CirceRefinedModelGenerator
 import dev.guardrail.generators.scala.ScalaCollectionsGenerator
 import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.circe.CirceRefinedProtocolGenerator
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
-import dev.guardrail.generators.scala.{ CirceRefinedModelGenerator, ScalaCollectionsGenerator, ScalaGenerator, ScalaLanguage }
-import dev.guardrail.generators.{ ProtocolDefinitions, ProtocolGenerator, SwaggerGenerator }
 import dev.guardrail.terms.ProtocolTerms
-import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.ClassDefinition
 import dev.guardrail.terms.protocol.PropertyRequirement
-import dev.guardrail.terms.protocol.{ ClassDefinition, PropertyRequirement }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import scala.meta._
-import support.SwaggerSpecRunner
 import support.SwaggerSpecRunner
 
 class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
@@ -81,7 +77,7 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
       val cmp = companionForStaticDefns(staticDefns)
 
       val expected =
-        q"""case class ValidatedObject(v1: Option[Int Refined _root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`100`.T]] = Option(10))"""
+        q"""case class ValidatedObject(v1: Int Refined _root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`100`.T] = 10)"""
 
       cls.structure should equal(expected.structure)
     }

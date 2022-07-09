@@ -167,7 +167,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
-      case class Sixth(defval: Int = 1, defvalOpt: Option[Long] = Option(2L))
+      case class Sixth(defval: Int = 1, defvalOpt: Long = 2L)
     """
     val companion = q"""
       object Sixth {
@@ -175,7 +175,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
           _root_.io.circe.Encoder.AsObject.instance[Sixth](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("defval", a.defval.asJson), ("defval_opt", a.defvalOpt.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
         }
-        implicit val decodeSixth: _root_.io.circe.Decoder[Sixth] = new _root_.io.circe.Decoder[Sixth] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Sixth] = for (v0 <- c.downField("defval").as[Int]; v1 <- c.downField("defval_opt").as[Option[Long]]) yield Sixth(v0, v1) }
+        implicit val decodeSixth: _root_.io.circe.Decoder[Sixth] = new _root_.io.circe.Decoder[Sixth] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Sixth] = for (v0 <- c.downField("defval").as[Int]; v1 <- c.downField("defval_opt").as[Long]) yield Sixth(v0, v1) }
       }
     """
 
