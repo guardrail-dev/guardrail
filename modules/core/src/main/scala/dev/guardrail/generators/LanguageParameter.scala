@@ -136,7 +136,7 @@ object LanguageParameter {
             paramType.pure[F]
           }
 
-        enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(rawDefaultType.traverse(_.pure[F])) { tpe =>
+        baseDefaultValue <- extractTypeName(paramType).flatMap(_.fold(rawDefaultType.traverse(_.pure[F])) { tpe =>
           protocolElems
             .flatTraverse {
               case x @ EnumDefinition(_, _tpeName, _, _, _, _) =>
@@ -152,9 +152,9 @@ object LanguageParameter {
 
         defaultValue <-
           if (!required) {
-            (enumDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
+            (baseDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
           } else {
-            enumDefaultValue.pure[F]
+            baseDefaultValue.pure[F]
           }
 
         name <- getParameterName(parameter)
