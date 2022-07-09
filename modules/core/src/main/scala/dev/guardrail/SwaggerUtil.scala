@@ -141,6 +141,7 @@ object SwaggerUtil {
           }
 
           schemaProjection
+            // Dereference SchemaRef
             .refine[F[(L#Type, ReifiedRawType)]] { case SchemaRef(_, ref) => ref }(ref =>
               for {
                 refName          <- fallbackType(ref.unwrapTracker.split("/").lastOption, None)
@@ -153,34 +154,38 @@ object SwaggerUtil {
                 )
               )
             )
+            // Explicitly return `string` if ObjectSchema has enum values. Should this go?
             .orRefine { case SchemaLiteral(x: ObjectSchema) if Option(x.getEnum).map(_.asScala).exists(_.nonEmpty) => x }(
               extractFormat(fmt => stringType(None).map(log(fmt, _)))
             )
-            .orRefine { case SchemaLiteral(x: UUIDSchema) => x }(const(uuidType()))
-            .orRefine { case SchemaLiteral(x: EmailSchema) => x }(const(stringType(None)))
-            .orRefine { case SchemaLiteral(x: PasswordSchema) => x }(const(stringType(None)))
-            .orRefine { case SchemaLiteral(x: StringSchema) if x.getType() == "file" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "email" => x }(const(stringType(None)))
-            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "password" => x }(const(stringType(None)))
-            .orRefine { case SchemaLiteral(x: DateSchema) => x }(const(dateType()))
-            .orRefine { case SchemaLiteral(x: DateTimeSchema) => x }(const(dateTimeType()))
-            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "byte" => x }(const(bytesType()))
-            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "binary" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: StringSchema) => x }(extractFormat(fmt => stringType(None).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: ByteArraySchema) => x }(const(bytesType()))
-            .orRefine { case SchemaLiteral(x: NumberSchema) if x.getFormat() == "float" => x }(const(floatType()))
-            .orRefine { case SchemaLiteral(x: NumberSchema) if x.getFormat() == "double" => x }(const(doubleType()))
-            .orRefine { case SchemaLiteral(x: NumberSchema) => x }(extractFormat(fmt => numberType(fmt).map(log(fmt, _))))
+            // First, match SchemaLiteral's that have conditionals on either the type or format
             .orRefine { case SchemaLiteral(x: IntegerSchema) if x.getFormat() == "int32" => x }(const(intType()))
             .orRefine { case SchemaLiteral(x: IntegerSchema) if x.getFormat() == "int64" => x }(const(longType()))
-            .orRefine { case SchemaLiteral(x: IntegerSchema) => x }(extractFormat(fmt => integerType(fmt).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: BooleanSchema) => x }(extractFormat(fmt => booleanType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: NumberSchema) if x.getFormat() == "double" => x }(const(doubleType()))
+            .orRefine { case SchemaLiteral(x: NumberSchema) if x.getFormat() == "float" => x }(const(floatType()))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "binary" => x }(const(fileType(None)))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "byte" => x }(const(bytesType()))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "email" => x }(const(stringType(None)))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getFormat() == "password" => x }(const(stringType(None)))
+            .orRefine { case SchemaLiteral(x: StringSchema) if x.getType() == "file" => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            // Then, fall-back to the base type matchers.
             .orRefine { case SchemaLiteral(x: ArraySchema) => x }(traverseArraySchema)
-            .orRefine { case SchemaLiteral(x: FileSchema) => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: BinarySchema) => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: MapSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: BooleanSchema) => x }(extractFormat(fmt => booleanType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: ByteArraySchema) => x }(const(bytesType()))
+            .orRefine { case SchemaLiteral(x: DateSchema) => x }(const(dateType()))
+            .orRefine { case SchemaLiteral(x: DateTimeSchema) => x }(const(dateTimeType()))
+            .orRefine { case SchemaLiteral(x: EmailSchema) => x }(const(stringType(None)))
+            .orRefine { case SchemaLiteral(x: FileSchema) => x }(extractFormat(fmt => fileType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: IntegerSchema) => x }(extractFormat(fmt => integerType(fmt).map(log(fmt, _))))
             .orRefine { case SchemaLiteral(x: JsonSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: MapSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: NumberSchema) => x }(extractFormat(fmt => numberType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: PasswordSchema) => x }(const(stringType(None)))
+            .orRefine { case SchemaLiteral(x: StringSchema) => x }(extractFormat(fmt => stringType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: UUIDSchema) => x }(const(uuidType()))
+            // Finally, attempt to recover if we've gotten all the way down here without knowing what we're dealing with
             .orRefineFallback { schemaProjection =>
               schemaProjection.unwrapTracker match {
                 case SchemaLiteral(x) =>
