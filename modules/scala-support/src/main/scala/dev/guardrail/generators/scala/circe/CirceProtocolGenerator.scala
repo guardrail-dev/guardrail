@@ -33,6 +33,7 @@ object CirceProtocolGenerator {
   def withValidations(circeVersion: CirceModelGenerator, applyValidations: WithValidations): ProtocolTerms[ScalaLanguage, Target] =
     new CirceProtocolGenerator(circeVersion, applyValidations)
 
+  @FunctionalInterface
   trait WithValidations {
     def apply(className: String, tpe: Type, property: Tracker[Schema[_]]): Target[Type]
   }
