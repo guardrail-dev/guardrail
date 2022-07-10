@@ -11,11 +11,11 @@ class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
 
   "regex validation" - {
     "should succeed on correct input" in {
-      Validated.decodeValidated(parse("""{ "pattern_validation": "123" }""").right.get.hcursor).right.value shouldBe Validated(None, None, None, Some("123"))
+      Validated.decodeValidated(parse("""{ "pattern_validation": "123" }""").value.hcursor).value shouldBe Validated(None, None, None, Some("123"))
     }
 
     "should fail on non matching input" in {
-      Validated.decodeValidated(parse("""{ "pattern_validation": "123notanumber" }""").right.get.hcursor).isLeft shouldBe true
+      Validated.decodeValidated(parse("""{ "pattern_validation": "123notanumber" }""").value.hcursor).isLeft shouldBe true
     }
 
   }
