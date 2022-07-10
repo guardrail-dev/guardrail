@@ -470,24 +470,24 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       q"import ${term}._"
     }
 
-    val regexHelperTypes: Target[List[Defn.Val]] =
+    val regexHelperTypes: List[Defn.Val] =
       protocolParameters
         .map(_.propertyValidation.map(_.regex))
-        .flatTraverse { tracker: Tracker[Option[String]] =>
-          tracker.indexedDistribute.toList.traverse { patternTracker =>
+        .flatMap { tracker: Tracker[Option[String]] =>
+          tracker.indexedDistribute.map { patternTracker =>
             val pattern = patternTracker.unwrapTracker
             val name    = Term.Name(s""""${pattern}"""")
-            val v       = q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(pattern)})"
-            Target.pure(v)
+
+            q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(pattern)})"
           }
         }
 
-    for {
-      helpers <- regexHelperTypes
-    } yield StaticDefns[ScalaLanguage](
-      className = clsName,
-      extraImports = extraImports,
-      definitions = (if (applyValidations == WithValidations.ignore) List.empty else helpers) ++ List(encoder, decoder).flatten
+    Target.pure(
+      StaticDefns[ScalaLanguage](
+        className = clsName,
+        extraImports = extraImports,
+        definitions = (if (applyValidations == WithValidations.ignore) List.empty else regexHelperTypes) ++ List(encoder, decoder).flatten
+      )
     )
   }
 
