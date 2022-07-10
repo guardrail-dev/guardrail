@@ -129,7 +129,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         object Cat {
           implicit val encodeCat: _root_.io.circe.Encoder.AsObject[Cat] = {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("petType", Json.fromString("Cat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("petType", _root_.io.circe.Json.fromString("Cat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeCat: _root_.io.circe.Decoder[Cat] = new _root_.io.circe.Decoder[Cat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Cat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]) yield Cat(v0, v1) }
           sealed abstract class HuntingSkill(val value: String) extends _root_.scala.Product with _root_.scala.Serializable { override def toString: String = value.toString }
@@ -167,9 +167,9 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         val discriminator: String = "petType"
         implicit val encoder: _root_.io.circe.Encoder[Pet] = _root_.io.circe.Encoder.instance({
           case e: Cat =>
-            e.asJsonObject.add(discriminator, "Cat".asJson).asJson
+            e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString("Cat")).asJson
           case e: Dog =>
-            e.asJsonObject.add(discriminator, "Dog".asJson).asJson
+            e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString("Dog")).asJson
         })
         implicit val decoder: _root_.io.circe.Decoder[Pet] = _root_.io.circe.Decoder.instance({ c =>
           val discriminatorCursor = c.downField(discriminator)
@@ -179,7 +179,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             case "Dog" =>
               c.as[Dog]
             case tpe =>
-              _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ " (valid: Cat, Dog)", discriminatorCursor.history))
+              _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ " (valid: Cat, Dog)", discriminatorCursor.history))
           })
         })
       }
@@ -319,7 +319,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         object Dog {
           implicit val encodeDog: _root_.io.circe.Encoder.AsObject[Dog] = {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[Dog](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("packSize", a.packSize.asJson), ("petType", Json.fromString("Dog"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[Dog](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("packSize", a.packSize.asJson), ("petType", _root_.io.circe.Json.fromString("Dog"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeDog: _root_.io.circe.Decoder[Dog] = new _root_.io.circe.Decoder[Dog] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Dog] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("packSize").as[Int]) yield Dog(v0, v1) }
         }
@@ -332,7 +332,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         object PersianCat {
           implicit val encodePersianCat: _root_.io.circe.Encoder.AsObject[PersianCat] = {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("wool", a.wool.asJson), ("petType", Json.fromString("PersianCat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("wool", a.wool.asJson), ("petType", _root_.io.circe.Json.fromString("PersianCat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodePersianCat: _root_.io.circe.Decoder[PersianCat] = new _root_.io.circe.Decoder[PersianCat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[PersianCat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]; v2 <- c.downField("wool").as[Int]) yield PersianCat(v0, v1, v2) }
         }
@@ -351,9 +351,9 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         val discriminator: String = "petType"
         implicit val encoder: _root_.io.circe.Encoder[Pet] = _root_.io.circe.Encoder.instance({
           case e: Dog =>
-            e.asJsonObject.add(discriminator, "Dog".asJson).asJson
+            e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString("Dog")).asJson
           case e: PersianCat =>
-            e.asJsonObject.add(discriminator, "PersianCat".asJson).asJson
+            e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString("PersianCat")).asJson
         })
         implicit val decoder: _root_.io.circe.Decoder[Pet] = _root_.io.circe.Decoder.instance { c =>
           val discriminatorCursor = c.downField(discriminator)
@@ -363,7 +363,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             case "PersianCat" =>
               c.as[PersianCat]
             case tpe =>
-              _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ " (valid: Dog, PersianCat)", discriminatorCursor.history))
+              _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ " (valid: Dog, PersianCat)", discriminatorCursor.history))
           })
         }
       }
@@ -373,7 +373,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         val discriminator: String = "petType"
         implicit val encoder: _root_.io.circe.Encoder[Cat] = _root_.io.circe.Encoder.instance({
           case e: PersianCat =>
-            e.asJsonObject.add(discriminator, "PersianCat".asJson).asJson
+            e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString("PersianCat")).asJson
         })
         implicit val decoder: _root_.io.circe.Decoder[Cat] = _root_.io.circe.Decoder.instance { c =>
           val discriminatorCursor = c.downField(discriminator)
@@ -381,7 +381,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             case "PersianCat" =>
               c.as[PersianCat]
             case tpe =>
-              _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ " (valid: PersianCat)", discriminatorCursor.history))
+              _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ " (valid: PersianCat)", discriminatorCursor.history))
           })
         }
       }
@@ -491,7 +491,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         object PersianCat {
           implicit val encodePersianCat: _root_.io.circe.Encoder.AsObject[PersianCat] = {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("catBreed", a.catBreed.asJson), ("petType", Json.fromString("PersianCat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("catBreed", a.catBreed.asJson), ("petType", _root_.io.circe.Json.fromString("PersianCat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodePersianCat: _root_.io.circe.Decoder[PersianCat] = new _root_.io.circe.Decoder[PersianCat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[PersianCat] = for (v0 <- c.downField("catBreed").as[String]) yield PersianCat(v0) }
         }
@@ -509,7 +509,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         val discriminator: String = "petType"
         implicit val encoder: _root_.io.circe.Encoder[Cat] = _root_.io.circe.Encoder.instance({
           case e: PersianCat =>
-            e.asJsonObject.add(discriminator, "PersianCat".asJson).asJson
+            e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString("PersianCat")).asJson
         })
         implicit val decoder: _root_.io.circe.Decoder[Cat] = _root_.io.circe.Decoder.instance { c =>
           val discriminatorCursor = c.downField(discriminator)
@@ -517,7 +517,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             case "PersianCat" =>
               c.as[PersianCat]
             case tpe =>
-              _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ " (valid: PersianCat)", discriminatorCursor.history))
+              _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ " (valid: PersianCat)", discriminatorCursor.history))
           })
         }
       }
@@ -592,7 +592,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         object Cat {
           implicit val encodeCat: _root_.io.circe.Encoder.AsObject[Cat] = {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("wool", a.wool.asJson), ("catBreed", a.catBreed.asJson), ("petType", Json.fromString("Cat")), ("mammalType", Json.fromString("Cat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("wool", a.wool.asJson), ("catBreed", a.catBreed.asJson), ("petType", _root_.io.circe.Json.fromString("Cat")), ("mammalType", _root_.io.circe.Json.fromString("Cat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
           implicit val decodeCat: _root_.io.circe.Decoder[Cat] = new _root_.io.circe.Decoder[Cat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Cat] = for (v0 <- c.downField("wool").as[Boolean]; v1 <- c.downField("catBreed").as[String]) yield Cat(v0, v1) }
         }
@@ -610,7 +610,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         val discriminator: String = "petType"
         implicit val encoder: _root_.io.circe.Encoder[Pet] = _root_.io.circe.Encoder.instance({
           case e: Cat =>
-            e.asJsonObject.add(discriminator, "Cat".asJson).asJson
+            e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString("Cat")).asJson
         })
         implicit val decoder: _root_.io.circe.Decoder[Pet] = _root_.io.circe.Decoder.instance({ c => {
           val discriminatorCursor = c.downField(discriminator)
@@ -618,7 +618,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             case "Cat" =>
               c.as[Cat]
             case tpe =>
-              _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ " (valid: Cat)", discriminatorCursor.history))
+              _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ " (valid: Cat)", discriminatorCursor.history))
           })
         } })
       }
@@ -628,7 +628,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         val discriminator: String = "mammalType"
         implicit val encoder: _root_.io.circe.Encoder[Mammal] = _root_.io.circe.Encoder.instance({
           case e: Cat =>
-            e.asJsonObject.add(discriminator, "Cat".asJson).asJson
+            e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString("Cat")).asJson
         })
         implicit val decoder: _root_.io.circe.Decoder[Mammal] = _root_.io.circe.Decoder.instance { c =>
           val discriminatorCursor = c.downField(discriminator)
@@ -636,7 +636,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             case "Cat" =>
               c.as[Cat]
             case tpe =>
-              _root_.scala.Left(DecodingFailure("Unknown value " ++ tpe ++ " (valid: Cat)", discriminatorCursor.history))
+              _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ " (valid: Cat)", discriminatorCursor.history))
           })
         }
       }
