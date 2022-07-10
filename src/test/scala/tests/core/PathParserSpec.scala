@@ -49,23 +49,23 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
     (
       "{foo}.json",
       q""" path(new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
-          .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """
+          .String("$")}).flatMap(str => _root_.io.circe.Json.fromString(str).as[Int].toOption)) """
     ),
     (
       "{foo}/{bar}.json",
       q""" path(IntNumber / new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
-          .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """
+          .String("$")}).flatMap(str => _root_.io.circe.Json.fromString(str).as[Int].toOption)) """
     ),
     (
       "{foo_bar}/{bar_baz}.json",
       q""" path(IntNumber / new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
-          .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) """
+          .String("$")}).flatMap(str => _root_.io.circe.Json.fromString(str).as[Int].toOption)) """
     ),
     ("foo?abort=1", q""" path("foo") & parameter("abort").require(_ == "1") """),
     (
       "{foo}.json?abort=1",
       q""" path(new scala.util.matching.Regex("^" + "" + "(.*)" + ".json" + ${Lit
-          .String("$")}).flatMap(str => io.circe.Json.fromString(str).as[Int].toOption)) & parameter("abort").require(_ == "1") """
+          .String("$")}).flatMap(str => _root_.io.circe.Json.fromString(str).as[Int].toOption)) & parameter("abort").require(_ == "1") """
     ),
     ("?", q""" pathEnd """),
     ("?a", q""" pathEnd & parameter("a").require(_ == "") """),

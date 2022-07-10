@@ -1,49 +1,49 @@
 core:
-- modules/core/*
-- modules/core/**/*
+- modules/core/src/main/*
+- modules/core/src/main/**/*
 - project/src/main/scala/modules/core.scala
 
 java-async-http:
-- modules/java-async-http/*
-- modules/java-async-http/**/*
+- modules/java-async-http/src/main/*
+- modules/java-async-http/src/main/**/*
 - project/src/main/scala/modules/javaAsyncHttp.scala
 
 java-dropwizard:
-- modules/java-dropwizard/*
-- modules/java-dropwizard/**/*
+- modules/java-dropwizard/src/main/*
+- modules/java-dropwizard/src/main/**/*
 - project/src/main/scala/modules/javaDropwizard.scala
 
 java-spring-mvc:
-- modules/java-spring-mvc/*
-- modules/java-spring-mvc/**/*
+- modules/java-spring-mvc/src/main/*
+- modules/java-spring-mvc/src/main/**/*
 - project/src/main/scala/modules/javaSpringMvc.scala
 
 java-support:
-- modules/java-support/*
-- modules/java-support/**/*
+- modules/java-support/src/main/*
+- modules/java-support/src/main/**/*
 - project/src/main/scala/modules/javaSupport.scala
 
 scala-akka-http:
-- modules/scala-akka-http/*
-- modules/scala-akka-http/**/*
+- modules/scala-akka-http/src/main/*
+- modules/scala-akka-http/src/main/**/*
 - project/src/main/scala/modules/scalaAkkaHttp.scala
 
 scala-dropwizard:
-- modules/scala-dropwizard/*
-- modules/scala-dropwizard/**/*
+- modules/scala-dropwizard/src/main/*
+- modules/scala-dropwizard/src/main/**/*
 - project/src/main/scala/modules/scalaDropwizard.scala
 
 scala-http4s:
-- modules/scala-http4s/*
-- modules/scala-http4s/**/*
+- modules/scala-http4s/src/main/*
+- modules/scala-http4s/src/main/**/*
 - project/src/main/scala/modules/scalaHttp4s.scala
 
 scala-support:
-- modules/scala-support/*
-- modules/scala-support/**/*
+- modules/scala-support/src/main/*
+- modules/scala-support/src/main/**/*
 - project/src/main/scala/modules/scalaSupport.scala
 
 cli:
-- modules/cli/*
-- modules/cli/**/*
+- modules/cli/src/main/*
+- modules/cli/src/main/**/*
 - project/src/main/scala/modules/cli.scala

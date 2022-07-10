@@ -297,7 +297,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       routeMethodsAndHandlerMethodSigs <- routes
         .traverse {
           case GenerateRouteMeta(
-                operationId,
+                _,
                 methodName,
                 responseClsName,
                 customExtractionFields,
@@ -326,7 +326,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
             NonEmptyList
               .fromList(
                 responses.value
-                  .flatMap(ResponseHelpers.getBestProduces[JavaLanguage](operationId, allProduces, _, _.isPlain))
+                  .flatMap(ResponseHelpers.getBestProduces[JavaLanguage](operation, allProduces, _, _.isPlain))
                   .distinct
                   .map(toJaxRsAnnotationName)
               )

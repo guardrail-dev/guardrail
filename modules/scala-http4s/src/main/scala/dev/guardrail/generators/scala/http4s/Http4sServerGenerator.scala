@@ -470,7 +470,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
               None,
               Some(
                 (
-                  q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value).map(Json.fromString(_).as[$tpe])",
+                  q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value).map(_root_.io.circe.Json.fromString(_).as[$tpe])",
                   p"Some(Right(${Pat.Var(arg.paramName)}))"
                 )
               ),
@@ -488,7 +488,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
               None,
               Some(
                 (
-                  q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value).map(Json.fromString(_).as[$tpe]).sequence",
+                  q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value).map(_root_.io.circe.Json.fromString(_).as[$tpe]).sequence",
                   p"Right(${Pat.Var(arg.paramName)})"
                 )
               ),
@@ -524,7 +524,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
               None,
               Some(
                 (
-                  q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.headOption).map(Json.fromString(_).as[$tpe])",
+                  q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.headOption).map(_root_.io.circe.Json.fromString(_).as[$tpe])",
                   p"Some(Right(${Pat.Var(arg.paramName)}))"
                 )
               ),
@@ -542,7 +542,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
                 None,
                 Some(
                   (
-                    q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).traverse(Json.fromString(_).as[$tpe])",
+                    q"urlForm.values.get(${arg.argName.toLit}).flatMap(_.toList).traverse(_root_.io.circe.Json.fromString(_).as[$tpe])",
                     p"Some(Right(${Pat.Var(arg.paramName)}))"
                   )
                 ),
@@ -559,7 +559,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
                 None,
                 Some(
                   (
-                    q"${lift(q"urlForm.values.get(${arg.argName.toLit})")}.flatMap(${lift(q"_")}).map(Json.fromString(_).as[$tpe]).sequence.sequence",
+                    q"${lift(q"urlForm.values.get(${arg.argName.toLit})")}.flatMap(${lift(q"_")}).map(_root_.io.circe.Json.fromString(_).as[$tpe]).sequence.sequence",
                     p"Right(${Pat.Var(arg.paramName)})"
                   )
                 ),
@@ -576,7 +576,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
               None,
               Some(
                 (
-                  q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList).map(_.traverse(Json.fromString(_).as[$tpe]))",
+                  q"urlForm.values.get(${arg.argName.toLit}).traverse(_.toList).map(_.traverse(_root_.io.circe.Json.fromString(_).as[$tpe]))",
                   p"List(Right(${Pat.Var(arg.paramName)}))"
                 )
               ),
@@ -619,7 +619,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
                 Target.pure(
                   Param(
                     Some(
-                      enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                      enumerator"${Pat.Var(Term.Name(s"${arg.argName.value}Option"))} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(_root_.io.circe.Json.fromString(str).as[$tpe]))).sequence"
                     ),
                     Some(
                       (
@@ -652,7 +652,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(_root_.io.circe.Json.fromString(str).as[$tpe]))).sequence"
                       ),
                       None,
                       arg.paramName
@@ -680,7 +680,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
                   Target.pure(
                     Param(
                       Some(
-                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence.map(Option(_).filter(_.nonEmpty))"
+                        enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.filter(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(_root_.io.circe.Json.fromString(str).as[$tpe]))).sequence.map(Option(_).filter(_.nonEmpty))"
                       ),
                       None,
                       arg.paramName
@@ -707,7 +707,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
                 Target.pure(
                   Param(
                     Some(
-                      enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(Json.fromString(str).as[$tpe]))).sequence"
+                      enumerator"${Pat.Var(arg.paramName)} <- multipart.parts.find(_.name.contains(${arg.argName.toLit})).map(_.body.through($bodyUtf8Decode).compile.foldMonoid.flatMap(str => F.fromEither(_root_.io.circe.Json.fromString(str).as[$tpe]))).sequence"
                     ),
                     None,
                     arg.paramName
@@ -1046,7 +1046,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
           object ${Term.Name(s"${name}Var")} {
             def unapply(str: String): Option[${tpe}] = {
               if (!str.isEmpty)
-                Json.fromString(str).as[${tpe}].toOption
+                _root_.io.circe.Json.fromString(str).as[${tpe}].toOption
               else
                 None
             }
@@ -1124,7 +1124,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         if (!List("Unit", "Boolean", "Double", "Float", "Short", "Int", "Long", "Char", "String").contains(elemType.toString())) {
           val queryParamDecoder = q"""
               implicit val ${Pat.Var(Term.Name(s"${elemType.toString()}QueryParamDecoder"))}: QueryParamDecoder[$elemType] = (value: QueryParameterValue) =>
-                  Json.fromString(value.value).as[$elemType]
+                  _root_.io.circe.Json.fromString(value.value).as[$elemType]
                     .leftMap(t => ParseFailure("Query decoding failed", t.getMessage))
                     .toValidatedNel
             """

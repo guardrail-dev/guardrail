@@ -42,7 +42,7 @@ object AkkaHttpHelper {
   }
 
   def fromStringConverter(tpe: Type, modelGeneratorType: ModelGeneratorType): Either[String, Term] = modelGeneratorType match {
-    case _: CirceModelGenerator   => Right(q"io.circe.Json.fromString(str).as[$tpe].toOption")
+    case _: CirceModelGenerator   => Right(q"_root_.io.circe.Json.fromString(str).as[$tpe].toOption")
     case _: JacksonModelGenerator => Right(q"scala.util.Try(mapper.convertValue(str, new com.fasterxml.jackson.core.`type`.TypeReference[$tpe] {})).toOption")
     case _                        => Left(s"Unknown modelGeneratorType: ${modelGeneratorType}")
   }

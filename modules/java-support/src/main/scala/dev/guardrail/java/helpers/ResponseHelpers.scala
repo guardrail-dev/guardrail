@@ -38,7 +38,7 @@ object ResponseHelpers {
     }
 
   def getBestProduces[L <: LA](
-      operationId: String,
+      operation: Tracker[Operation],
       contentTypes: List[ContentType],
       response: Response[L],
       fallbackIsString: L#Type => Boolean
@@ -51,9 +51,10 @@ object ResponseHelpers {
           .orElse(contentTypes.collectFirst { case tc: TextContent => tc })
           .orElse(contentTypes.collectFirst { case bc: BinaryContent => bc })
           .orElse {
-            val fallback = if (fallbackIsString(valueType)) TextPlain.empty else ApplicationJson.empty
+            val fallback    = if (fallbackIsString(valueType)) TextPlain.empty else ApplicationJson.empty
+            val operationId = operation.downField("operationId", _.getOperationId).unwrapTracker.getOrElse("<no operationId>")
             println(
-              s"WARNING: no supported body param type for operation '$operationId', response code ${response.statusCode}; falling back to ${fallback.value}"
+              s"WARNING: no supported body param type for operation '$operationId', response code ${response.statusCode}; falling back to ${fallback.value} (${operation.showHistory})"
             )
             Option(fallback)
           }

@@ -18,7 +18,6 @@ object core {
           "org.tpolecat"                %% "atto-core"                    % "0.9.5",
           "org.typelevel"               %% "cats-core"                    % catsVersion,
           "org.typelevel"               %% "cats-kernel"                  % catsVersion,
-          "org.typelevel"               %% "cats-free"                    % catsVersion,
           "org.scala-lang.modules"      %% "scala-java8-compat"           % "1.0.2",
         ).map(_.cross(CrossVersion.for3Use2_13)),
       )

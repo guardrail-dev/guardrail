@@ -67,7 +67,7 @@ object ResponseADTHelper {
                   decodeBy(MediaType.text.plain) { msg =>
                     msg.contentLength.filter(_ > 0).fold[DecodeResult[F, $tpe]](DecodeResult.successT(None)){ _ =>
                       DecodeResult.success(decodeText(msg)).flatMap { str =>
-                        Json.fromString(str).as[$tpe]
+                        _root_.io.circe.Json.fromString(str).as[$tpe]
                           .fold(failure =>
                             DecodeResult.failureT(InvalidMessageBodyFailure(s"Could not decode response: $$str", Some(failure))),
                             DecodeResult.successT(_)
