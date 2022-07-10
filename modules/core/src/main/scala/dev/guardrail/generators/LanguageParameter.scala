@@ -125,18 +125,11 @@ object LanguageParameter {
 
     log.function(s"fromParameter")(
       for {
-        _                                                             <- log.debug(parameter.unwrapTracker.showNotNull)
-        (meta, required)                                              <- paramMeta(parameter)
-        core.Resolved(paramType, _, baseDefaultValue, reifiedRawType) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
+        _                                                           <- log.debug(parameter.unwrapTracker.showNotNull)
+        (meta, required)                                            <- paramMeta(parameter)
+        core.Resolved(paramType, _, rawDefaultType, reifiedRawType) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
 
-        declType <-
-          if (!required) {
-            liftOptionalType(paramType)
-          } else {
-            paramType.pure[F]
-          }
-
-        enumDefaultValue <- extractTypeName(paramType).flatMap(_.fold(baseDefaultValue.traverse(_.pure[F])) { tpe =>
+        baseDefaultValue <- extractTypeName(paramType).flatMap(_.fold(rawDefaultType.traverse(_.pure[F])) { tpe =>
           protocolElems
             .flatTraverse {
               case x @ EnumDefinition(_, _tpeName, _, _, _, _) =>
@@ -145,16 +138,21 @@ object LanguageParameter {
                 } yield if (areEqual) List(x) else List.empty[EnumDefinition[L]]
               case _ => List.empty[EnumDefinition[L]].pure[F]
             }
-            .flatMap(_.headOption.fold[F[Option[L#Term]]](baseDefaultValue.traverse(_.pure[F])) { x =>
-              baseDefaultValue.traverse(lookupEnumDefaultValue(tpe, _, x.elems).flatMap(widenTermSelect))
+            .flatMap(_.headOption.fold[F[Option[L#Term]]](rawDefaultType.traverse(_.pure[F])) { x =>
+              rawDefaultType.traverse(lookupEnumDefaultValue(tpe, _, x.elems).flatMap(widenTermSelect))
             })
         })
 
-        defaultValue <-
+        (declType, defaultValue) <-
           if (!required) {
-            (enumDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
+            baseDefaultValue match {
+              case None =>
+                (liftOptionalType(paramType), emptyOptionalTerm().map(Option.apply _)).mapN((_, _))
+              case Some(value) =>
+                (paramType, baseDefaultValue).pure[F]
+            }
           } else {
-            enumDefaultValue.pure[F]
+            (paramType, baseDefaultValue).pure[F]
           }
 
         name <- getParameterName(parameter)

@@ -60,13 +60,14 @@ object Responses {
                 core.Resolved(baseType, _, baseDefaultValue, _) = resolved // TODO: ReifiedRawType is just dropped, should it be considered?
               } yield (contentType, baseType, baseDefaultValue)
             }
-            headers <- resp.downField("headers", _.getHeaders()).unwrapTracker.value.toList.traverse { case (name, header) =>
+            headers <- resp.downField("headers", _.getHeaders()).indexedDistribute.value.traverse { case (name, header) =>
               for {
-                argName    <- formatMethodArgName(s"${name}Header")
-                termName   <- pureTermName(argName)
-                typeName   <- pureTypeName("String").flatMap(widenTypeName)
-                resultType <- if (header.getRequired) typeName.pure[F] else liftOptionalType(typeName)
-              } yield new Header(name, header.getRequired, resultType, termName)
+                argName  <- formatMethodArgName(s"${name}Header")
+                termName <- pureTermName(argName)
+                typeName <- pureTypeName("String").flatMap(widenTypeName)
+                required = header.downField("required", _.getRequired).unwrapTracker.getOrElse(false)
+                resultType <- if (required) typeName.pure[F] else liftOptionalType(typeName)
+              } yield new Header(name, required, resultType, termName)
             }
           } yield new Response[L](statusCodeName, statusCode, valueTypes.headOption, new Headers(headers)) // FIXME: headOption
         }

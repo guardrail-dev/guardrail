@@ -277,7 +277,7 @@ object SwaggerUtil {
     import Sc._
     def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => F[L#Term]): Tracker[A] => F[core.ResolvedType[L]] = { a =>
       for {
-        default <- Default(a.unwrapTracker).extract[B].traverse(transformLit(_))
+        default <- Default(a).extract[B].traverse(transformLit(_))
       } yield resolved match {
         case x: core.Resolved[L] => x.copy(defaultValue = default)
         case other               => other
