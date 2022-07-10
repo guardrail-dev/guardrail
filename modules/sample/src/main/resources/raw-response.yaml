@@ -27,4 +27,3 @@ definitions:
         format: int64
       url:
         type: string
-        format: url

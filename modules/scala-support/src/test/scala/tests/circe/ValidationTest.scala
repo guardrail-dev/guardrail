@@ -51,7 +51,7 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
       implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
       implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
         def MonadF                                                                                                    = Target.targetInstances
-        def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = ???
+        def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"String")
         def getFrameworkDefinitions(
             tracing: Boolean
         ): dev.guardrail.Target[List[(dev.guardrail.generators.scala.ScalaLanguage#TermName, List[dev.guardrail.generators.scala.ScalaLanguage#Definition])]] =
