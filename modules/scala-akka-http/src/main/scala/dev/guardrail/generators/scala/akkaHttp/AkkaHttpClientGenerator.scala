@@ -559,10 +559,11 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
     generateDecoders(methodName, responses, produces)
 
   private def generateDecoders(methodName: String, responses: Responses[ScalaLanguage], produces: Tracker[NonEmptyList[ContentType]]): Target[List[Defn.Val]] =
-    (for {
-      resp <- responses.value
-      tpe  <- resp.value.map(_._2).toList
-    } yield for {
-      (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces, modelGeneratorType)
-    } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}").sequence
+    responses.value.flatTraverse { resp =>
+      resp.value.map(_._2).toList.traverse { tpe =>
+        for {
+          (decoder, baseType) <- AkkaHttpHelper.generateDecoder(tpe, produces, modelGeneratorType)
+        } yield q"val ${Pat.Var(Term.Name(s"$methodName${resp.statusCodeName}Decoder"))} = ${decoder}"
+      }
+    }
 }
