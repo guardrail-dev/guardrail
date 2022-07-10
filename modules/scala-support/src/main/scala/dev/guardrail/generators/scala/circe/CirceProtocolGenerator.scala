@@ -472,6 +472,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
     val regexHelperTypes: List[Defn.Val] =
       protocolParameters
+        .filter(Function.const(applyValidations != WithValidations.ignore) _)
         .map(_.propertyValidation.map(_.regex))
         .flatMap { tracker: Tracker[Option[String]] =>
           tracker.indexedDistribute.map { patternTracker =>
@@ -486,7 +487,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       StaticDefns[ScalaLanguage](
         className = clsName,
         extraImports = extraImports,
-        definitions = (if (applyValidations == WithValidations.ignore) List.empty else regexHelperTypes) ++ List(encoder, decoder).flatten
+        definitions = regexHelperTypes ++ encoder ++ decoder
       )
     )
   }
