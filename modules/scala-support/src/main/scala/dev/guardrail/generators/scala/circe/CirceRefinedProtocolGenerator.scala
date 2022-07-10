@@ -7,9 +7,9 @@ import dev.guardrail.generators.scala.{ CirceRefinedModelGenerator, ScalaLanguag
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.terms.ProtocolTerms
 
+import cats.implicits._
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
-import scala.util.Try
 
 class CirceRefinedProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
@@ -28,13 +28,16 @@ object CirceRefinedProtocolGenerator {
     import scala.meta._
     tpe match {
       case t"String" =>
-        prop.downField("pattern", _.getPattern).fold(Target.pure(tpe)) { patternTracker =>
-          Try {
-            val pat     = patternTracker.unwrapTracker
-            val refined = s"""_root_.eu.timepit.refined.string.MatchesRegex[$className.`"$pat"`.T]""".parse[Type].get
+        prop
+          .downField("pattern", _.getPattern)
+          .indexedDistribute
+          .fold(tpe) { patternTracker =>
+            val pat = patternTracker.unwrapTracker
+            val refined =
+              Type.Apply(t"_root_.eu.timepit.refined.string.MatchesRegex", List(Type.Select(Term.Select(Term.Name(className), Term.Name(s""""$pat"""")), t"T")))
             t"""String Refined $refined"""
-          }.fold(th => Target.raiseUserError(s"$th: ${patternTracker.showHistory}"), Target.pure)
-        }
+          }
+          .pure[Target]
       case t"Int" =>
         def refine(decimal: BigDecimal): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                            = prop.downField("maximum", _.getMaximum).unwrapTracker.map(refine(_)) // Can't use ETA since we need ...

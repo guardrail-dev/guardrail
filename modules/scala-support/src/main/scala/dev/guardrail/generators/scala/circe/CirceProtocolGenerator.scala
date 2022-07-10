@@ -473,17 +473,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     val helperRegexTypes: List[Target[Option[Defn.Val]]] = protocolParameters.map(_.propertyValidation.map(_.regex)).map { tracker: Tracker[Option[String]] =>
       tracker.fold(Target.pure(Option.empty[Defn.Val])) { patternTracker =>
         val pattern = patternTracker.unwrapTracker
-        scala.util
-          .Try {
-            val name    = Term.Name(s""""${pattern}"""")
-            val witness = Term.Apply(q"_root_.shapeless.Witness", List(s""""${pattern}"""".parse[Term].get))
-
-            q"val ${Pat.Var(name)} = $witness"
-          }
-          .fold(
-            th => Target.raiseException[Option[Defn.Val]](s"$th:${patternTracker.showHistory}"),
-            v => Target.pure(Option.apply[Defn.Val](v))
-          )
+        val name    = Term.Name(s""""${pattern}"""")
+        val v       = q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(pattern)})"
+        Target.pure(Option.apply[Defn.Val](v))
       }
     }
 
