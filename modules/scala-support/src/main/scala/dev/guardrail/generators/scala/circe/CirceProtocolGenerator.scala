@@ -480,14 +480,14 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
             val prepend = pattern.head match {
               case '^' => ""
-              case _ => ".*"
+              case _   => ".*"
             }
             val append = pattern.last match {
               case '$' => ""
-              case _ => ".*"
+              case _   => ".*"
             }
             val partiallyMatchedPattern = s"$prepend$pattern$append"
-            val name    = Term.Name(s""""$partiallyMatchedPattern"""")
+            val name                    = Term.Name(s""""$partiallyMatchedPattern"""")
 
             q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(partiallyMatchedPattern)})"
           }
