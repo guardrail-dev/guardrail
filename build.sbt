@@ -66,7 +66,7 @@ addCommandAlias("checkFormatting", "; scalafmtCheckAll ; " + (scalaFrameworks ++
 addCommandAlias("testSuite", "; test ; runtimeScalaSuite ; runtimeJavaSuite ; microsite/compile")
 addCommandAlias("compileSamples", (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x.projectName}/Test/compile").mkString("; "))
 
-resolvers += Resolver.sonatypeRepo("releases")
+resolvers ++= Resolver.sonatypeOssRepos("releases")
 
 publishMavenStyle := true
 
