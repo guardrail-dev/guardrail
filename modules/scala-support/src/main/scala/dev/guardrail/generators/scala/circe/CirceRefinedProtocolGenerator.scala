@@ -32,15 +32,9 @@ object CirceRefinedProtocolGenerator {
           .downField("pattern", _.getPattern)
           .indexedDistribute
           .fold(tpe) { patternTracker =>
-            val pat = patternTracker.unwrapTracker
-            val prepend = pat.head match {
-              case '^' => ""
-              case _   => ".*"
-            }
-            val append = pat.last match {
-              case '$' => ""
-              case _   => ".*"
-            }
+            val pat     = patternTracker.unwrapTracker
+            val prepend = if (pat.startsWith("^")) "" else ".*"
+            val append  = if (pat.endsWith("$")) "" else ".*"
 
             val refined =
               Type.Apply(
