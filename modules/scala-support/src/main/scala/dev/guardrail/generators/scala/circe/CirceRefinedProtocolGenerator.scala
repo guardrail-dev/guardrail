@@ -32,6 +32,7 @@ object CirceRefinedProtocolGenerator {
         prop
           .downField("pattern", _.getPattern)
           .indexedDistribute
+          .filter(_.unwrapTracker.nonEmpty)
           .fold(tpe) { patternTracker =>
             val pat     = patternTracker.unwrapTracker
             val prepend = if (pat.startsWith("^")) "" else ".*"
@@ -78,6 +79,7 @@ object CirceRefinedProtocolGenerator {
     val regexHelperTypes: List[Defn.Val] =
       protocolParameters
         .flatMap(_.propertyValidation.map(_.regex).indexedDistribute)
+        .filter(_.unwrapTracker.nonEmpty)
         .map { patternTracker: Tracker[String] =>
           val pattern                 = patternTracker.unwrapTracker
           val prepend                 = if (pattern.startsWith("^")) "" else ".*"
