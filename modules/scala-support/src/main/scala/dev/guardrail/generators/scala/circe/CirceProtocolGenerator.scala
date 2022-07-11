@@ -477,9 +477,19 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         .flatMap { tracker: Tracker[Option[String]] =>
           tracker.indexedDistribute.map { patternTracker =>
             val pattern = patternTracker.unwrapTracker
-            val name    = Term.Name(s""""${pattern}"""")
 
-            q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(pattern)})"
+            val prepend = pattern.head match {
+              case '^' => ""
+              case _ => ".*"
+            }
+            val append = pattern.last match {
+              case '$' => ""
+              case _ => ".*"
+            }
+            val partiallyMatchedPattern = s"$prepend$pattern$append"
+            val name    = Term.Name(s""""$partiallyMatchedPattern"""")
+
+            q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(partiallyMatchedPattern)})"
           }
         }
 

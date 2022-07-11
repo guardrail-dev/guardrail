@@ -33,8 +33,18 @@ object CirceRefinedProtocolGenerator {
           .indexedDistribute
           .fold(tpe) { patternTracker =>
             val pat = patternTracker.unwrapTracker
+            val prepend = pat.head match {
+              case '^' => ""
+              case _ => ".*"
+            }
+            val append = pat.last match {
+              case '$' => ""
+              case _ => ".*"
+            }
+
             val refined =
-              Type.Apply(t"_root_.eu.timepit.refined.string.MatchesRegex", List(Type.Select(Term.Select(Term.Name(className), Term.Name(s""""$pat"""")), t"T")))
+              Type.Apply(t"_root_.eu.timepit.refined.string.MatchesRegex", List(Type.Select(Term.Select(Term.Name(className),
+                Term.Name(s""""$prepend$pat$append"""")), t"T")))
             t"""String Refined $refined"""
           }
           .pure[Target]

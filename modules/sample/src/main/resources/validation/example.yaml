@@ -35,6 +35,15 @@ definitions:
       pattern_validation:
         type: string
         pattern: "[0-9]+"
+  Validated2:
+    type: object
+    properties:
+      pattern_validation_partial:
+        type: string
+        pattern: "pet"
+      pattern_validation_exact:
+        type: string
+        pattern: "^pet$"
 paths:
   /user/{id}:
     get:
