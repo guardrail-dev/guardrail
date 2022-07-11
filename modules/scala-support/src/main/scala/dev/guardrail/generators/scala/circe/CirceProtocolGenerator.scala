@@ -4,9 +4,9 @@ import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Monad
 import cats.data.{ NonEmptyList, NonEmptyVector }
 import cats.syntax.all._
-import scala.meta._
-import scala.reflect.runtime.universe.typeTag
 
+import scala.meta.{ Defn, _ }
+import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.core
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
@@ -14,6 +14,7 @@ import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawTy
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.RawParameterName
+import dev.guardrail.generators.scala.circe.CirceProtocolGenerator.WithValidations
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
@@ -28,13 +29,20 @@ class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
 
 object CirceProtocolGenerator {
   def apply(circeVersion: CirceModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
-    new CirceProtocolGenerator(circeVersion, (tpe, _) => Target.pure(tpe))
-  def withValidations(circeVersion: CirceModelGenerator, applyValidations: (Type, Tracker[Schema[_]]) => Target[Type]): ProtocolTerms[ScalaLanguage, Target] =
+    new CirceProtocolGenerator(circeVersion, WithValidations.ignore)
+  def withValidations(circeVersion: CirceModelGenerator, applyValidations: WithValidations): ProtocolTerms[ScalaLanguage, Target] =
     new CirceProtocolGenerator(circeVersion, applyValidations)
+
+  @FunctionalInterface
+  trait WithValidations {
+    def apply(className: String, tpe: Type, property: Tracker[Schema[_]]): Target[Type]
+  }
+  object WithValidations {
+    val ignore: WithValidations = (className: String, tpe: Type, property: Tracker[Schema[_]]) => Target.pure(tpe)
+  }
 }
 
-class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyValidations: (Type, Tracker[Schema[_]]) => Target[Type])
-    extends ProtocolTerms[ScalaLanguage, Target] {
+class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyValidations: WithValidations) extends ProtocolTerms[ScalaLanguage, Target] {
 
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
@@ -177,7 +185,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             Target.pure((t"String", classDep, rawType))
           case core.Resolved(declType, classDep, _, rawType) =>
             for {
-              validatedType <- applyValidations(declType, property)
+              validatedType <- applyValidations(clsName, declType, property)
             } yield (validatedType, classDep, rawType)
           case core.Deferred(tpeName) =>
             val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
@@ -185,23 +193,24 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               Type.Name(tpeName)
             }
             for {
-              validatedType <- applyValidations(tpe, property)
+              validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, fallbackRawType)
           case core.DeferredArray(tpeName, containerTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
             val tpe          = t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[$innerType]"
             for {
-              validatedType <- applyValidations(tpe, property)
+              validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
           case core.DeferredMap(tpeName, customTpe) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
             val tpe          = t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]"
             for {
-              validatedType <- applyValidations(tpe, property)
+              validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
+        pattern = property.downField("pattern", _.getPattern).map(PropertyValidations)
         presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
 
@@ -231,7 +240,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         emptyToNull,
         dataRedaction,
         requirement,
-        finalDefaultValue
+        finalDefaultValue,
+        pattern
       )
     }
 
@@ -342,7 +352,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       supportPackage: List[String],
       selfParams: List[ProtocolParameter[ScalaLanguage]],
       parents: List[SuperClass[ScalaLanguage]] = Nil
-  ) = {
+  ): Target[Option[Defn.Val]] = {
     val discriminators            = parents.flatMap(_.discriminators)
     val discriminatorNames        = discriminators.map(_.propertyName).toSet
     val params                    = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(param => discriminatorNames.contains(param.name.value))
@@ -453,16 +463,18 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       clsName: String,
       deps: List[scala.meta.Term.Name],
       encoder: Option[scala.meta.Defn.Val],
-      decoder: Option[scala.meta.Defn.Val]
+      decoder: Option[scala.meta.Defn.Val],
+      protocolParameters: List[ProtocolParameter[ScalaLanguage]]
   ) = {
     val extraImports: List[Import] = deps.map { term =>
       q"import ${term}._"
     }
+
     Target.pure(
       StaticDefns[ScalaLanguage](
         className = clsName,
         extraImports = extraImports,
-        definitions = List(encoder, decoder).flatten
+        definitions = (encoder ++ decoder).toList
       )
     )
   }

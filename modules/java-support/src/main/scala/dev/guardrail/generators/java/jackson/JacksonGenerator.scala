@@ -12,8 +12,8 @@ import com.github.javaparser.ast.{ Node, NodeList }
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr.{ MethodCallExpr, _ }
 import com.github.javaparser.ast.stmt._
-import scala.reflect.runtime.universe.typeTag
 
+import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.core
 import dev.guardrail.core.{ LiteralRawType, ReifiedRawType, Tracker }
 import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
@@ -909,7 +909,8 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             }
         }
         term <- safeParseParameter(s"final ${finalDeclType} $fieldName")
-        dep = classDep.filterNot(_.asString == clsName) // Filter out our own class name
+        dep     = classDep.filterNot(_.asString == clsName) // Filter out our own class name
+        pattern = property.downField("pattern", _.getPattern).map(PropertyValidations)
       } yield ProtocolParameter[JavaLanguage](
         term,
         finalDeclType,
@@ -920,7 +921,8 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
         emptyToNull,
         dataRedaction,
         requirement,
-        finalDefaultValue
+        finalDefaultValue,
+        pattern
       )
     }
 
@@ -945,7 +947,8 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       clsName: String,
       deps: List[com.github.javaparser.ast.expr.Name],
       encoder: Option[com.github.javaparser.ast.body.VariableDeclarator],
-      decoder: Option[com.github.javaparser.ast.body.VariableDeclarator]
+      decoder: Option[com.github.javaparser.ast.body.VariableDeclarator],
+      protocolParameters: List[ProtocolParameter[JavaLanguage]]
   ) =
     Target.pure(StaticDefns(clsName, List.empty, List.empty))
 

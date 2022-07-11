@@ -5,9 +5,36 @@ import io.circe.parser.parse
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import validation.client.akkaHttp.definitions.Validated
+import validation.client.akkaHttp.definitions.{ Validated, Validated2 }
 
 class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
+
+  "regex validation" - {
+
+    "partial match" in {
+      Validated2.decodeValidated2(parse("""{ "pattern_validation_partial": "carpet" }""").value.hcursor).value shouldBe Validated2(Some("carpet"), None)
+    }
+
+    "exact match" in {
+      Validated2.decodeValidated2(parse("""{ "pattern_validation_exact": "carpet" }""").value.hcursor).isLeft shouldBe true
+
+      Validated2.decodeValidated2(parse("""{ "pattern_validation_exact": "pet" }""").value.hcursor).value shouldBe Validated2(None, Some("pet"))
+    }
+
+    "should succeed on correct input" in {
+      Validated.decodeValidated(parse("""{ "pattern_validation": "123" }""").value.hcursor).value shouldBe Validated(None, None, None, Some("123"))
+    }
+
+    "should succeed on a partially matching input" in {
+      Validated.decodeValidated(parse("""{ "pattern_validation": "123notanumber" }""").value.hcursor).value shouldBe Validated(
+        None,
+        None,
+        None,
+        Some("123notanumber")
+      )
+    }
+
+  }
 
   "maximum validation" - {
     "should be inclusive" in {

@@ -6,9 +6,11 @@ import dev.guardrail.core.Tracker
 import dev.guardrail.generators.scala.{ CirceRefinedModelGenerator, ScalaLanguage }
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.terms.ProtocolTerms
-import scala.reflect.runtime.universe.typeTag
+import dev.guardrail.terms.protocol._
 
+import cats.implicits._
 import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 class CirceRefinedProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
@@ -21,11 +23,29 @@ class CirceRefinedProtocolGeneratorLoader extends ProtocolGeneratorLoader {
 
 object CirceRefinedProtocolGenerator {
   def apply(circeRefinedVersion: CirceRefinedModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
-    fromGenerator(CirceProtocolGenerator.withValidations(circeRefinedVersion.toCirce, applyValidations _))
+    fromGenerator(CirceProtocolGenerator.withValidations(circeRefinedVersion.toCirce, applyValidations))
 
-  def applyValidations(tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
+  def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
+      case t"String" =>
+        prop
+          .downField("pattern", _.getPattern)
+          .indexedDistribute
+          .filter(_.unwrapTracker.nonEmpty)
+          .fold(tpe) { patternTracker =>
+            val pat     = patternTracker.unwrapTracker
+            val prepend = if (pat.startsWith("^")) "" else ".*"
+            val append  = if (pat.endsWith("$")) "" else ".*"
+
+            val refined =
+              Type.Apply(
+                t"_root_.eu.timepit.refined.string.MatchesRegex",
+                List(Type.Select(Term.Select(Term.Name(className), Term.Name(s""""$prepend$pat$append"""")), t"T"))
+              )
+            t"""String Refined $refined"""
+          }
+          .pure[Target]
       case t"Int" =>
         def refine(decimal: BigDecimal): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                            = prop.downField("maximum", _.getMaximum).unwrapTracker.map(refine(_)) // Can't use ETA since we need ...
@@ -47,6 +67,33 @@ object CirceRefinedProtocolGenerator {
     }
   }
 
+  def renderDTOStaticDefns(
+      base: ProtocolTerms[ScalaLanguage, Target]
+  )(
+      clsName: String,
+      deps: List[scala.meta.Term.Name],
+      encoder: Option[scala.meta.Defn.Val],
+      decoder: Option[scala.meta.Defn.Val],
+      protocolParameters: List[ProtocolParameter[ScalaLanguage]]
+  ) = {
+    val regexHelperTypes: List[Defn.Val] =
+      protocolParameters
+        .flatMap(_.propertyValidation.map(_.regex).indexedDistribute)
+        .filter(_.unwrapTracker.nonEmpty)
+        .map { patternTracker: Tracker[String] =>
+          val pattern                 = patternTracker.unwrapTracker
+          val prepend                 = if (pattern.startsWith("^")) "" else ".*"
+          val append                  = if (pattern.endsWith("$")) "" else ".*"
+          val partiallyMatchedPattern = s"$prepend$pattern$append"
+          val name                    = Term.Name(s""""$partiallyMatchedPattern"""")
+
+          q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(partiallyMatchedPattern)})"
+        }
+    for {
+      defns <- base.renderDTOStaticDefns(clsName, deps, encoder, decoder, protocolParameters)
+    } yield defns.copy(definitions = regexHelperTypes ++ defns.definitions)
+  }
+
   def fromGenerator(generator: ProtocolTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
     generator.copy(
       protocolImports = { () =>
@@ -60,6 +107,7 @@ object CirceRefinedProtocolGenerator {
             )
           )
       },
+      renderDTOStaticDefns = renderDTOStaticDefns(generator) _,
       staticProtocolImports = pkgName => {
         val implicitsRef: Term.Ref = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
         Target.pure(

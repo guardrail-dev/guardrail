@@ -11,7 +11,6 @@ import dev.guardrail.generators.scala.ScalaCollectionsGenerator
 import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.circe.CirceRefinedProtocolGenerator
-import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.ProtocolTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.ClassDefinition
@@ -42,6 +41,9 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
      |        default: 10
      |        maximum: 100
      |        minimum: 1
+     |      v2:
+     |        type: string
+     |        pattern: "[0-9]+"
      |""".stripMargin
 
   "Validation" - {
@@ -74,10 +76,12 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
           defaultPropertyRequirement = PropertyRequirement.OptionalLegacy
         )
         .value
-      val cmp = companionForStaticDefns(staticDefns)
+
+      staticDefns.definitions.head.toString() shouldBe """val `".*[0-9]+.*"` = _root_.shapeless.Witness(".*[0-9]+.*")"""
 
       val expected =
-        q"""case class ValidatedObject(v1: Int Refined _root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`100`.T] = 10)"""
+        q"""case class ValidatedObject(v1: Int Refined _root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`100`.T] = 10,
+           v2: Option[String Refined _root_.eu.timepit.refined.string.MatchesRegex[ValidatedObject.`".*[0-9]+.*"`.T]] = None)"""
 
       cls.structure should equal(expected.structure)
     }

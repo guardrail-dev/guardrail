@@ -2,9 +2,9 @@ package dev.guardrail.generators.scala.jackson
 
 import cats.data.NonEmptyList
 import cats.syntax.all._
+
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
-
 import dev.guardrail.core.{ EmptyIsNull, SupportDefinition }
 import dev.guardrail.generators.scala.{ CirceModelGenerator, JacksonModelGenerator, ScalaGenerator, ScalaLanguage }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator
@@ -202,9 +202,9 @@ object JacksonProtocolGenerator {
         ),
       encodeModel = (_, _, _, _) => Target.pure(None),
       decodeModel = (_, _, _, _, _) => Target.pure(None),
-      renderDTOStaticDefns = (className, deps, encoder, decoder) =>
+      renderDTOStaticDefns = (className, deps, encoder, decoder, params) =>
         for {
-          renderedDTOStaticDefns <- baseInterp.renderDTOStaticDefns(className, deps, encoder, decoder)
+          renderedDTOStaticDefns <- baseInterp.renderDTOStaticDefns(className, deps, encoder, decoder, List.empty)
           classType = Type.Name(className)
         } yield renderedDTOStaticDefns.copy(
           definitions = renderedDTOStaticDefns.definitions ++ List(
