@@ -77,17 +77,15 @@ object CirceRefinedProtocolGenerator {
   ) = {
     val regexHelperTypes: List[Defn.Val] =
       protocolParameters
-        .map(_.propertyValidation.map(_.regex))
-        .flatMap { tracker: Tracker[Option[String]] =>
-          tracker.indexedDistribute.map { patternTracker =>
-            val pattern                 = patternTracker.unwrapTracker
-            val prepend                 = if (pattern.startsWith("^")) "" else ".*"
-            val append                  = if (pattern.endsWith("$")) "" else ".*"
-            val partiallyMatchedPattern = s"$prepend$pattern$append"
-            val name                    = Term.Name(s""""$partiallyMatchedPattern"""")
+        .flatMap(_.propertyValidation.map(_.regex).indexedDistribute)
+        .map { patternTracker: Tracker[String] =>
+          val pattern                 = patternTracker.unwrapTracker
+          val prepend                 = if (pattern.startsWith("^")) "" else ".*"
+          val append                  = if (pattern.endsWith("$")) "" else ".*"
+          val partiallyMatchedPattern = s"$prepend$pattern$append"
+          val name                    = Term.Name(s""""$partiallyMatchedPattern"""")
 
-            q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(partiallyMatchedPattern)})"
-          }
+          q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(partiallyMatchedPattern)})"
         }
     for {
       defns <- base.renderDTOStaticDefns(clsName, deps, encoder, decoder, protocolParameters)
