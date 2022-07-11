@@ -6,6 +6,7 @@ import dev.guardrail.core.Tracker
 import dev.guardrail.generators.scala.{ CirceRefinedModelGenerator, ScalaLanguage }
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.terms.ProtocolTerms
+import dev.guardrail.terms.protocol._
 
 import cats.implicits._
 import scala.meta._
@@ -65,6 +66,34 @@ object CirceRefinedProtocolGenerator {
     }
   }
 
+  def renderDTOStaticDefns(
+      base: ProtocolTerms[ScalaLanguage, Target]
+  )(
+      clsName: String,
+      deps: List[scala.meta.Term.Name],
+      encoder: Option[scala.meta.Defn.Val],
+      decoder: Option[scala.meta.Defn.Val],
+      protocolParameters: List[ProtocolParameter[ScalaLanguage]]
+  ) = {
+    val regexHelperTypes: List[Defn.Val] =
+      protocolParameters
+        .map(_.propertyValidation.map(_.regex))
+        .flatMap { tracker: Tracker[Option[String]] =>
+          tracker.indexedDistribute.map { patternTracker =>
+            val pattern                 = patternTracker.unwrapTracker
+            val prepend                 = if (pattern.startsWith("^")) "" else ".*"
+            val append                  = if (pattern.endsWith("$")) "" else ".*"
+            val partiallyMatchedPattern = s"$prepend$pattern$append"
+            val name                    = Term.Name(s""""$partiallyMatchedPattern"""")
+
+            q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(partiallyMatchedPattern)})"
+          }
+        }
+    for {
+      defns <- base.renderDTOStaticDefns(clsName, deps, encoder, decoder, protocolParameters)
+    } yield defns.copy(definitions = regexHelperTypes ++ defns.definitions)
+  }
+
   def fromGenerator(generator: ProtocolTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
     generator.copy(
       protocolImports = { () =>
@@ -78,6 +107,7 @@ object CirceRefinedProtocolGenerator {
             )
           )
       },
+      renderDTOStaticDefns = renderDTOStaticDefns(generator) _,
       staticProtocolImports = pkgName => {
         val implicitsRef: Term.Ref = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
         Target.pure(
