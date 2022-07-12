@@ -17,7 +17,7 @@ jobs:
       matrix:
         java: [ '1.15' ]
         scala: [
-            { version: '2.12.14', bincompat: '2.12' }
+            { version: '2.12.15', bincompat: '2.12' }
           ]
     outputs:
       scala_versions: ${{ steps.set-scala-versions.outputs.scala_versions }}
@@ -60,7 +60,7 @@ jobs:
       matrix:
         java: [ '1.8', '1.15', '1.17' ]
         scala: [
-            { version: '2.12.14', bincompat: '2.12' }
+            { version: '2.12.15', bincompat: '2.12' }
           ]
         framework: [
             { framework: 'dropwizard',         project: 'sample-dropwizard'     },
