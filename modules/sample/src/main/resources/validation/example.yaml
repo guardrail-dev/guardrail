@@ -44,6 +44,18 @@ definitions:
       pattern_validation_exact:
         type: string
         pattern: "^pet$"
+
+  ValidatedCollections:
+    type: object
+    properties:
+      bounded_size_array:
+        type: array
+        items:
+          type: integer
+          format: int32
+        minItems: 1
+        maxItems: 10
+
 paths:
   /user/{id}:
     get:

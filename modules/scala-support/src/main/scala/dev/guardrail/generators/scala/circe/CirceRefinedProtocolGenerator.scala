@@ -28,6 +28,24 @@ object CirceRefinedProtocolGenerator {
   def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
+      case Type.Apply(t"Vector", _) =>
+        def refine(decimal: Integer): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
+        val maxOpt                         = prop.downField("maxItems", _.getMaxItems).unwrapTracker.map(refine)
+        val minOpt                         = prop.downField("minItems", _.getMinItems).unwrapTracker.map(refine)
+
+        val intervalOpt = (maxOpt, minOpt) match {
+          case (Some(max), Some(min)) =>
+            Some(t"_root_.eu.timepit.refined.numeric.Interval.Closed[$min, $max]")
+          case (Some(max), None) =>
+            Some(t"_root_.eu.timepit.refined.numeric.LessEqual[$max]")
+          case (None, Some(min)) =>
+            Some(t"_root_.eu.timepit.refined.numeric.GreaterEqual[$min]")
+          case _ => None
+        }
+        Target.pure(intervalOpt.fold(tpe) { interval =>
+          t"""$tpe Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
+        })
+
       case t"String" =>
         prop
           .downField("pattern", _.getPattern)

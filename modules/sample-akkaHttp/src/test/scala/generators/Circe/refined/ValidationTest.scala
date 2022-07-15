@@ -1,13 +1,35 @@
 package generators.Circe.refined
 
 import eu.timepit.refined.auto._
+import eu.timepit.refined.numeric.Interval
 import io.circe.parser.parse
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import validation.client.akkaHttp.definitions.{ Validated, Validated2 }
+import validation.client.akkaHttp.definitions.{ Validated, Validated2, ValidatedCollections }
+import eu.timepit.refined.collection._
+import eu.timepit.refined._
 
 class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
+
+  "collections validation" - {
+    "should fail when the max collection size limit is violated" in {
+      ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [0,1,2,3,4,5,6,7,8,9,0,1] }""").value.hcursor).isLeft shouldBe true
+    }
+
+    "should fail when the min collection size limit is violated" in {
+      ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [] }""").value.hcursor).isLeft shouldBe true
+    }
+
+    "should work within the array boundaries" in {
+      type CollectionLimit = Size[Interval.Closed[shapeless.Witness.`1`.T, shapeless.Witness.`10`.T]]
+      val array = refineV[CollectionLimit](Vector(1, 2, 3)).right.value
+      ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [1,2,3] }""").value.hcursor).value shouldBe ValidatedCollections(
+        Option(array)
+      )
+    }
+
+  }
 
   "regex validation" - {
 
