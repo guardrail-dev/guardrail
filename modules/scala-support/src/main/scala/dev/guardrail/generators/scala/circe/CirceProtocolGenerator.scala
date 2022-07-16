@@ -506,7 +506,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   override def protocolImports() =
     Target.pure(
       List(
-        q"import io.circe.syntax._"
+        q"import cats.syntax.either._",
+        q"import io.circe.syntax._",
+        q"import cats.instances.all._"
       )
     )
 
