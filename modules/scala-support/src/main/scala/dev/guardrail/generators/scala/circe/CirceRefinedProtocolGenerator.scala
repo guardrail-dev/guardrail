@@ -1,14 +1,14 @@
 package dev.guardrail.generators.scala.circe
 
 import _root_.io.swagger.v3.oas.models.media.Schema
-import dev.guardrail.Target
+import dev.guardrail.{ RuntimeFailure, Target }
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.scala.{ CirceRefinedModelGenerator, ScalaLanguage }
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.terms.ProtocolTerms
 import dev.guardrail.terms.protocol._
-
 import cats.implicits._
+
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
@@ -28,7 +28,19 @@ object CirceRefinedProtocolGenerator {
   def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
-      case Type.Apply(t"Vector", _) =>
+      case Type.Apply(t"Vector", inner) =>
+        val containerElementSchema: Tracker[Option[Schema[_]]] = prop.downField("items", _.getItems)
+        val innerType: Target[Type] = containerElementSchema.fold(
+          Target.fromOption(inner.headOption, RuntimeFailure(s"Unexpected state - empty 'items': ${containerElementSchema.showHistory}"))
+        ) { tracker =>
+          Target
+            .fromOption(inner.headOption, RuntimeFailure(s"Unexpected state - empty 'items': ${containerElementSchema.showHistory}"))
+            .flatMap(head =>
+              applyValidations(className, head, tracker)
+                .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
+            )
+        }
+
         def refine(decimal: Integer): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                         = prop.downField("maxItems", _.getMaxItems).unwrapTracker.map(refine)
         val minOpt                         = prop.downField("minItems", _.getMinItems).unwrapTracker.map(refine)
@@ -42,9 +54,13 @@ object CirceRefinedProtocolGenerator {
             Some(t"_root_.eu.timepit.refined.numeric.GreaterEqual[$min]")
           case _ => None
         }
-        Target.pure(intervalOpt.fold(tpe) { interval =>
-          t"""$tpe Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
-        })
+
+        for {
+          validatedVectorType <- innerType
+          result <- Target.pure(intervalOpt.fold(tpe) { interval =>
+            t"""$validatedVectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
+          })
+        } yield result
 
       case t"String" =>
         prop

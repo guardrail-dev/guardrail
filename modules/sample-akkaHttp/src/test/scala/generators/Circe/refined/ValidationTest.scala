@@ -9,26 +9,75 @@ import org.scalatest.matchers.should.Matchers
 import validation.client.akkaHttp.definitions.{ Validated, Validated2, ValidatedCollections }
 import eu.timepit.refined.collection._
 import eu.timepit.refined._
+import eu.timepit.refined.api.Refined
+import shapeless.Witness
 
 class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
 
-  "collections validation" - {
-    "should fail when the max collection size limit is violated" in {
-      ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [0,1,2,3,4,5,6,7,8,9,0,1] }""").value.hcursor).isLeft shouldBe true
+  "collection items validation" - {
+
+    "should fail if collection elements rejected by the predicate" in {
+      ValidatedCollections
+        .decodeValidatedCollections(
+          parse("""{ "collection_element_validation" : [0,2,3,4,5,6] }""").value.hcursor
+        )
+        .isLeft shouldBe true
     }
 
-    "should fail when the min collection size limit is violated" in {
-      ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [] }""").value.hcursor).isLeft shouldBe true
+    "should succeed if all of the collection elements passed the predicate" in {
+      type VectorWithPositiveNumbers = Vector[Int Refined numeric.GreaterEqual[Witness.`1`.T]]
+      val vector: VectorWithPositiveNumbers = Vector(1, 2, 3, 4, 5, 6)
+
+      val array = refineV[Size[numeric.GreaterEqual[Witness.`5`.T]]](vector).right.get
+
+      ValidatedCollections
+        .decodeValidatedCollections(
+          parse("""{ "collection_element_validation" : [1,2,3,4,5,6] }""").value.hcursor
+        )
+        .value shouldBe ValidatedCollections(collectionElementValidation = Some(array))
     }
 
-    "should work within the array boundaries" in {
-      type CollectionLimit = Size[Interval.Closed[shapeless.Witness.`1`.T, shapeless.Witness.`10`.T]]
-      val array = refineV[CollectionLimit](Vector(1, 2, 3)).right.value
-      ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [1,2,3] }""").value.hcursor).value shouldBe ValidatedCollections(
-        Option(array)
-      )
+  }
+
+  "collection size validation" - {
+    "max size" - {
+      "should fail when the min collection size limit is violated" in {
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "max_size_array" : [1,2,3,4,5,6] }""").value.hcursor).isLeft shouldBe true
+      }
     }
 
+    "min size" - {
+      "should fail when the min collection size limit is violated" in {
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "min_size_array" : [9] }""").value.hcursor).isLeft shouldBe true
+      }
+//      "should work within the array boundaries" in {
+//        type VectorWithPositiveNumbers = Vector[Int Refined numeric.GreaterEqual[shapeless.Witness.`1`.T]]
+//        val vector: VectorWithPositiveNumbers = Vector(1, 2, 3, 4, 5, 6)
+//
+//        type CollectionLimit = Size[_root_.eu.timepit.refined.numeric.GreaterEqual[_root_.shapeless.Witness.`5`.T]]
+//        val array = refineV[CollectionLimit](vector).right.value
+//        ValidatedCollections.decodeValidatedCollections(parse("""{ "min_size_array" : [1,2,3,4,5,6] }""").value.hcursor).value shouldBe ValidatedCollections(
+//          None, None, Option(array)
+//        )
+//      }
+    }
+    "range" - {
+      "should fail when the max collection size limit is violated" in {
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [0,1,2,3,4,5,6,7,8,9,0,1] }""").value.hcursor).isLeft shouldBe true
+      }
+
+      "should fail when the min collection size limit is violated" in {
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [] }""").value.hcursor).isLeft shouldBe true
+      }
+
+      "should work within the array boundaries" in {
+        val array     = refineV[Size[Interval.Closed[Witness.`1`.T, Witness.`10`.T]]](Vector(1, 2, 3))
+        val validated = array.right.get
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [1,2,3] }""").value.hcursor).value shouldBe ValidatedCollections(
+          Option(validated)
+        )
+      }
+    }
   }
 
   "regex validation" - {

@@ -40,13 +40,14 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
        |        items:
        |          type: integer
        |          format: int32
+       |          minimum: 1
        |        minItems: 1
        |        maxItems: 10
        |""".stripMargin
 
-  "Validation" - {
+  "Array Validation" - {
 
-    "should work" in {
+    "should generate size boundary constrains" in {
 
       implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
       implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
@@ -76,7 +77,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
         .value
 
       val expected =
-        q"""case class ValidatedCollections(boundedSizeArray: Option[Vector[Int] Refined
+        q"""case class ValidatedCollections(boundedSizeArray: Option[Vector[Int Refined _root_.eu.timepit.refined.numeric.GreaterEqual[_root_.shapeless.Witness.`1`.T]] Refined
            _root_.eu.timepit.refined.collection.Size[_root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`10`.T]]] = None)"""
 
       println(cls)
