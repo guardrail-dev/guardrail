@@ -50,16 +50,6 @@ class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
       "should fail when the min collection size limit is violated" in {
         ValidatedCollections.decodeValidatedCollections(parse("""{ "min_size_array" : [9] }""").value.hcursor).isLeft shouldBe true
       }
-//      "should work within the array boundaries" in {
-//        type VectorWithPositiveNumbers = Vector[Int Refined numeric.GreaterEqual[shapeless.Witness.`1`.T]]
-//        val vector: VectorWithPositiveNumbers = Vector(1, 2, 3, 4, 5, 6)
-//
-//        type CollectionLimit = Size[_root_.eu.timepit.refined.numeric.GreaterEqual[_root_.shapeless.Witness.`5`.T]]
-//        val array = refineV[CollectionLimit](vector).right.value
-//        ValidatedCollections.decodeValidatedCollections(parse("""{ "min_size_array" : [1,2,3,4,5,6] }""").value.hcursor).value shouldBe ValidatedCollections(
-//          None, None, Option(array)
-//        )
-//      }
     }
     "range" - {
       "should fail when the max collection size limit is violated" in {

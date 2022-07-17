@@ -80,8 +80,6 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
         q"""case class ValidatedCollections(boundedSizeArray: Option[Vector[Int Refined _root_.eu.timepit.refined.numeric.GreaterEqual[_root_.shapeless.Witness.`1`.T]] Refined
            _root_.eu.timepit.refined.collection.Size[_root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`10`.T]]] = None)"""
 
-      println(cls)
-
       cls.structure should equal(expected.structure)
     }
 
