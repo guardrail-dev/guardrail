@@ -50,7 +50,7 @@ object CirceRefinedProtocolGenerator {
           }
         } yield {
           val vectorType = validatedVectorType.getOrElse(raw)
-          intervalOpt.fold(tpe) { interval =>
+          intervalOpt.fold[Type](vectorType) { interval =>
             t"""$vectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
           }
         }
