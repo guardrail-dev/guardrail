@@ -21,6 +21,14 @@ class CirceRefinedProtocolGeneratorLoader extends ProtocolGeneratorLoader {
     )
 }
 
+object StandardContainers {
+  def unapply(value: Type.Name): Option[Type.Name] =
+    value match {
+      case tpe @ (t"IndexedSeq" | t"Iterable" | t"List" | t"Seq" | t"Vector") => Some(tpe)
+      case _                                                                  => None
+    }
+}
+
 object CirceRefinedProtocolGenerator {
   def apply(circeRefinedVersion: CirceRefinedModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
     fromGenerator(CirceProtocolGenerator.withValidations(circeRefinedVersion.toCirce, applyValidations))
@@ -28,7 +36,7 @@ object CirceRefinedProtocolGenerator {
   def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
-      case raw @ Type.Apply(t"IndexedSeq" | t"Iterable" | t"List" | t"Seq" | t"Vector", List(inner)) =>
+      case raw @ t"${StandardContainers(container)}[$inner]" =>
         def refine(decimal: Integer): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                         = prop.downField("maxItems", _.getMaxItems).unwrapTracker.map(refine)
         val minOpt                         = prop.downField("minItems", _.getMinItems).unwrapTracker.map(refine)
@@ -44,12 +52,12 @@ object CirceRefinedProtocolGenerator {
         }
 
         for {
-          validatedVectorType <- prop.downField("items", _.getItems).indexedDistribute.traverse { tracker =>
+          validatedContainerType <- prop.downField("items", _.getItems).indexedDistribute.traverse { tracker =>
             applyValidations(className, inner, tracker)
-              .map(vectorElementType => t"Vector[$vectorElementType]")
+              .map(vectorElementType => t"$container[$vectorElementType]")
           }
         } yield {
-          val vectorType = validatedVectorType.getOrElse(raw)
+          val vectorType = validatedContainerType.getOrElse(raw)
           intervalOpt.fold[Type](vectorType) { interval =>
             t"""$vectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
           }
