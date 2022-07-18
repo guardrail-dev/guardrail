@@ -48,10 +48,9 @@ object CirceRefinedProtocolGenerator {
             applyValidations(className, inner, tracker)
               .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
           }
-          result <- Target.pure(intervalOpt.fold(tpe) { interval =>
-            t"""$validatedVectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
-          })
-        } yield result
+        } yield intervalOpt.fold(tpe) { interval =>
+          t"""$validatedVectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
+        }
 
       case t"String" =>
         prop
