@@ -74,6 +74,14 @@ definitions:
           format: int32
           minimum: 1
         minItems: 5
+      collection_override_element_validation:
+        type: array
+        x-scala-array-type: Seq
+        items:
+          type: integer
+          format: int32
+          minimum: 1
+        minItems: 5
 
 paths:
   /user/{id}:
