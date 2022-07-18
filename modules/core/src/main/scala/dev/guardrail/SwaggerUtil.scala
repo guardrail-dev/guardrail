@@ -132,7 +132,7 @@ object SwaggerUtil {
                 for {
                   (found, innerRawType) <- determineTypeName(itemsSchema, Tracker.cloneHistory(schema, None), components)
                   customArrayType <- SwaggerUtil
-                    .customArrayTypeName(schema.unwrapTracker)
+                    .customArrayTypeName(schema)
                     .flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(schema, x))))
                   lifted <- liftVectorType(found, customArrayType)
                 } yield (lifted, ReifiedRawType.ofVector(innerRawType): ReifiedRawType)
