@@ -46,7 +46,7 @@ object CirceRefinedProtocolGenerator {
         for {
           validatedVectorType <- prop.downField("items", _.getItems).indexedDistribute.traverse { tracker =>
             applyValidations(className, inner, tracker)
-              .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
+              .map(vectorElementType => t"Vector[$vectorElementType]")
           }
         } yield {
           val vectorType = validatedVectorType.getOrElse(raw)
