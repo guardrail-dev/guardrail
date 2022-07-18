@@ -28,7 +28,7 @@ object CirceRefinedProtocolGenerator {
   def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
-      case raw @ t"Vector[$inner]" =>
+      case raw @ Type.Apply(t"IndexedSeq" | t"Iterable" | t"List" | t"Seq" | t"Vector", List(inner)) =>
         def refine(decimal: Integer): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                         = prop.downField("maxItems", _.getMaxItems).unwrapTracker.map(refine)
         val minOpt                         = prop.downField("minItems", _.getMinItems).unwrapTracker.map(refine)
