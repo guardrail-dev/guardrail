@@ -47,26 +47,70 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
 
   "Array Validation" - {
 
+    implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
+    implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
+      def MonadF                                                                                                    = Target.targetInstances
+      def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"String")
+      def getFrameworkDefinitions(
+          tracing: Boolean
+      ): dev.guardrail.Target[List[(dev.guardrail.generators.scala.ScalaLanguage#TermName, List[dev.guardrail.generators.scala.ScalaLanguage#Definition])]] =
+        ???
+      def getFrameworkImplicits(): dev.guardrail.Target[Option[
+        (dev.guardrail.generators.scala.ScalaLanguage#TermName, dev.guardrail.generators.scala.ScalaLanguage#ObjectDefinition)
+      ]] = ???
+      def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]] = ???
+      def lookupStatusCode(key: String): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)]      = ???
+      def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type]            = Target.pure(t"io.circe.Json")
+    }
+    implicit val circeProtocolGenerator: ProtocolTerms[ScalaLanguage, Target] = CirceRefinedProtocolGenerator(CirceRefinedModelGenerator.V012)
+    implicit val scalaGenerator                                               = ScalaGenerator()
+    implicit val swaggerGenerator                                             = SwaggerGenerator[ScalaLanguage]()
+
+    "pattern" in {
+
+      val swagger2: String =
+        s"""
+           |swagger: "2.0"
+           |info:
+           |  title: Whatever
+           |  version: 1.0.0
+           |host: localhost:1234
+           |schemes:
+           |  - http
+           |definitions:
+           |  ValidatedCollections:
+           |    type: object
+           |    properties:
+           |      bounded_size_array:
+           |        type: array
+           |        items:
+           |          type: string
+           |          pattern: "pet"
+           |        minItems: 1
+           |        maxItems: 10
+           |""".stripMargin
+
+      val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = ProtocolGenerator
+        .fromSwagger[ScalaLanguage, Target](
+          Tracker(swaggerFromString(swagger2)),
+          dtoPackage = Nil,
+          supportPackage = NonEmptyList.one("foop"),
+          defaultPropertyRequirement = PropertyRequirement.OptionalLegacy
+        )
+        .value
+
+      println(staticDefns)
+
+      val expected =
+        q"""case class ValidatedCollections(boundedSizeArray: Option[Vector[Int Refined _root_.eu.timepit.refined.numeric.GreaterEqual[_root_.shapeless.Witness.`1`.T]] Refined
+           _root_.eu.timepit.refined.collection.Size[_root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`10`.T]]] = None)"""
+
+      cls.structure should equal(expected.structure)
+
+    }
+
     "should generate size boundary constrains" in {
 
-      implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
-      implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
-        def MonadF                                                                                                    = Target.targetInstances
-        def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"String")
-        def getFrameworkDefinitions(
-            tracing: Boolean
-        ): dev.guardrail.Target[List[(dev.guardrail.generators.scala.ScalaLanguage#TermName, List[dev.guardrail.generators.scala.ScalaLanguage#Definition])]] =
-          ???
-        def getFrameworkImplicits(): dev.guardrail.Target[Option[
-          (dev.guardrail.generators.scala.ScalaLanguage#TermName, dev.guardrail.generators.scala.ScalaLanguage#ObjectDefinition)
-        ]] = ???
-        def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]] = ???
-        def lookupStatusCode(key: String): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)]      = ???
-        def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"io.circe.Json")
-      }
-      implicit val circeProtocolGenerator: ProtocolTerms[ScalaLanguage, Target] = CirceRefinedProtocolGenerator(CirceRefinedModelGenerator.V012)
-      implicit val scalaGenerator                                               = ScalaGenerator()
-      implicit val swaggerGenerator                                             = SwaggerGenerator[ScalaLanguage]()
       val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = ProtocolGenerator
         .fromSwagger[ScalaLanguage, Target](
           Tracker(swaggerFromString(swagger)),

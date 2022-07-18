@@ -6,7 +6,7 @@ import io.circe.parser.parse
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import validation.client.akkaHttp.definitions.{ Validated, Validated2, ValidatedCollections }
+import validation.client.akkaHttp.definitions.{ Validated, Validated2, ValidatedCollections, ValidatedCollections2 }
 import eu.timepit.refined.collection._
 import eu.timepit.refined._
 import eu.timepit.refined.api.Refined
@@ -16,7 +16,18 @@ class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
 
   "collection items validation" - {
 
-    "should fail if collection elements rejected by the predicate" in {
+    "should fail if collection elements rejected by the predicate (string)" in {
+      ValidatedCollections2
+        .decodeValidatedCollections2(
+          parse("""{ "bounded_size_array" : ["pet", "pet", "carpet", "pet shop", "does not match"] }""").value.hcursor
+        )
+        .left
+        .value
+        .toString
+        .contains("""DecodingFailure(Predicate failed: "does not match"""") shouldBe true
+    }
+
+    "should fail if collection elements rejected by the predicate (number)" in {
       ValidatedCollections
         .decodeValidatedCollections(
           parse("""{ "collection_element_validation" : [0,2,3,4,5,6] }""").value.hcursor

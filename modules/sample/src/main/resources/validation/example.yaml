@@ -45,6 +45,17 @@ definitions:
         type: string
         pattern: "^pet$"
 
+  ValidatedCollections2:
+    type: object
+    properties:
+      bounded_size_array:
+        type: array
+        items:
+          type: string
+          pattern: "pet"
+        minItems: 1
+        maxItems: 10
+
   ValidatedCollections:
     type: object
     properties:

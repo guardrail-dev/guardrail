@@ -210,7 +210,14 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
-        pattern = property.downField("pattern", _.getPattern).map(PropertyValidations)
+        fieldPattern: Tracker[Option[String]] = property.downField("pattern", _.getPattern)
+        collectionElementPattern: Option[Tracker[String]] =
+          property.downField("items", _.getItems).indexedDistribute.flatMap(_.downField("pattern", _.getPattern).indexedDistribute)
+
+        pattern = collectionElementPattern.fold(fieldPattern.map(PropertyValidations))(
+          _.map(regex => PropertyValidations(Some(regex)))
+        )
+
         presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
 
