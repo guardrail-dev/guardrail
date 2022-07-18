@@ -28,10 +28,10 @@ object CirceRefinedProtocolGenerator {
   def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
-      case t"Vector[$inner]" =>
+      case raw @ t"Vector[$inner]" =>
         val containerElementSchema: Tracker[Option[Schema[_]]] = prop.downField("items", _.getItems)
         val innerType: Target[Type] = containerElementSchema.fold(
-          Target.pure(inner)
+          Target.pure(raw)
         ) { tracker =>
           Target
             .pure(inner)
