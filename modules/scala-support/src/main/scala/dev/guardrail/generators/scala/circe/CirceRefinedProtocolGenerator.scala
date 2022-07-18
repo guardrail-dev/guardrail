@@ -44,12 +44,15 @@ object CirceRefinedProtocolGenerator {
         }
 
         for {
-          validatedVectorType <- prop.downField("items", _.getItems).indexedDistribute.fold(Target.pure(raw)) { tracker =>
+          validatedVectorType <- prop.downField("items", _.getItems).indexedDistribute.traverse { tracker =>
             applyValidations(className, inner, tracker)
               .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
           }
-        } yield intervalOpt.fold(tpe) { interval =>
-          t"""$validatedVectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
+        } yield {
+          val vectorType = validatedVectorType.getOrElse(raw)
+          intervalOpt.fold(tpe) { interval =>
+            t"""$vectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
+          }
         }
 
       case t"String" =>
