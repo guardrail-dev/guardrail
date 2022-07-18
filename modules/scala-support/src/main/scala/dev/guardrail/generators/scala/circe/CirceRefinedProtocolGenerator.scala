@@ -29,17 +29,15 @@ object CirceRefinedProtocolGenerator {
     import scala.meta._
     tpe match {
       case raw @ t"Vector[$inner]" =>
-        val containerElementSchema: Tracker[Option[Schema[_]]] = prop.downField("items", _.getItems)
-        val innerType: Target[Type] = containerElementSchema.fold(
-          Target.pure(raw)
-        ) { tracker =>
-          Target
-            .pure(inner)
-            .flatMap(head =>
-              applyValidations(className, head, tracker)
-                .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
-            )
-        }
+        val innerType: Target[Type] = prop
+          .downField("items", _.getItems)
+          .indexedDistribute
+          .fold(
+            Target.pure(raw)
+          ) { tracker =>
+            applyValidations(className, inner, tracker)
+              .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
+          }
 
         def refine(decimal: Integer): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                         = prop.downField("maxItems", _.getMaxItems).unwrapTracker.map(refine)
