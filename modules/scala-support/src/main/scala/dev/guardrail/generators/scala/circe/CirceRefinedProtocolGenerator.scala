@@ -1,7 +1,7 @@
 package dev.guardrail.generators.scala.circe
 
 import _root_.io.swagger.v3.oas.models.media.Schema
-import dev.guardrail.{ RuntimeFailure, Target }
+import dev.guardrail.Target
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.scala.{ CirceRefinedModelGenerator, ScalaLanguage }
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
@@ -28,13 +28,13 @@ object CirceRefinedProtocolGenerator {
   def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
-      case Type.Apply(t"Vector", inner) =>
+      case t"Vector[$inner]" =>
         val containerElementSchema: Tracker[Option[Schema[_]]] = prop.downField("items", _.getItems)
         val innerType: Target[Type] = containerElementSchema.fold(
-          Target.fromOption(inner.headOption, RuntimeFailure(s"Unexpected state - empty 'items': ${containerElementSchema.showHistory}"))
+          Target.pure(inner)
         ) { tracker =>
           Target
-            .fromOption(inner.headOption, RuntimeFailure(s"Unexpected state - empty 'items': ${containerElementSchema.showHistory}"))
+            .pure(inner)
             .flatMap(head =>
               applyValidations(className, head, tracker)
                 .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
