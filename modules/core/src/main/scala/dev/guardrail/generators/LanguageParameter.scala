@@ -129,6 +129,13 @@ object LanguageParameter {
         (meta, required)                                            <- paramMeta(parameter)
         core.Resolved(paramType, _, rawDefaultType, reifiedRawType) <- core.ResolvedType.resolve[L, F](meta, protocolElems)
 
+        declType <-
+          if (!required) {
+            liftOptionalType(paramType)
+          } else {
+            paramType.pure[F]
+          }
+
         baseDefaultValue <- extractTypeName(paramType).flatMap(_.fold(rawDefaultType.traverse(_.pure[F])) { tpe =>
           protocolElems
             .flatTraverse {
@@ -143,16 +150,11 @@ object LanguageParameter {
             })
         })
 
-        (declType, defaultValue) <-
+        defaultValue <-
           if (!required) {
-            baseDefaultValue match {
-              case None =>
-                (liftOptionalType(paramType), emptyOptionalTerm().map(Option.apply _)).mapN((_, _))
-              case Some(value) =>
-                (paramType, baseDefaultValue).pure[F]
-            }
+            (baseDefaultValue.traverse(liftOptionalTerm), emptyOptionalTerm().map(Option.apply _)).mapN(_.orElse(_))
           } else {
-            (paramType, baseDefaultValue).pure[F]
+            baseDefaultValue.pure[F]
           }
 
         name <- getParameterName(parameter)
