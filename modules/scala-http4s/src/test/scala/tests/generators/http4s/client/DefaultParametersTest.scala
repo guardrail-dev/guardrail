@@ -145,7 +145,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
       private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] = F.pure(response.headers.get(CIString(header)).map(_.head.value))
       private def parseRequiredHeader(response: Response[F], header: String): F[String] = response.headers.get(CIString(header)).map(_.head.value).fold[F[String]](F.raiseError(ParseFailure("Missing required header.", s"HTTP header '$$header' is not present.")))(F.pure)
       private[this] val getOrderByIdOkDecoder = jsonOf[F, Order]
-      def getOrderById(orderId: Long, defparmOpt: Int = 1, defparm: Int = 2, headerMeThis: String, headers: List[Header.ToRaw] = List.empty): F[GetOrderByIdResponse] = {
+      def getOrderById(orderId: Long, defparmOpt: Option[Int] = Option(1), defparm: Int = 2, headerMeThis: String, headers: List[Header.ToRaw] = List.empty): F[GetOrderByIdResponse] = {
         val allHeaders: List[org.http4s.Header.ToRaw] = List[Header.ToRaw](org.http4s.headers.Accept(org.http4s.MediaType.application.json.withQValue(org.http4s.QValue.One))) ++ headers ++ List[Option[Header.ToRaw]](Some(("HeaderMeThis", Formatter.show(headerMeThis)))).flatten
         val req = Request[F](method = Method.GET, uri = Uri.unsafeFromString(host + basePath + "/store/order/" + Formatter.addPath(orderId) + "?" + Formatter.addArg("defparm_opt", defparmOpt) + Formatter.addArg("defparm", defparm)), headers = Headers(allHeaders))
         httpClient.run(req).use({
