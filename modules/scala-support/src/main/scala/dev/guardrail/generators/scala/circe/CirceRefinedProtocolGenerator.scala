@@ -29,16 +29,6 @@ object CirceRefinedProtocolGenerator {
     import scala.meta._
     tpe match {
       case raw @ t"Vector[$inner]" =>
-        val innerType: Target[Type] = prop
-          .downField("items", _.getItems)
-          .indexedDistribute
-          .fold(
-            Target.pure(raw)
-          ) { tracker =>
-            applyValidations(className, inner, tracker)
-              .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
-          }
-
         def refine(decimal: Integer): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
         val maxOpt                         = prop.downField("maxItems", _.getMaxItems).unwrapTracker.map(refine)
         val minOpt                         = prop.downField("minItems", _.getMinItems).unwrapTracker.map(refine)
@@ -54,7 +44,10 @@ object CirceRefinedProtocolGenerator {
         }
 
         for {
-          validatedVectorType <- innerType
+          validatedVectorType <- prop.downField("items", _.getItems).indexedDistribute.fold(Target.pure(raw)) { tracker =>
+            applyValidations(className, inner, tracker)
+              .map(vectorElementType => Type.Apply(t"Vector", List(vectorElementType)))
+          }
           result <- Target.pure(intervalOpt.fold(tpe) { interval =>
             t"""$validatedVectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
           })
