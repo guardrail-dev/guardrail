@@ -8,12 +8,14 @@ import sbt.Keys._
 object scalaDropwizard {
   val catsVersion            = "2.8.0"
   val dropwizardScalaVersion = "1.3.7-1"
-  val dropwizardVersion      = "1.3.29"
+  val dropwizardVersion      = "2.0.25"
   val jacksonVersion         = "2.13.3"
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
   val jerseyVersion          = "2.25.1"
   val scalatestVersion       = "3.2.12"
+  val hibernateCoreVersion      = "5.5.7.Final"
+  val hibernateValidatorVersion = "6.1.7.Final"
 
   val dependencies = Seq(
     "javax.annotation"               %  "javax.annotation-api"    % javaxAnnotationVersion, // for jdk11
@@ -21,8 +23,10 @@ object scalaDropwizard {
     "io.dropwizard"                  %  "dropwizard-core"         % dropwizardVersion,
     "io.dropwizard"                  %  "dropwizard-forms"        % dropwizardVersion,
     "com.fasterxml.jackson.datatype" %  "jackson-datatype-jsr310" % jacksonVersion,
-    "junit"                          %  "junit"                   % "4.13.2"             % Test,
-    "com.github.sbt"                   %  "junit-interface"         % "0.13.3"             % Test,
+    "org.hibernate"                  %  "hibernate-core"          % hibernateCoreVersion,
+    "org.hibernate.validator"        %  "hibernate-validator"     % hibernateValidatorVersion,
+    "junit"                          %  "junit"                   % "4.13.2"           % Test,
+    "com.github.sbt"                 %  "junit-interface"         % "0.13.3"           % Test,
     "com.github.tomakehurst"         %  "wiremock"                % "2.27.2"           % Test,
     "io.dropwizard"                  %  "dropwizard-testing"      % dropwizardVersion  % Test,
     "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test,
