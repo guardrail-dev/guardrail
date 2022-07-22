@@ -70,7 +70,7 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
             _root_.io.circe.Encoder.AsObject.instance[Foo](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("value", a.value.asJson), ("value2", a.value2.asJson), ("nested", a.nested.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
-          implicit val decodeFoo: _root_.io.circe.Decoder[Foo] = new _root_.io.circe.Decoder[Foo] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Foo] = for (v0 <- c.downField("value").as[Foo.Value]; v1 <- c.downField("value2").as[Baz]; v2 <- c.downField("nested").as[Option[Foo.Nested]]) yield Foo(v0, v1, v2) }
+          implicit val decodeFoo: _root_.io.circe.Decoder[Foo] = new _root_.io.circe.Decoder[Foo] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Foo] = for (v0 <- c.downField("value").as[Option[Foo.Value]]; v1 <- c.downField("value2").as[Baz]; v2 <- c.downField("nested").as[Option[Foo.Nested]]) yield Foo(v0, v1, v2) }
           sealed abstract class Value(val value: String) extends _root_.scala.Product with _root_.scala.Serializable { override def toString: String = value.toString }
           object Value {
             object members {
@@ -86,13 +86,13 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
             def from(value: String): _root_.scala.Option[Value] = values.find(_.value == value)
             implicit val order: cats.Order[Value] = cats.Order.by[Value, Int](values.indexOf)
           }
-          case class Nested(value: Foo.Nested.Value = Foo.Nested.Value.C)
+          case class Nested(value: Option[Foo.Nested.Value] = Option(Foo.Nested.Value.C))
           object Nested {
             implicit val encodeNested: _root_.io.circe.Encoder.AsObject[Nested] = {
               val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
               _root_.io.circe.Encoder.AsObject.instance[Nested](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("value", a.value.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
             }
-            implicit val decodeNested: _root_.io.circe.Decoder[Nested] = new _root_.io.circe.Decoder[Nested] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Nested] = for (v0 <- c.downField("value").as[Foo.Nested.Value]) yield Nested(v0) }
+            implicit val decodeNested: _root_.io.circe.Decoder[Nested] = new _root_.io.circe.Decoder[Nested] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Nested] = for (v0 <- c.downField("value").as[Option[Foo.Nested.Value]]) yield Nested(v0) }
             sealed abstract class Value(val value: String) extends _root_.scala.Product with _root_.scala.Serializable { override def toString: String = value.toString }
             object Value {
               object members {
@@ -112,7 +112,7 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         }
        """
 
-      c1.structure shouldEqual q"case class Foo(value: Foo.Value = Foo.Value.A, value2: Baz = Baz.X, nested: Option[Foo.Nested] = None)".structure
+      c1.structure shouldEqual q"case class Foo(value: Option[Foo.Value] = Option(Foo.Value.A), value2: Baz = Baz.X, nested: Option[Foo.Nested] = None)".structure
       companion.structure shouldEqual cmp.structure
     }
 

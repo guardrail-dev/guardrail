@@ -311,7 +311,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
     it("should generate right case class") {
       clsDog.structure shouldBe q"""case class Dog(name: String, packSize: Int = 0) extends Pet""".structure
-      clsPersianCat.structure shouldBe q"""case class PersianCat(name: String, huntingSkill: Cat.HuntingSkill = Cat.HuntingSkill.Lazy, wool: Int = 10) extends Cat""".structure
+      clsPersianCat.structure shouldBe q"""case class PersianCat(name: String, huntingSkill: Cat.HuntingSkill = Cat.HuntingSkill.Lazy, wool: Option[Int] = Option(10)) extends Cat""".structure
     }
 
     it("should generate right companion object (Dog)") {
@@ -334,7 +334,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
             _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("wool", a.wool.asJson), ("petType", _root_.io.circe.Json.fromString("PersianCat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
           }
-          implicit val decodePersianCat: _root_.io.circe.Decoder[PersianCat] = new _root_.io.circe.Decoder[PersianCat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[PersianCat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]; v2 <- c.downField("wool").as[Int]) yield PersianCat(v0, v1, v2) }
+          implicit val decodePersianCat: _root_.io.circe.Decoder[PersianCat] = new _root_.io.circe.Decoder[PersianCat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[PersianCat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]; v2 <- c.downField("wool").as[Option[Int]]) yield PersianCat(v0, v1, v2) }
         }
       """
       companionPersianCat.structure shouldBe companion.structure

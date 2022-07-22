@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+die() {
+  msg="$1"; shift
+  echo "$msg" >&2
+  exit 1
+}
+
 hash gh 2>/dev/null >&2 || die "$0 requires an authenticated gh. Ensure gh is on your path and gh auth login has been successfully completed before trying again"
 
 if [ "$1" = "go" ]; then

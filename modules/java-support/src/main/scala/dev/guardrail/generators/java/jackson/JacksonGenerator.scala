@@ -896,18 +896,18 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             Target.log.warning(s"Can't generate default value for class $clsName and property $name.") >> Target.pure(None)
           case None => Target.pure(None)
         }): Target[Option[Expression]]
-        (finalDeclType, finalDefaultValue) <- requirement match {
-          case PropertyRequirement.Required =>
-            Target.pure((tpe, expressionDefaultValue))
-          case _ =>
-            defaultValue match {
-              case Some(value) => value.toExpression.map(Option.apply).map(tpe -> _)
-              case None =>
-                for {
-                  optionalTpe <- Cl.liftOptionalType(tpe)
-                } yield (optionalTpe, Option.empty[Expression])
-            }
-        }
+        finalDefaultTypeValue <- Option(requirement)
+          .filter {
+            case PropertyRequirement.Required => true
+            case _                            => false
+          }
+          .fold[Target[(Type, Option[Expression])]](
+            for {
+              optionalTpe      <- Cl.liftOptionalType(tpe)
+              defaultValueExpr <- defaultValue.fold(Target.pure(Option.empty[Expression]))(dv => dv.toExpression.map(Option.apply))
+            } yield (optionalTpe, defaultValueExpr)
+          )(Function.const(Target.pure((tpe, expressionDefaultValue))) _)
+        (finalDeclType, finalDefaultValue) = finalDefaultTypeValue
         term <- safeParseParameter(s"final ${finalDeclType} $fieldName")
         dep     = classDep.filterNot(_.asString == clsName) // Filter out our own class name
         pattern = property.downField("pattern", _.getPattern).map(PropertyValidations)
