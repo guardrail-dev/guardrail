@@ -9,6 +9,6 @@ object scalaSupport {
   val project =
     commonModule("scala-support")
       .settings(
-        libraryDependencies += "org.scalameta" %% "scalameta" % "4.5.9"
+        libraryDependencies += "org.scalameta" %% "scalameta" % "4.5.11"
       )
 }
