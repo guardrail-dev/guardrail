@@ -68,7 +68,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
 
     "pattern" in {
 
-      val swagger2: String =
+      val collectionElementsWithPattern: String =
         s"""
            |swagger: "2.0"
            |info:
@@ -92,7 +92,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
 
       val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = ProtocolGenerator
         .fromSwagger[ScalaLanguage, Target](
-          Tracker(swaggerFromString(swagger2)),
+          Tracker(swaggerFromString(collectionElementsWithPattern)),
           dtoPackage = Nil,
           supportPackage = NonEmptyList.one("foop"),
           defaultPropertyRequirement = PropertyRequirement.OptionalLegacy
@@ -102,7 +102,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
       println(staticDefns)
 
       val expected =
-        q"""case class ValidatedCollections(boundedSizeArray: Option[Vector[Int Refined _root_.eu.timepit.refined.numeric.GreaterEqual[_root_.shapeless.Witness.`1`.T]] Refined
+        q"""case class ValidatedCollections(boundedSizeArray: Option[Vector[String Refined _root_.eu.timepit.refined.string.MatchesRegex[ValidatedCollections.`".*pet.*"`.T]] Refined
            _root_.eu.timepit.refined.collection.Size[_root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`10`.T]]] = None)"""
 
       cls.structure should equal(expected.structure)
