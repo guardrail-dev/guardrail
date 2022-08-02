@@ -88,6 +88,9 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
            |          pattern: "pet"
            |        minItems: 1
            |        maxItems: 10
+           |      should_not_collide:
+           |        type: string
+           |        pattern: "pet"
            |""".stripMargin
 
       val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = ProtocolGenerator
@@ -99,11 +102,15 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
         )
         .value
 
-      println(staticDefns)
+      val regexHelperDefinition = q"""val `".*pet.*"` = _root_.shapeless.Witness(".*pet.*")"""
+      staticDefns.definitions.map(_.structure) should contain(regexHelperDefinition.structure)
+      staticDefns.definitions.map(_.structure).count(_ == regexHelperDefinition.structure) shouldBe 1
 
       val expected =
-        q"""case class ValidatedCollections(boundedSizeArray: Option[Vector[String Refined _root_.eu.timepit.refined.string.MatchesRegex[ValidatedCollections.`".*pet.*"`.T]] Refined
-           _root_.eu.timepit.refined.collection.Size[_root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`10`.T]]] = None)"""
+        q"""case class ValidatedCollections(
+            boundedSizeArray: Option[Vector[String Refined _root_.eu.timepit.refined.string.MatchesRegex[ValidatedCollections.`".*pet.*"`.T]] Refined
+              _root_.eu.timepit.refined.collection.Size[_root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`10`.T]]] = None,
+            shouldNotCollide: Option[String Refined _root_.eu.timepit.refined.string.MatchesRegex[ValidatedCollections.`".*pet.*"`.T]] = None)"""
 
       cls.structure should equal(expected.structure)
 

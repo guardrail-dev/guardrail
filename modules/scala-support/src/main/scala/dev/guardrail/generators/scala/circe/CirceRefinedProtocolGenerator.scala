@@ -124,9 +124,13 @@ object CirceRefinedProtocolGenerator {
 
           q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(partiallyMatchedPattern)})"
         }
+
+    // to avoid declaring the same type alias multiple times
+    val distinctHelperTypes = regexHelperTypes.groupBy(_.structure).values.map(_.head).toList
+
     for {
       defns <- base.renderDTOStaticDefns(clsName, deps, encoder, decoder, protocolParameters)
-    } yield defns.copy(definitions = regexHelperTypes ++ defns.definitions)
+    } yield defns.copy(definitions = distinctHelperTypes ++ defns.definitions)
   }
 
   def fromGenerator(generator: ProtocolTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =

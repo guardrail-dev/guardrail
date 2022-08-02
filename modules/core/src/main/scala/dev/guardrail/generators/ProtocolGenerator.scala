@@ -686,15 +686,15 @@ object ProtocolGenerator {
               formattedClsName <- formatTypeName(clsName)
               parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components)
               model <- fromModel(
-                NonEmptyList.of(formattedClsName),
-                comp,
-                parents,
-                concreteTypes,
-                definitions.value,
-                dtoPackage,
-                supportPackage.toList,
-                defaultPropertyRequirement,
-                components
+                clsName = NonEmptyList.of(formattedClsName),
+                model = comp,
+                parents = parents,
+                concreteTypes = concreteTypes,
+                definitions = definitions.value,
+                dtoPackage = dtoPackage,
+                supportPackage = supportPackage.toList,
+                defaultPropertyRequirement = defaultPropertyRequirement,
+                components = components
               )
               alias <- modelTypeAlias(formattedClsName, comp, components)
             } yield model.getOrElse(alias)
