@@ -1,13 +1,85 @@
 package generators.Circe.refined
 
 import eu.timepit.refined.auto._
+import eu.timepit.refined.numeric.Interval
 import io.circe.parser.parse
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
-import validation.client.akkaHttp.definitions.{ Validated, Validated2 }
+import validation.client.akkaHttp.definitions.{ Validated, Validated2, ValidatedCollections, ValidatedCollections2 }
+import eu.timepit.refined.collection._
+import eu.timepit.refined._
+import eu.timepit.refined.api.Refined
+import shapeless.Witness
 
 class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
+
+  "collection items validation" - {
+
+    "should fail if collection elements rejected by the predicate (string)" in {
+      ValidatedCollections2
+        .decodeValidatedCollections2(
+          parse("""{ "bounded_size_array" : ["pet", "pet", "carpet", "pet shop", "does not match"] }""").value.hcursor
+        )
+        .left
+        .value
+        .toString
+        .contains("""DecodingFailure(Predicate failed: "does not match"""") shouldBe true
+    }
+
+    "should fail if collection elements rejected by the predicate (number)" in {
+      ValidatedCollections
+        .decodeValidatedCollections(
+          parse("""{ "collection_element_validation" : [0,2,3,4,5,6] }""").value.hcursor
+        )
+        .isLeft shouldBe true
+    }
+
+    "should succeed if all of the collection elements passed the predicate" in {
+      type VectorWithPositiveNumbers = Vector[Int Refined numeric.GreaterEqual[Witness.`1`.T]]
+      val vector: VectorWithPositiveNumbers = Vector(1, 2, 3, 4, 5, 6)
+
+      val array = refineV[Size[numeric.GreaterEqual[Witness.`5`.T]]](vector).right.get
+
+      ValidatedCollections
+        .decodeValidatedCollections(
+          parse("""{ "collection_element_validation" : [1,2,3,4,5,6] }""").value.hcursor
+        )
+        .value shouldBe ValidatedCollections(collectionElementValidation = Some(array))
+    }
+
+  }
+
+  "collection size validation" - {
+    "max size" - {
+      "should fail when the min collection size limit is violated" in {
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "max_size_array" : [1,2,3,4,5,6] }""").value.hcursor).isLeft shouldBe true
+      }
+    }
+
+    "min size" - {
+      "should fail when the min collection size limit is violated" in {
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "min_size_array" : [9] }""").value.hcursor).isLeft shouldBe true
+      }
+    }
+    "range" - {
+      "should fail when the max collection size limit is violated" in {
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [0,1,2,3,4,5,6,7,8,9,0,1] }""").value.hcursor).isLeft shouldBe true
+      }
+
+      "should fail when the min collection size limit is violated" in {
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [] }""").value.hcursor).isLeft shouldBe true
+      }
+
+      "should work within the array boundaries" in {
+        val array     = refineV[Size[Interval.Closed[Witness.`1`.T, Witness.`10`.T]]](Vector(1, 2, 3))
+        val validated = array.right.get
+        ValidatedCollections.decodeValidatedCollections(parse("""{ "bounded_size_array" : [1,2,3] }""").value.hcursor).value shouldBe ValidatedCollections(
+          Option(validated)
+        )
+      }
+    }
+  }
 
   "regex validation" - {
 

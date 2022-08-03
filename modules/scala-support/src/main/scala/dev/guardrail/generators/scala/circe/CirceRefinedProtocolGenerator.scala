@@ -7,8 +7,8 @@ import dev.guardrail.generators.scala.{ CirceRefinedModelGenerator, ScalaLanguag
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.terms.ProtocolTerms
 import dev.guardrail.terms.protocol._
-
 import cats.implicits._
+
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
@@ -21,6 +21,14 @@ class CirceRefinedProtocolGeneratorLoader extends ProtocolGeneratorLoader {
     )
 }
 
+object StandardContainers {
+  def unapply(value: Type.Name): Option[Type.Name] =
+    value match {
+      case tpe @ (t"IndexedSeq" | t"Iterable" | t"List" | t"Seq" | t"Vector") => Some(tpe)
+      case _                                                                  => None
+    }
+}
+
 object CirceRefinedProtocolGenerator {
   def apply(circeRefinedVersion: CirceRefinedModelGenerator): ProtocolTerms[ScalaLanguage, Target] =
     fromGenerator(CirceProtocolGenerator.withValidations(circeRefinedVersion.toCirce, applyValidations))
@@ -28,6 +36,33 @@ object CirceRefinedProtocolGenerator {
   def applyValidations(className: String, tpe: Type, prop: Tracker[Schema[_]]): Target[Type] = {
     import scala.meta._
     tpe match {
+      case raw @ t"${StandardContainers(container)}[$inner]" =>
+        def refine(decimal: Integer): Type = Type.Select(Term.Select(q"_root_.shapeless.Witness", Term.Name(decimal.toInt.toString)), t"T")
+        val maxOpt                         = prop.downField("maxItems", _.getMaxItems).unwrapTracker.map(refine)
+        val minOpt                         = prop.downField("minItems", _.getMinItems).unwrapTracker.map(refine)
+
+        val intervalOpt = (maxOpt, minOpt) match {
+          case (Some(max), Some(min)) =>
+            Some(t"_root_.eu.timepit.refined.numeric.Interval.Closed[$min, $max]")
+          case (Some(max), None) =>
+            Some(t"_root_.eu.timepit.refined.numeric.LessEqual[$max]")
+          case (None, Some(min)) =>
+            Some(t"_root_.eu.timepit.refined.numeric.GreaterEqual[$min]")
+          case _ => None
+        }
+
+        for {
+          validatedContainerType <- prop.downField("items", _.getItems).indexedDistribute.traverse { tracker =>
+            applyValidations(className, inner, tracker)
+              .map(vectorElementType => t"$container[$vectorElementType]")
+          }
+        } yield {
+          val vectorType = validatedContainerType.getOrElse(raw)
+          intervalOpt.fold[Type](vectorType) { interval =>
+            t"""$vectorType Refined _root_.eu.timepit.refined.collection.Size[$interval]"""
+          }
+        }
+
       case t"String" =>
         prop
           .downField("pattern", _.getPattern)
@@ -89,9 +124,13 @@ object CirceRefinedProtocolGenerator {
 
           q"val ${Pat.Var(name)} = _root_.shapeless.Witness(${Lit.String(partiallyMatchedPattern)})"
         }
+
+    // to avoid declaring the same type alias multiple times
+    val deduplicatedRegexHelperTypes = regexHelperTypes.groupBy(_.structure).values.flatMap(_.headOption).toList
+
     for {
       defns <- base.renderDTOStaticDefns(clsName, deps, encoder, decoder, protocolParameters)
-    } yield defns.copy(definitions = regexHelperTypes ++ defns.definitions)
+    } yield defns.copy(definitions = deduplicatedRegexHelperTypes ++ defns.definitions)
   }
 
   def fromGenerator(generator: ProtocolTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
