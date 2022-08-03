@@ -126,11 +126,11 @@ object CirceRefinedProtocolGenerator {
         }
 
     // to avoid declaring the same type alias multiple times
-    val distinctHelperTypes = regexHelperTypes.groupBy(_.structure).values.map(_.head).toList
+    val deduplicatedRegexHelperTypes = regexHelperTypes.groupBy(_.structure).values.flatMap(_.headOption).toList
 
     for {
       defns <- base.renderDTOStaticDefns(clsName, deps, encoder, decoder, protocolParameters)
-    } yield defns.copy(definitions = distinctHelperTypes ++ defns.definitions)
+    } yield defns.copy(definitions = deduplicatedRegexHelperTypes ++ defns.definitions)
   }
 
   def fromGenerator(generator: ProtocolTerms[ScalaLanguage, Target]): ProtocolTerms[ScalaLanguage, Target] =
