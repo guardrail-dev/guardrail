@@ -11,6 +11,7 @@ render() {
   module="$1"; shift || die "Missing module for render"
 
   cat <<!
+_extends: guardrail:.github/release-drafter.yml
 name-template: '$module-v\$RESOLVED_VERSION'
 tag-template: '$module-v\$RESOLVED_VERSION'
 tag-prefix: $module-v
@@ -22,39 +23,6 @@ include-paths:
   - "$path"
 !
   done
-  cat <<!
-# NB: Managed by support/regenerate-release-drafter.sh
-categories:
-  - title: '🚀 Features'
-    labels:
-      - 'enhancement'
-  - title: '🐛 Bug Fixes'
-    labels:
-      - 'bug'
-  - title: '🧰 Maintenance'
-    label: 'chore'
-change-template: '- \$TITLE @\$AUTHOR (#\$NUMBER)'
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add \` to disable code blocks.
-version-resolver:
-  major:
-    labels:
-      - 'major'
-  minor:
-    labels:
-      - 'minor'
-  patch:
-    labels:
-      - 'patch'
-  default: patch
-template: |
-  ## Changes
-
-  \$CHANGES
-
-  ## Contributors
-
-  Thanks to \$CONTRIBUTORS for your contributions to this release!
-!
 }
 
 reinitialize_release() {

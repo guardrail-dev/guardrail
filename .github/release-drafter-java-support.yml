@@ -1,37 +1,7 @@
+_extends: guardrail:.github/release-drafter.yml
 name-template: 'java-support-v$RESOLVED_VERSION'
 tag-template: 'java-support-v$RESOLVED_VERSION'
 tag-prefix: java-support-v
 include-paths:
   - "modules/java-support/src/main/"
   - "project/src/main/scala/modules/javaSupport.scala"
-# NB: Managed by support/regenerate-release-drafter.sh
-categories:
-  - title: '🚀 Features'
-    labels:
-      - 'enhancement'
-  - title: '🐛 Bug Fixes'
-    labels:
-      - 'bug'
-  - title: '🧰 Maintenance'
-    label: 'chore'
-change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
-version-resolver:
-  major:
-    labels:
-      - 'major'
-  minor:
-    labels:
-      - 'minor'
-  patch:
-    labels:
-      - 'patch'
-  default: patch
-template: |
-  ## Changes
-
-  $CHANGES
-
-  ## Contributors
-
-  Thanks to $CONTRIBUTORS for your contributions to this release!
