@@ -27,8 +27,8 @@ object WelcomeMessage {
         |${item("format")} - Format all code, ${gatesPR}
         |${item("runExample")} - Run generators with example args (usage: runExample [language [framework]])
         |${item("testSuite")} - Run every available test suite, ${gatesPR}
-        |${subItem("testScalaSuite")} - Run core tests, then all available Scala tests
-        |${subItem("testJavaSuite")} - Run core tests, then all available Java tests
+        |${subItem("scalaTestSuite")} - Run core tests, then all available Scala tests
+        |${subItem("javaTestSuite")} - Run core tests, then all available Java tests
         |${item("runtimeSuite")} - Similar to testSuite, but skip core tests
         |${subItem("runtimeScalaSuite")} - Similar to testScalaSuite, but skip core tests
         |${subItem("runtimeJavaSuite")} - Similar to testJavaSuite, but skip core tests
