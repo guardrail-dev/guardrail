@@ -7,7 +7,7 @@ import sbt.Keys._
 import wartremover.WartRemover.autoImport._
 
 object scalaAkkaHttp {
-  val akkaHttpVersion        = "10.2.9"
+  val akkaHttpVersion        = "10.2.10"
   val akkaVersion            = "2.6.20"
   val catsVersion            = "2.8.0"
   val circeVersion           = "0.14.3"
