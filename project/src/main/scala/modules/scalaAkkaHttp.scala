@@ -8,10 +8,10 @@ import wartremover.WartRemover.autoImport._
 
 object scalaAkkaHttp {
   val akkaHttpVersion        = "10.2.9"
-  val akkaVersion            = "2.6.19"
+  val akkaVersion            = "2.6.20"
   val catsVersion            = "2.8.0"
   val circeVersion           = "0.14.2"
-  val hibernateVersion       = "6.2.4.Final"
+  val hibernateVersion       = "6.2.5.Final"
   val jacksonVersion         = "2.13.3"
   val javaxAnnotationVersion = "1.3.2"
   val javaxElVersion         = "3.0.0"
