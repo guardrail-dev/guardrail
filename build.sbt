@@ -44,6 +44,23 @@ runExample := Def.inputTaskDyn {
   )
 }.evaluated
 
+lazy val runIssue: InputKey[Unit] = inputKey[Unit]("Run generators associated with a particular regression spec")
+runIssue := Def.inputTaskDyn {
+  import complete.DefaultParsers.spaceDelimited
+
+  object Starabble {
+    def unapply(value: String): Option[Option[String]] = Some(Some(value).filterNot(_ == "*"))
+  }
+  val args: Seq[String] = spaceDelimited("<arg>").parsed
+  val runArgs: List[List[List[String]]] = args match {
+    case Starabble(language) :: Starabble(framework) :: file :: Nil => language.fold(List("scala", "java"))(List(_)).map(language => exampleArgs(language, framework=framework, file=Some(file)))
+    case Nil => List.empty
+  }
+  Def.sequential(
+    runArgs.map(args => runTask(Test, "dev.guardrail.cli.CLI", args.flatten.filter(_.nonEmpty): _*))
+  )
+}.evaluated
+
 // Make "cli" not emit unhandled exceptions on exit
 Test / fork := true
 run / fork := true

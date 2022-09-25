@@ -112,13 +112,14 @@ object RegressionTests {
     ExampleCase(sampleResource("authentication-override.yaml"), "authentication-override-simple").args("--auth-implementation", "simple").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
   )
 
-  def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases
+  def exampleArgs(language: String, framework: Option[String] = None, file: Option[String] = None): List[List[String]] = exampleCases
     .foldLeft(List[List[String]](List(language)))({
       case (acc, ExampleCase(path, prefix, extra, onlyFrameworks)) =>
         acc ++ (for {
           frameworkSuite <- exampleFrameworkSuites(language).filter(efs => framework.forall(_ == efs.name))
           ExampleFramework(frameworkName, frameworkPackage, kinds, modules) = frameworkSuite
           if onlyFrameworks.forall(_.exists({ case (onlyLanguage, onlyFrameworks) => onlyLanguage == language && onlyFrameworks.contains(frameworkName) }))
+          if file.forall(path.toPath.endsWith)
           kind <- kinds
           filteredExtra = extra.filterNot(if (language == "java" || (language == "scala" && frameworkName == "dropwizard")) _ == "--tracing" else Function.const(false) _)
         } yield
