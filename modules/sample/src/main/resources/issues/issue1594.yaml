@@ -1,0 +1,14 @@
+openapi: 3.0.0
+info:
+  title: Whatever
+  version: 1.0.0
+servers:
+  - url: //localhost:1234/foo/
+paths:
+  /foo//bar:
+    post:
+      operationId: doFoo
+      x-jvm-package: foo
+      responses:
+        "201":
+          description: Created
