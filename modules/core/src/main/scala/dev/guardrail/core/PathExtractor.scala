@@ -49,6 +49,14 @@ object PathExtractor {
   }
 }
 
+// PathExtractor is a parameterized parser that takes a raw string and extracts
+// a set of bindings and extractors, as well as any static querystring
+//
+// Type arguments:
+//   L <: LA            : Which language our types refer to
+//   T                  : L#Term, but we can't type project in class arguments
+//   TN                 : L#TermName, but we can't type project in class arguments
+//   ModelGeneratorType : Smuggling in some extra data useful in parse, but that we don't have access to in the core module
 class PathExtractor[L <: LA, T, TN <: T, ModelGeneratorType](
     pathSegmentConverter: (LanguageParameter[L], Option[T], ModelGeneratorType) => Either[String, T],
     buildParamConstraint: ((String, String)) => T,
