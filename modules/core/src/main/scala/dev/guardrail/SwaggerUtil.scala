@@ -187,10 +187,13 @@ object SwaggerUtil {
             .orRefine { case SchemaLiteral(x: UUIDSchema) => x }(const(uuidType()))
             // Finally, attempt to recover if we've gotten all the way down here without knowing what we're dealing with
             .orRefineFallback { schemaProjection =>
-              schemaProjection.unwrapTracker match {
-                case SchemaLiteral(x) =>
-                  println(s"WARNING: Missing type mapping for ${x.getClass}, please report this at https://github.com/guardrail-dev/guardrail/issues")
-                case SchemaRef(schema, ref) => println(s"WARNING: Unexpected type mapping missing, $ref")
+              schemaProjection match {
+                case Tracker(history, SchemaLiteral(x)) =>
+                  println(
+                    s"WARNING: Missing type mapping for ${x.getClass} (${history}), please report this at https://github.com/guardrail-dev/guardrail/issues"
+                  )
+                case Tracker(history, SchemaRef(schema, ref)) =>
+                  println(s"WARNING: Unexpected type mapping missing, $ref (${history})")
               }
               val schema = schemaProjection.map {
                 case SchemaLiteral(x)               => x
