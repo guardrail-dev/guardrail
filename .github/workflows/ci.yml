@@ -50,6 +50,7 @@ jobs:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
         verbose: true
+        token: ${{ secrets.CODECOV_TOKEN }}
     - name: Set scala version for matrix
       id: set-scala-versions  # The greps on the following line are to ensure as much as possible that we've caught the right line
       run: echo "::set-output name=scala_versions::$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)"
