@@ -44,6 +44,8 @@ class PathParserSpec extends AnyFunSuite with Matchers with EitherValues with Op
   List[(String, Term)](
     ("", q""" pathEnd """),
     ("foo", q""" path("foo") """),
+    ("foo/bar", q""" path("foo" / "bar") """),
+    ("foo//bar", q""" path("foo" / "bar") """),
     ("foo/", q""" pathPrefix("foo") & pathEndOrSingleSlash """),
     ("{foo}", q""" path(IntNumber) """),
     (

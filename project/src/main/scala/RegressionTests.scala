@@ -84,6 +84,7 @@ object RegressionTests {
     ExampleCase(sampleResource("issues/issue1138.yaml"), "issues.issue1138"),
     ExampleCase(sampleResource("issues/issue1260.yaml"), "issues.issue1260"),
     ExampleCase(sampleResource("issues/issue1218.yaml"), "issues.issue1218").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("issues/issue1594.yaml"), "issues.issue1594"),
     ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
     ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "examples.support.PositiveLong"),
     // ExampleCase(sampleResource("petstore-openapi-3.0.2.yaml"), "examples.petstore.openapi302").args("--import", "examples.support.PositiveLong"),
@@ -112,13 +113,14 @@ object RegressionTests {
     ExampleCase(sampleResource("authentication-override.yaml"), "authentication-override-simple").args("--auth-implementation", "simple").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
   )
 
-  def exampleArgs(language: String, framework: Option[String] = None): List[List[String]] = exampleCases
+  def exampleArgs(language: String, framework: Option[String] = None, file: Option[String] = None): List[List[String]] = exampleCases
     .foldLeft(List[List[String]](List(language)))({
       case (acc, ExampleCase(path, prefix, extra, onlyFrameworks)) =>
         acc ++ (for {
           frameworkSuite <- exampleFrameworkSuites(language).filter(efs => framework.forall(_ == efs.name))
           ExampleFramework(frameworkName, frameworkPackage, kinds, modules) = frameworkSuite
           if onlyFrameworks.forall(_.exists({ case (onlyLanguage, onlyFrameworks) => onlyLanguage == language && onlyFrameworks.contains(frameworkName) }))
+          if file.forall(path.toPath.endsWith)
           kind <- kinds
           filteredExtra = extra.filterNot(if (language == "java" || (language == "scala" && frameworkName == "dropwizard")) _ == "--tracing" else Function.const(false) _)
         } yield

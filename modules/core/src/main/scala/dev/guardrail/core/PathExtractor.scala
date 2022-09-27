@@ -49,6 +49,14 @@ object PathExtractor {
   }
 }
 
+// PathExtractor is a parameterized parser that takes a raw string and extracts
+// a set of bindings and extractors, as well as any static querystring
+//
+// Type arguments:
+//   L <: LA            : Which language our types refer to
+//   T                  : L#Term, but we can't type project in class arguments
+//   TN                 : L#TermName, but we can't type project in class arguments
+//   ModelGeneratorType : Smuggling in some extra data useful in parse, but that we don't have access to in the core module
 class PathExtractor[L <: LA, T, TN <: T, ModelGeneratorType](
     pathSegmentConverter: (LanguageParameter[L], Option[T], ModelGeneratorType) => Either[String, T],
     buildParamConstraint: ((String, String)) => T,
@@ -77,8 +85,10 @@ class PathExtractor[L <: LA, T, TN <: T, ModelGeneratorType](
       }
     }
 
+  private val pathSep: Parser[Char] = many1(char('/')).map(_.head)
+
   def segments(implicit pathArgs: List[LanguageParameter[L]], modelGeneratorType: ModelGeneratorType): LP =
-    sepBy1(choice(regexSegment(pathArgs, modelGeneratorType), stringSegment), char('/'))
+    sepBy1(choice(regexSegment(pathArgs, modelGeneratorType), stringSegment), pathSep)
       .map(_.toList)
 
   val qsValueOnly: Parser[(String, String)] = ok("") ~ (char('=') ~> opt(many(noneOf("&")))
@@ -89,8 +99,8 @@ class PathExtractor[L <: LA, T, TN <: T, ModelGeneratorType](
   val staticQSTerm: Parser[T] =
     choice(staticQSArg, qsValueOnly).map(buildParamConstraint)
   val queryPart: Parser[T]               = sepBy1(staticQSTerm, char('&')).map(_.reduceLeft(joinParams))
-  val leadingSlash: Parser[Option[Char]] = opt(char('/'))
-  val trailingSlash: Parser[Boolean]     = opt(char('/')).map(_.nonEmpty)
+  val leadingSlash: Parser[Option[Char]] = opt(pathSep)
+  val trailingSlash: Parser[Boolean]     = opt(pathSep).map(_.nonEmpty)
   val staticQS: Parser[Option[T]]        = (char('?') ~> queryPart.map(Option.apply _)) | char('?').map(_ => Option.empty[T]) | ok(Option.empty[T])
   val emptyPath: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))]   = ok((List.empty[(Option[TN], T)], (false, None)))
   val emptyPathQS: Parser[(List[(Option[TN], T)], (Boolean, Option[T]))] = ok(List.empty[(Option[TN], T)]) ~ (ok(false) ~ staticQS)
