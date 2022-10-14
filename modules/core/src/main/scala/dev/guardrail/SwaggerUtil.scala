@@ -96,17 +96,6 @@ object SwaggerUtil {
       import Cl._
       import Fw._
 
-      def log(fmt: Option[String], t: L#Type): L#Type = {
-        fmt.foreach { fmt =>
-          println(
-            s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${rawSchema.unwrapTracker
-                .getType()}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${rawSchema.showHistory})"
-          )
-        }
-
-        t
-      }
-
       for {
         schemaProjection <- rawSchema
           .downField("$ref", _.get$ref())
@@ -114,6 +103,20 @@ object SwaggerUtil {
           .fold[F[Tracker[SchemaProjection]]](rawSchema.map(SchemaLiteral(_): SchemaProjection).pure[F]) { ref =>
             Sw.dereferenceSchema(ref, components).map(_.map(schema => SchemaRef(SchemaLiteral(schema), ref.unwrapTracker)))
           }
+        customTpe <- customType.indexedDistribute.flatTraverse(x => liftCustomType[L, F](x))
+        log = { (fmt: Option[String], t: L#Type) =>
+          fmt.foreach { fmt =>
+            if (customTpe.isEmpty) {
+              println(
+                s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${rawSchema.unwrapTracker
+                    .getType()}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${rawSchema.showHistory})"
+              )
+            }
+          }
+
+          t: L#Type
+        }
+
         (renderType, reifiedRawType) <- {
           def extractFormat(func: Option[String] => F[L#Type]): Tracker[Schema[_]] => F[(L#Type, ReifiedRawType)] = { schema =>
             val rawType   = schema.downField("type", _.getType())
