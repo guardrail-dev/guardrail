@@ -10,7 +10,7 @@ object scalaHttp4s {
   val circeVersion           = "0.14.3"
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
-  val scalatestVersion       = "3.2.13"
+  val scalatestVersion       = "3.2.14"
 
   val dependenciesV0_22 = {
     val catsEffectVersion      = "2.5.4"
