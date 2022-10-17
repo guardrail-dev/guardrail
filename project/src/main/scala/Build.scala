@@ -84,7 +84,7 @@ object Build {
     organization := "dev.guardrail",
     licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
 
-    crossScalaVersions := Seq("2.12.17", "2.13.8"),
+    crossScalaVersions := Seq("2.12.17", "2.13.10"),
     scalaVersion := "2.12.17",
 
     // early-semver was a mistake. We already have early-semver guaratees during CI, but including this in the publishing POM
