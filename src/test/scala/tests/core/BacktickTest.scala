@@ -155,8 +155,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val companion = q"""
       object DashyClass {
         implicit val encodeDashyClass: _root_.io.circe.Encoder.AsObject[DashyClass] = {
-          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-          _root_.io.circe.Encoder.AsObject.instance[DashyClass](a =>  _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("dashy-param", a.dashyParam.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[DashyClass](a =>  _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("dashy-param", a.dashyParam.asJson))))
         }
         implicit val decodeDashyClass: _root_.io.circe.Decoder[DashyClass] = new _root_.io.circe.Decoder[DashyClass] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[DashyClass] = for (v0 <- c.downField("dashy-param").as[Option[Long]]) yield DashyClass(v0) }
       }

@@ -99,8 +99,7 @@ class ParamConflictsTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
     val companion = q"""
       object Foo {
         implicit val encodeFoo: _root_.io.circe.Encoder.AsObject[Foo] = {
-          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-          _root_.io.circe.Encoder.AsObject.instance[Foo](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("conflicting_name", a.conflicting_name.asJson), ("ConflictingName", a.ConflictingName.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[Foo](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("conflicting_name", a.conflicting_name.asJson), ("ConflictingName", a.ConflictingName.asJson))))
         }
         implicit val decodeFoo: _root_.io.circe.Decoder[Foo] = new _root_.io.circe.Decoder[Foo] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Foo] = for (v0 <- c.downField("conflicting_name").as[Option[String]]; v1 <- c.downField("ConflictingName").as[Option[String]]) yield Foo(v0, v1) }
       }

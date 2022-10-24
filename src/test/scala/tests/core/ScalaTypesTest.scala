@@ -44,8 +44,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val companion = q"""
       object Baz {
         implicit val encodeBaz: _root_.io.circe.Encoder.AsObject[Baz] = {
-          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-          _root_.io.circe.Encoder.AsObject.instance[Baz](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("foo", a.foo.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[Baz](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("foo", a.foo.asJson))))
         }
         implicit val decodeBaz: _root_.io.circe.Decoder[Baz] = new _root_.io.circe.Decoder[Baz] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Baz] = for (v0 <- c.downField("foo").as[Option[dev.guardrail.foo.bar.Baz]]) yield Baz(v0) }
       }
