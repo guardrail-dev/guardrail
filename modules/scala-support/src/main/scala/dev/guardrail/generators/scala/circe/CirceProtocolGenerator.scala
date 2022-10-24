@@ -334,11 +334,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         q"$acc ++ $field"
       }
 
-      Option(
-        q"""
+      q"""
               ${circeVersion.encoderObjectCompanion}.instance[${Type.Name(clsName)}](a => _root_.io.circe.JsonObject.fromIterable($allFields))
             """
-      )
     }
     val (readOnlyDefn, readOnlyFilter) = NonEmptyList.fromList(readOnlyKeys).fold((List.empty[Stat], identity[Term] _)) { roKeys =>
       (
@@ -347,7 +345,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       )
     }
 
-    Target.pure(encVal.map(encVal => q"""
+    Target.pure(Option(q"""
           implicit val ${suffixClsName("encode", clsName)}: ${circeVersion.encoderObject}[${Type.Name(clsName)}] = {
             ..${readOnlyDefn};
             ${readOnlyFilter(encVal)}
@@ -373,14 +371,12 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       decVal <-
         if (paramCount == 0) {
           Target.pure(
-            Option[Term](
-              q"""
+            q"""
                  new _root_.io.circe.Decoder[${Type.Name(clsName)}] {
                     final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[${Type.Name(clsName)}] =
                       _root_.scala.Right(${Term.Name(clsName)}())
                   }
                 """
-            )
           )
         } else {
           params.zipWithIndex
@@ -452,8 +448,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             }
             .map { pairs =>
               val (terms, enumerators) = pairs.unzip
-              Option(
-                q"""
+              q"""
                   new _root_.io.circe.Decoder[${Type.Name(clsName)}] {
                     final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[${Type.Name(clsName)}] =
                       for {
@@ -461,10 +456,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                       } yield ${Term.Name(clsName)}(..${terms})
                   }
                 """
-              )
             }
         }
-    } yield decVal.map(decVal => q"""
+    } yield Option(q"""
             implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = $decVal
           """)
   }
