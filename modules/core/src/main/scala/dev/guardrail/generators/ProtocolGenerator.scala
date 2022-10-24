@@ -429,6 +429,16 @@ object ProtocolGenerator {
           .orRefine { case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s }(s =>
             fromEnum(nestedClassName.last, s, dtoPackage, components).map(Option(_))
           )
+          .orRefine { case m: MapSchema => m } { m =>
+            m.downField("additionalProperties", _.getAdditionalProperties)
+              .indexedDistribute
+              .flatTraverse(
+                _.refine { case x: ObjectSchema => x }(obj =>
+                  fromModel(nestedClassName, obj, List.empty, concreteTypes, definitions, dtoPackage, supportPackage, defaultPropertyRequirement, components)
+                ).toOption.sequence
+              )
+              .widen
+          }
           .getOrElse(Option.empty[Either[String, NestedProtocolElems[L]]].pure[F])
       } yield defn
 
