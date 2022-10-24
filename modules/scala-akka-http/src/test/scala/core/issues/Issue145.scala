@@ -56,8 +56,7 @@ class Issue145 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       val companion = q"""
         object Pet {
           implicit val encodePet: _root_.io.circe.Encoder.AsObject[Pet] = {
-            val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[Pet](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("underscore_name", a.underscoreName.asJson), ("dash-name", a.dashName.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[Pet](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("underscore_name", a.underscoreName.asJson), ("dash-name", a.dashName.asJson))))
           }
           implicit val decodePet: _root_.io.circe.Decoder[Pet] = new _root_.io.circe.Decoder[Pet] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Pet] = for (v0 <- c.downField("name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) _root_.io.circe.Json.Null else j)).as[Option[CustomThing]]; v1 <- c.downField("underscore_name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) _root_.io.circe.Json.Null else j)).as[Option[CustomThing]]; v2 <- c.downField("dash-name").withFocus(j => j.asString.fold(j)(s => if (s.isEmpty) _root_.io.circe.Json.Null else j)).as[Option[CustomThing]]) yield Pet(v0, v1, v2) }
         }

@@ -153,8 +153,7 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
     val companion = q"""
       object PropRef {
         implicit val encodePropRef: _root_.io.circe.Encoder.AsObject[PropRef] = {
-          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-          _root_.io.circe.Encoder.AsObject.instance[PropRef](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("param", a.param.asJson), ("array", a.array.asJson), ("arrayArray", a.arrayArray.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[PropRef](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("param", a.param.asJson), ("array", a.array.asJson), ("arrayArray", a.arrayArray.asJson))))
         }
         implicit val decodePropRef: _root_.io.circe.Decoder[PropRef] = new _root_.io.circe.Decoder[PropRef] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[PropRef] = for (v0 <- c.downField("param").as[Option[Long]]; v1 <- c.downField("array").as[Option[Vector[Long]]]; v2 <- c.downField("arrayArray").as[Option[Vector[Vector[Long]]]]) yield PropRef(v0, v1, v2) }
       }
@@ -220,8 +219,7 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
     val companion = q"""
       object PropRef {
         implicit val encodePropRef: _root_.io.circe.Encoder.AsObject[PropRef] = {
-          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-          _root_.io.circe.Encoder.AsObject.instance[PropRef](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("param", a.param.asJson), ("array", a.array.asJson), ("arrayArray", a.arrayArray.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[PropRef](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("param", a.param.asJson), ("array", a.array.asJson), ("arrayArray", a.arrayArray.asJson))))
         }
         implicit val decodePropRef: _root_.io.circe.Decoder[PropRef] = new _root_.io.circe.Decoder[PropRef] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[PropRef] = for (v0 <- c.downField("param").as[Option[Long]]; v1 <- c.downField("array").as[Option[Vector[Long]]]; v2 <- c.downField("arrayArray").as[Option[Vector[Vector[Long]]]]) yield PropRef(v0, v1, v2) }
       }
