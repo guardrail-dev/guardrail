@@ -4,7 +4,9 @@ import cats.{ Eval, Foldable, Functor }
 
 // Effectively Nested[F, (K, *), V]
 // With some thought, this may just be expressible via a type alias
-class Mappish[F[_], K, V](val value: F[(K, V)])
+class Mappish[F[_], K, V](val value: F[(K, V)]) {
+  override def toString() = s"Mappish(${value.toString()})"
+}
 
 object Mappish {
   def apply[F[_], A, B](value: F[(A, B)]): Mappish[F, A, B] = new Mappish(value)
