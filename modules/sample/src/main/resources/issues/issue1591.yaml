@@ -1,0 +1,40 @@
+openapi: 3.0.1
+info:
+  title: Whatever
+  version: 1.0.0
+paths: { }
+components:
+  schemas:
+    Foo:
+      type: object
+      properties:
+        bar:
+          type: string
+    status:
+      description: AppProjectStatus contains status information for AppProject
+        CRs
+      properties:
+        jwtTokensByRole:
+          type: object
+          additionalProperties:
+            description: JWTTokens represents a list of JWT tokens
+            properties:
+              items:
+                items:
+                  description: JWTToken holds the issuedAt and expiresAt values
+                    of a token
+                  properties:
+                    exp:
+                      format: int64
+                      type: integer
+                    iat:
+                      format: int64
+                      type: integer
+                    id:
+                      type: string
+                  required:
+                    - iat
+                  type: object
+                type: array
+            type: object
+      type: object
