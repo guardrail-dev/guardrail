@@ -296,7 +296,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   ) = {
     val discriminators                = parents.flatMap(_.discriminators)
     val discriminatorNames            = discriminators.map(_.propertyName).toSet
-    val (discriminatorParams, params) = (parents.reverse.flatMap(_.params) ++ selfParams).partition(param => discriminatorNames.contains(param.name.value))
+    val allParams                     = parents.reverse.flatMap(_.params) ++ selfParams
+    val (discriminatorParams, params) = allParams.partition(param => discriminatorNames.contains(param.name.value))
     val readOnlyKeys: List[String]    = params.flatMap(_.readOnlyKey).toList
     val typeName                      = Type.Name(clsName)
     val encVal = {
@@ -363,7 +364,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   ): Target[Option[Defn.Val]] = {
     val discriminators            = parents.flatMap(_.discriminators)
     val discriminatorNames        = discriminators.map(_.propertyName).toSet
-    val params                    = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(param => discriminatorNames.contains(param.name.value))
+    val allParams                 = parents.reverse.flatMap(_.params) ++ selfParams
+    val params                    = allParams.filterNot(param => discriminatorNames.contains(param.name.value))
     val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
     val paramCount                = params.length
     for {
