@@ -339,10 +339,17 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             """
       )
     }
+    val (readOnlyDefn, readOnlyFilter) = NonEmptyList.fromList(readOnlyKeys).fold((List.empty[Stat], identity[Term] _)) { roKeys =>
+      (
+        List(q"val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String](..${roKeys.toList.map(Lit.String(_))})"),
+        encVal => q"$encVal.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))"
+      )
+    }
+
     Target.pure(encVal.map(encVal => q"""
           implicit val ${suffixClsName("encode", clsName)}: ${circeVersion.encoderObject}[${Type.Name(clsName)}] = {
-            val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String](..${readOnlyKeys.map(Lit.String(_))})
-            $encVal.mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            ..${readOnlyDefn};
+            ${readOnlyFilter(encVal)}
           }
         """))
   }
