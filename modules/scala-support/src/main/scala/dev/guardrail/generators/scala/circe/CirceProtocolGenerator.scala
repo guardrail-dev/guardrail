@@ -135,18 +135,20 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   override def extractProperties(swagger: Tracker[Schema[_]]) =
     swagger
       .refine[Target[List[(String, Tracker[Schema[_]])]]] { case o: ObjectSchema => o }(m =>
-        Target.pure(m.downField("properties", _.getProperties).indexedCosequence.value)
+        Target.pure(m.downField("properties", _.getProperties()).indexedCosequence.value)
       )
       .orRefine { case c: ComposedSchema => c } { comp =>
         val extractedProps =
-          comp.downField("allOf", _.getAllOf()).indexedDistribute.flatMap(_.downField("properties", _.getProperties).indexedCosequence.value)
+          comp
+            .downField("allOf", _.getAllOf())
+            .indexedDistribute
+            .flatMap(_.downField("properties", _.getProperties).indexedCosequence.value)
         Target.pure(extractedProps)
       }
       .orRefine { case x: Schema[_] if Option(x.get$ref()).isDefined => x }(comp =>
         Target.raiseUserError(s"Attempted to extractProperties for a ${comp.unwrapTracker.getClass()}, unsure what to do here (${comp.showHistory})")
       )
-      .getOrElse(Target.pure(List.empty))
-      .map(_.toList)
+      .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
   override def transformProperty(
       clsName: String,

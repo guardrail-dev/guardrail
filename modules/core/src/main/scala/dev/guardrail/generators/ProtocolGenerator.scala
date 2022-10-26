@@ -346,37 +346,34 @@ object ProtocolGenerator {
         defaultPropertyRequirement,
         components
       )
-      defn        <- renderDTOClass(clsName.last, supportPackage, params, parents)
       encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
       decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
       tpe         <- parseTypeName(clsName.last)
       fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
-      result <-
-        if (parents.isEmpty && props.isEmpty) (Left("Entity isn't model"): Either[String, ClassDefinition[L]]).pure[F]
-        else {
-          val nestedClasses = nestedDefinitions.flatTraverse {
-            case classDefinition: ClassDefinition[L] =>
-              for {
-                widenClass          <- widenClassDefinition(classDefinition.cls)
-                companionTerm       <- pureTermName(classDefinition.name)
-                companionDefinition <- wrapToObject(companionTerm, classDefinition.staticDefns.extraImports, classDefinition.staticDefns.definitions)
-                widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
-              } yield List(widenClass) ++ widenCompanion.fold(classDefinition.staticDefns.definitions)(List(_))
-            case enumDefinition: EnumDefinition[L] =>
-              for {
-                widenClass          <- widenClassDefinition(enumDefinition.cls)
-                companionTerm       <- pureTermName(enumDefinition.name)
-                companionDefinition <- wrapToObject(companionTerm, enumDefinition.staticDefns.extraImports, enumDefinition.staticDefns.definitions)
-                widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
-              } yield List(widenClass) ++ widenCompanion.fold(enumDefinition.staticDefns.definitions)(List(_))
-          }
-          nestedClasses.map { v =>
-            val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ v)
-            tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName.last, _, fullType, defn, finalStaticDefns, parents))
-          }
-        }
-    } yield result
+      nestedClasses <- nestedDefinitions.flatTraverse {
+        case classDefinition: ClassDefinition[L] =>
+          for {
+            widenClass          <- widenClassDefinition(classDefinition.cls)
+            companionTerm       <- pureTermName(classDefinition.name)
+            companionDefinition <- wrapToObject(companionTerm, classDefinition.staticDefns.extraImports, classDefinition.staticDefns.definitions)
+            widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
+          } yield List(widenClass) ++ widenCompanion.fold(classDefinition.staticDefns.definitions)(List(_))
+        case enumDefinition: EnumDefinition[L] =>
+          for {
+            widenClass          <- widenClassDefinition(enumDefinition.cls)
+            companionTerm       <- pureTermName(enumDefinition.name)
+            companionDefinition <- wrapToObject(companionTerm, enumDefinition.staticDefns.extraImports, enumDefinition.staticDefns.definitions)
+            widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
+          } yield List(widenClass) ++ widenCompanion.fold(enumDefinition.staticDefns.definitions)(List(_))
+      }
+      defn <- renderDTOClass(clsName.last, supportPackage, params, parents)
+    } yield {
+      val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ nestedClasses)
+      if (parents.isEmpty && props.isEmpty) Left("Entity isn't model"): Either[String, ClassDefinition[L]]
+      else tpe.toRight("Empty entity name").map(ClassDefinition[L](clsName.last, _, fullType, defn, finalStaticDefns, parents))
+    }
+
   }
 
   private def prepareProperties[L <: LA, F[_]](
@@ -406,8 +403,19 @@ object ProtocolGenerator {
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
         defn <- schema
           .refine[F[Option[Either[String, NestedProtocolElems[L]]]]] { case x: ObjectSchema => x }(_ =>
-            fromModel(nestedClassName, schema, List.empty, concreteTypes, definitions, dtoPackage, supportPackage, defaultPropertyRequirement, components)
-              .map(Option(_))
+            for {
+              defn <- fromModel(
+                nestedClassName,
+                schema,
+                List.empty,
+                concreteTypes,
+                definitions,
+                dtoPackage,
+                supportPackage,
+                defaultPropertyRequirement,
+                components
+              )
+            } yield Option(defn)
           )
           .orRefine { case o: ComposedSchema => o }(o =>
             for {
