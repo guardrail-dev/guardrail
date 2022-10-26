@@ -402,11 +402,11 @@ object ProtocolGenerator {
       for {
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
         defn <- schema
-          .refine[F[Option[Either[String, NestedProtocolElems[L]]]]] { case x: ObjectSchema => x }(_ =>
+          .refine[F[Option[Either[String, NestedProtocolElems[L]]]]] { case x: ObjectSchema => x }(o =>
             for {
               defn <- fromModel(
                 nestedClassName,
-                schema,
+                o,
                 List.empty,
                 concreteTypes,
                 definitions,
@@ -422,7 +422,7 @@ object ProtocolGenerator {
               parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
               maybeClassDefinition <- fromModel(
                 nestedClassName,
-                schema,
+                o,
                 parents,
                 concreteTypes,
                 definitions,
