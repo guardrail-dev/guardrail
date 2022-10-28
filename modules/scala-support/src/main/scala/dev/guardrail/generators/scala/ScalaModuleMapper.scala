@@ -12,6 +12,7 @@ class ScalaModuleMapper extends ModuleMapperLoader {
     case "http4s"            => Some(Set("circe", "http4s"))
     case "http4s-v0.23"      => Some(Set("circe", "http4s-v0.23"))
     case "http4s-v0.22"      => Some(Set("circe", "http4s-v0.22"))
+    case "zio-http"          => Some(Set("circe", "zio-http")) // TODO: add and use zio-json instead of circe
     case "akka-http-jackson" => Some(Set("akka-http", "jackson"))
     case "dropwizard"        => Some(Set("dropwizard", "jackson"))
     case _                   => None
