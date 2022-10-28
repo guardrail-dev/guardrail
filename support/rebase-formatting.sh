@@ -63,6 +63,7 @@ projects=(
   scala-support
   scala-akka-http
   scala-http4s
+  scala-zio-http
   scala-dropwizard
 )
 

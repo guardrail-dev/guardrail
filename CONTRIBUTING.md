@@ -11,6 +11,7 @@ Project structure
   - `scala-akka-http`: Generators for [`akka-http`](https://doc.akka.io/docs/akka-http/current/index.html) clients and servers
   - `scala-dropwizard`: Generators for [dropwizard](https://www.dropwizard.io/)
   - `scala-http4s`: Generators for [`http4s`](https://http4s.org/) clients and servers
+  - `scala-zio-http`: Generators for [`zio-http`](https://zio.github.io/zio-http/) clients and servers
   - `scala-support`: Language definitions for Scala, as well as circe and Jackson generators
 
 Coding guidelines

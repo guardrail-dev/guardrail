@@ -1,0 +1,7 @@
+_extends: guardrail:.github/release-drafter.yml
+name-template: 'scala-zio-http-v$RESOLVED_VERSION'
+tag-template: 'scala-zio-http-v$RESOLVED_VERSION'
+tag-prefix: scala-zio-http-v
+include-paths:
+  - "modules/scala-zio-http/src/main/"
+  - "project/src/main/scala/modules/scalaZioHttp.scala"

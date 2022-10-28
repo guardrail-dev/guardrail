@@ -8,6 +8,7 @@ object RegressionTests {
       ExampleFramework("akka-http", "akkaHttp"),
       ExampleFramework("http4s-v0.22", "http4s-v0_22"),
       ExampleFramework("http4s", "http4s"),
+      ExampleFramework("zio-http", "zioHttp"),
       ExampleFramework("akka-http-jackson", "akkaHttpJackson"),
       ExampleFramework("dropwizard", "dropwizardScala", List("server")),
     ),

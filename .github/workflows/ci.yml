@@ -101,6 +101,7 @@ jobs:
             { framework: 'akka-http',         project: 'sample-akkaHttp'        },
             { framework: 'http4s',            project: 'sample-http4s'          },
             { framework: 'http4s-v0.22',      project: 'sample-http4s-v0_22'     },
+            { framework: 'zio-http',          project: 'sample-zio-http'        },
             { framework: 'akka-http-jackson', project: 'sample-akkaHttpJackson' },
             { framework: 'dropwizard',        project: 'sample-dropwizardScala' }
           ]
