@@ -50,8 +50,7 @@ class Issue105 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     val companion = q"""
       object Foo {
         implicit val encodeFoo: _root_.io.circe.Encoder.AsObject[Foo] = {
-          val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-          _root_.io.circe.Encoder.AsObject.instance[Foo](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("nonEmptyString", a.nonEmptyString.asJson), ("positiveLong", a.positiveLong.asJson)))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+          _root_.io.circe.Encoder.AsObject.instance[Foo](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("nonEmptyString", a.nonEmptyString.asJson), ("positiveLong", a.positiveLong.asJson))))
         }
         implicit val decodeFoo: _root_.io.circe.Decoder[Foo] = new _root_.io.circe.Decoder[Foo] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Foo] = for (v0 <- c.downField("nonEmptyString").as[Option[String Refined NonEmpty]]; v1 <- c.downField("positiveLong").as[Option[Long Refined Positive]]) yield Foo(v0, v1) }
       }

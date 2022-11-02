@@ -128,8 +128,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       val companion = q"""
         object Cat {
           implicit val encodeCat: _root_.io.circe.Encoder.AsObject[Cat] = {
-            val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("petType", _root_.io.circe.Json.fromString("Cat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("petType", _root_.io.circe.Json.fromString("Cat")))))
           }
           implicit val decodeCat: _root_.io.circe.Decoder[Cat] = new _root_.io.circe.Decoder[Cat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Cat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]) yield Cat(v0, v1) }
           sealed abstract class HuntingSkill(val value: String) extends _root_.scala.Product with _root_.scala.Serializable { override def toString: String = value.toString }
@@ -318,8 +317,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       val companion = q"""
         object Dog {
           implicit val encodeDog: _root_.io.circe.Encoder.AsObject[Dog] = {
-            val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[Dog](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("packSize", a.packSize.asJson), ("petType", _root_.io.circe.Json.fromString("Dog"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[Dog](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("packSize", a.packSize.asJson), ("petType", _root_.io.circe.Json.fromString("Dog")))))
           }
           implicit val decodeDog: _root_.io.circe.Decoder[Dog] = new _root_.io.circe.Decoder[Dog] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Dog] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("packSize").as[Int]) yield Dog(v0, v1) }
         }
@@ -331,8 +329,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       val companion = q"""
         object PersianCat {
           implicit val encodePersianCat: _root_.io.circe.Encoder.AsObject[PersianCat] = {
-            val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("wool", a.wool.asJson), ("petType", _root_.io.circe.Json.fromString("PersianCat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("name", a.name.asJson), ("huntingSkill", a.huntingSkill.asJson), ("wool", a.wool.asJson), ("petType", _root_.io.circe.Json.fromString("PersianCat")))))
           }
           implicit val decodePersianCat: _root_.io.circe.Decoder[PersianCat] = new _root_.io.circe.Decoder[PersianCat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[PersianCat] = for (v0 <- c.downField("name").as[String]; v1 <- c.downField("huntingSkill").as[Cat.HuntingSkill]; v2 <- c.downField("wool").as[Option[Int]]) yield PersianCat(v0, v1, v2) }
         }
@@ -490,8 +487,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       val companion = q"""
         object PersianCat {
           implicit val encodePersianCat: _root_.io.circe.Encoder.AsObject[PersianCat] = {
-            val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("catBreed", a.catBreed.asJson), ("petType", _root_.io.circe.Json.fromString("PersianCat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[PersianCat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("catBreed", a.catBreed.asJson), ("petType", _root_.io.circe.Json.fromString("PersianCat")))))
           }
           implicit val decodePersianCat: _root_.io.circe.Decoder[PersianCat] = new _root_.io.circe.Decoder[PersianCat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[PersianCat] = for (v0 <- c.downField("catBreed").as[String]) yield PersianCat(v0) }
         }
@@ -591,8 +587,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       val companion = q"""
         object Cat {
           implicit val encodeCat: _root_.io.circe.Encoder.AsObject[Cat] = {
-            val readOnlyKeys = _root_.scala.Predef.Set[_root_.scala.Predef.String]()
-            _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("wool", a.wool.asJson), ("catBreed", a.catBreed.asJson), ("petType", _root_.io.circe.Json.fromString("Cat")), ("mammalType", _root_.io.circe.Json.fromString("Cat"))))).mapJsonObject(_.filterKeys(key => !(readOnlyKeys contains key)))
+            _root_.io.circe.Encoder.AsObject.instance[Cat](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("wool", a.wool.asJson), ("catBreed", a.catBreed.asJson), ("petType", _root_.io.circe.Json.fromString("Cat")), ("mammalType", _root_.io.circe.Json.fromString("Cat")))))
           }
           implicit val decodeCat: _root_.io.circe.Decoder[Cat] = new _root_.io.circe.Decoder[Cat] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Cat] = for (v0 <- c.downField("wool").as[Boolean]; v1 <- c.downField("catBreed").as[String]) yield Cat(v0, v1) }
         }
