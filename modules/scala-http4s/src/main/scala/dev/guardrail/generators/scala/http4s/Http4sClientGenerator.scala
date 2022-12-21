@@ -13,7 +13,6 @@ import dev.guardrail.generators.LanguageParameter
 import dev.guardrail.generators.LanguageParameters
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.generators.RenderedClientOperation
-import dev.guardrail.generators.scala.ResponseADTHelper
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.spi.ClientGeneratorLoader

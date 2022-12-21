@@ -25,7 +25,6 @@ import dev.guardrail.generators.TracingField
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.ModelGeneratorType
-import dev.guardrail.generators.scala.ResponseADTHelper
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.spi.ModuleLoadResult

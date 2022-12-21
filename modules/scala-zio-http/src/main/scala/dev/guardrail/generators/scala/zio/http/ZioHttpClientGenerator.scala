@@ -4,6 +4,7 @@ import _root_.io.swagger.v3.oas.models.Components
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.data.NonEmptyList
 import cats.syntax.all._
+import dev.guardrail.Target
 import dev.guardrail._
 import dev.guardrail.core.SupportDefinition
 import dev.guardrail.core.Tracker
@@ -13,13 +14,21 @@ import dev.guardrail.generators.LanguageParameter
 import dev.guardrail.generators.LanguageParameters
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.generators.RenderedClientOperation
-import dev.guardrail.generators.scala.ResponseADTHelper
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.generators.spi.ModuleLoadResult
 import dev.guardrail.generators.syntax._
 import dev.guardrail.shims._
+import dev.guardrail.terms.ApplicationJson
+import dev.guardrail.terms.ContentType
+import dev.guardrail.terms.Header
+import dev.guardrail.terms.MultipartFormData
+import dev.guardrail.terms.OctetStream
+import dev.guardrail.terms.Responses
+import dev.guardrail.terms.RouteMeta
+import dev.guardrail.terms.SecurityScheme
+import dev.guardrail.terms.TextPlain
 import dev.guardrail.terms._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -318,7 +327,7 @@ class ZioHttpClientGenerator(version: ZioHttpVersion) extends ClientTerms[ScalaL
           formDataParams
             .filter(_ => formDataNeedsMultipart)
             .map(formDataParams =>
-               (inner: List[Stat]) => q"""Multiparts.forSync[F].flatMap(_.multipart($formDataParams.flatten.toVector).flatMap { _multipart => ..${inner} })"""
+              (inner: List[Stat]) => q"""Multiparts.forSync[F].flatMap(_.multipart($formDataParams.flatten.toVector).flatMap { _multipart => ..${inner} })"""
             )
             .getOrElse[List[Stat] => Term](Term.Block(_))
         headersExpr =

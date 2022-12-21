@@ -11,6 +11,8 @@ import dev.guardrail.AuthImplementation.Custom
 import dev.guardrail.AuthImplementation.Disable
 import dev.guardrail.AuthImplementation.Native
 import dev.guardrail.AuthImplementation.Simple
+import dev.guardrail.Target
+import dev.guardrail.UserError
 import dev.guardrail._
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.ServerRawResponse
@@ -25,7 +27,6 @@ import dev.guardrail.generators.TracingField
 import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.ModelGeneratorType
-import dev.guardrail.generators.scala.ResponseADTHelper
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.spi.ModuleLoadResult
@@ -36,16 +37,18 @@ import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.ContentType
 import dev.guardrail.terms.Header
 import dev.guardrail.terms.LanguageTerms
+import dev.guardrail.terms.OpenAPITerms
 import dev.guardrail.terms.Response
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.RouteMeta
 import dev.guardrail.terms.SecurityRequirements
 import dev.guardrail.terms.SecurityScheme
-import dev.guardrail.terms.OpenAPITerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server._
 
+import scala.meta._
+import scala.meta._
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
