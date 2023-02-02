@@ -35,6 +35,6 @@ object javaSupport {
     commonModule("java-support")
       .settings(
         libraryDependencies ++= eclipseFormatterDependencies,
-        libraryDependencies += "com.github.javaparser" % "javaparser-symbol-solver-core" % "3.22.1"
+        libraryDependencies += "com.github.javaparser" % "javaparser-symbol-solver-core" % "3.25.0"
       )
 }
