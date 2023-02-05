@@ -388,6 +388,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     case HttpMethod.PATCH  => Target.pure(Term.Name("PATCH"))
     case HttpMethod.POST   => Target.pure(Term.Name("POST"))
     case HttpMethod.PUT    => Target.pure(Term.Name("PUT"))
+    case HttpMethod.HEAD   => Target.pure(Term.Name("HEAD"))
     case other             => Target.raiseUserError(s"Unknown method: ${other}")
   }
 
