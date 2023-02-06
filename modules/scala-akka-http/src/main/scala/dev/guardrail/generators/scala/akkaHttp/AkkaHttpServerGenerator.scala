@@ -351,6 +351,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     case HttpMethod.POST    => Target.pure(q"post")
     case HttpMethod.PUT     => Target.pure(q"put")
     case HttpMethod.OPTIONS => Target.pure(q"options")
+    case HttpMethod.HEAD    => Target.pure(q"head")
     case other              => Target.raiseUserError(s"Unknown method: ${other}")
   }
 
