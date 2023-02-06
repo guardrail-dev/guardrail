@@ -89,6 +89,7 @@ jobs:
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
   scala:
     runs-on: ubuntu-20.04
     needs: [core]
@@ -131,3 +132,4 @@ jobs:
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
         fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
