@@ -9,7 +9,7 @@ object scalaDropwizard {
   val catsVersion            = "2.8.0"
   val dropwizardScalaVersion = "1.3.7-1"
   val dropwizardVersion      = "1.3.29"
-  val jacksonVersion         = "2.14.2"
+  val jacksonVersion         = "2.15.0"
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
   val jerseyVersion          = "2.25.1"
