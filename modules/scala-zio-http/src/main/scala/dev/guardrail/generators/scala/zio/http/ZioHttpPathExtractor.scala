@@ -1,26 +1,28 @@
 package dev.guardrail.generators.scala.zio.http
 
-import scala.meta._
-
 import dev.guardrail.core.PathExtractor
-import dev.guardrail.generators.scala.{ ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.generators.scala.ModelGeneratorType
+import dev.guardrail.generators.scala.ScalaLanguage
+
+import scala.meta._
 
 @SuppressWarnings(Array("org.wartremover.warts.Throw"))
 object ZioHttpPathExtractor
-    extends PathExtractor[ScalaLanguage, Pat, Term.Name, ModelGeneratorType](
+    extends PathExtractor[ScalaLanguage, Term, Term.Name, ModelGeneratorType](
       pathSegmentConverter = { case (LanguageParameter(_, param, paramName, argName, argType), base, _) =>
-        base.fold[Either[String, Pat]] {
+        base.fold[Either[String, Term]] {
           argType match {
-            case t"Int"                         => Right(p"IntVar(${Pat.Var(paramName)})")
-            case t"Long"                        => Right(p"LongVar(${Pat.Var(paramName)})")
-            case t"String"                      => Right(Pat.Var(paramName))
-            case t"java.util.UUID"              => Right(p"UUIDVar(${Pat.Var(paramName)})")
-            case Type.Name(tpe)                 => Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
-            case Type.Select(_, Type.Name(tpe)) => Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
+            case t"Int"                         => Right(q"int(${Lit.String(paramName.value)})")
+            case t"Long"                        => Right(q"long(${Lit.String(paramName.value)})")
+            case t"Boolean"                     => Right(q"boolean(${Lit.String(paramName.value)})")
+            case t"String"                      => Right(q"string(${Lit.String(paramName.value)})")
+            case t"java.util.UUID"              => Right(q"uuid(${Lit.String(paramName.value)})")
+            case Type.Name(tpe)                 => Right(q"${Term.Name(s"${tpe}")}(${Lit.String(paramName.value)})")
+            case Type.Select(_, Type.Name(tpe)) => Right(q"${Term.Name(s"${tpe}")}(${Lit.String(paramName.value)})")
             case tpe =>
               println(s"Doing our best turning ${tpe} into an extractor")
-              Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
+              Right(q"${Term.Name(s"${tpe}")}(${Lit.String(paramName.value)})")
           }
         } { _ =>
           // todo add support for regex segment
@@ -28,10 +30,10 @@ object ZioHttpPathExtractor
         }
       },
       buildParamConstraint = { case (k, v) =>
-        p"${Term.Name(s"${k.capitalize}Matcher")}(${Lit.String(v)})"
+        q"${Term.Name(s"${k.capitalize}Matcher")}(${Lit.String(v)})"
       },
       joinParams = { (l, r) =>
-        p"${l} +& ${r}"
+        q"${l} +& ${r}"
       },
       stringPath = Lit.String(_),
       liftBinding = identity,

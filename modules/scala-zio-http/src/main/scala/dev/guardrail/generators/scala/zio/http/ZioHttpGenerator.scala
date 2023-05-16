@@ -31,24 +31,12 @@ class ZioHttpGenerator private extends FrameworkTerms[ScalaLanguage, Target] {
       List(
         q"import cats.data.EitherT",
         q"import cats.implicits._",
-        q"import cats.effect.IO",
-        q"import cats.effect.Async",
-        q"import cats.effect.Sync",
-        q"import org.http4s.{Status => _, _}",
-        q"import org.http4s.client.{Client => ZioHttpClient}",
-        q"import org.http4s.client.UnexpectedStatus",
-        q"import org.http4s.dsl.io.Path",
-        q"import org.http4s.multipart._",
-        q"import org.http4s.headers._",
-        q"import org.http4s.implicits._",
-        q"import org.http4s.EntityEncoder._",
-        q"import org.http4s.EntityDecoder._",
-        q"import org.http4s.Media",
-        q"import org.typelevel.ci.CIString",
-        q"import fs2.Stream",
         q"import io.circe.Json",
         q"import scala.language.higherKinds",
-        q"import scala.language.implicitConversions"
+        q"import scala.language.implicitConversions",
+        q"import zio.http._",
+        q"import zio._",
+        q"import zio.stream._"
       )
     )
   def getFrameworkImplicits() =
@@ -56,20 +44,12 @@ class ZioHttpGenerator private extends FrameworkTerms[ScalaLanguage, Target] {
       val defn = q"""
           object ZioHttpImplicits {
             import scala.util.Try
-            private[this] def pathEscape(s: String): String = Path.Segment(s).toString
+          
+            private[this] def pathEscape(s: String): String = Uri.Path.Segment.apply(s, Uri.Path.Empty).toString
             implicit def addShowablePath[T](implicit ev: Show[T]): AddPath[T] = AddPath.build[T](v => pathEscape(ev.show(v)))
 
-            private[this] def argEscape(k: String, v: String): String = Query.apply((k, Some(v))).toString
+            private[this] def argEscape(k: String, v: String): String = Uri.Query.apply((k, v)).toString
             implicit def addShowableArg[T](implicit ev: Show[T]): AddArg[T] = AddArg.build[T](key => v => argEscape(key, ev.show(v)))
-
-            type TraceBuilder[F[_]] = String => org.http4s.client.Client[F] => org.http4s.client.Client[F]
-
-            implicit def emptyEntityEncoder[F[_]: Sync]: EntityEncoder[F, EntityBody[Nothing]] = EntityEncoder.emptyEncoder
-
-            implicit def byteStreamEntityDecoder[F[_]:Sync]: EntityDecoder[F, Stream[F, Byte]] = new EntityDecoder[F,Stream[F,Byte]] {
-              override def decode(m: Media[F], strict: Boolean): DecodeResult[F, Stream[F, Byte]] = DecodeResult.successT(m.body)
-              override def consumes: Set[MediaRange] = Set(MediaRange.`*/*`)
-            }
 
             object DoubleNumber {
               def unapply(value: String): Option[Double] = Try(value.toDouble).toOption

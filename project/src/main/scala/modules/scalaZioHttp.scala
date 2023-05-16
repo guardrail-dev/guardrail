@@ -26,10 +26,6 @@ object scalaZioHttp {
     ) ++ Seq(
       "io.circe"         %% "circe-core"            % circeVersion,
       "io.circe"         %% "circe-parser"          % circeVersion,
-      "org.http4s"       %% "http4s-blaze-client"   % http4sVersion,
-      "org.http4s"       %% "http4s-blaze-server"   % http4sVersion,
-      "org.http4s"       %% "http4s-circe"          % http4sVersion,
-      "org.http4s"       %% "http4s-dsl"            % http4sVersion,
       "org.typelevel"    %% "cats-core"             % catsVersion,
       "org.typelevel"    %% "cats-effect"           % catsEffectVersion,
     ).map(_.cross(CrossVersion.for3Use2_13))

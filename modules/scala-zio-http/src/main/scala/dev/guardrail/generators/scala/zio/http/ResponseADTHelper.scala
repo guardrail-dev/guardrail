@@ -13,8 +13,8 @@ object ResponseADTHelper {
       protocolElems: List[StrictProtocolElems[ScalaLanguage]]
   ): List[Defn] = {
     val isGeneric                         = isDefinitionGeneric(responses)
-    val extraTypes: List[Type]            = if (isGeneric) List(t"F") else Nil
-    val extraTypeParams: List[Type.Param] = if (isGeneric) List(tparam"F[_]") else Nil
+    val extraTypes: List[Type]            = if (isGeneric) List(t"UIO") else Nil
+    val extraTypeParams: List[Type.Param] = if (isGeneric) List(tparam"UIO[_]") else Nil
 
     val responseSuperType     = Type.Name(responseClsName)
     val responseSuperTerm     = Term.Name(responseClsName)
@@ -33,7 +33,7 @@ object ResponseADTHelper {
           val foldCase      = p"case ${responseSuperTerm}.${responseTerm} => ${foldHandleName}"
           (q"case object $responseTerm extends $responseSuperTemplate", (foldParameter, foldCase))
         case _ =>
-          val responseCaseType = if (isGeneric) t"$responseSuperTerm.$responseName[F]" else t"$responseSuperTerm.$responseName"
+          val responseCaseType = t"$responseSuperTerm.$responseName"
           val foldParameter    = param"${foldHandleName}: (..${allParams.map(_._1)}) => A"
           val foldCase         = p"case x: $responseCaseType => ${foldHandleName}(..${allParams.map(t => q"x.${t._2}")})"
           (
