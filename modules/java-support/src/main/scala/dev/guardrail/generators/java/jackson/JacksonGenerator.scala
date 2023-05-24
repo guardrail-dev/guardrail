@@ -822,17 +822,19 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
 
   override def extractProperties(swagger: Tracker[Schema[_]]) =
     swagger
-      .refine { case m: ObjectSchema => m }(m => Target.pure(m.downField("properties", _.getProperties()).indexedCosequence.value))
-      .orRefine { case c: ComposedSchema => c }(comp =>
-        Target.pure(
+      .refine[Target[List[(String, Tracker[Schema[_]])]]] { case m: ObjectSchema => m }(m =>
+        Target.pure(m.downField("properties", _.getProperties()).indexedCosequence.value)
+      )
+      .orRefine { case c: ComposedSchema => c } { comp =>
+        val extractedProps =
           comp
             .downField("allOf", _.getAllOf())
             .indexedDistribute
             .lastOption
             .toList
             .flatMap(_.downField("properties", _.getProperties).indexedCosequence.value.toList)
-        )
-      )
+        Target.pure(extractedProps)
+      }
       .orRefine { case x: Schema[_] if Option(x.get$ref()).isDefined => x }(comp =>
         Target.raiseUserError(s"Attempted to extractProperties for a ${comp.unwrapTracker.getClass()}, unsure what to do here (${comp.showHistory})")
       )
@@ -853,20 +855,21 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       defaultValue: Option[com.github.javaparser.ast.Node]
   ) =
     Target.log.function("transformProperty") {
-      val readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly).unwrapTracker.contains(true))
-      val emptyToNull =
-        property
+      val fallbackRawType = LiteralRawType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
+      for {
+        _ <- Target.log.debug(s"Args: (${clsName}, ${name}, ...)")
+
+        readOnlyKey = Option(name).filter(_ => property.downField("readOnly", _.getReadOnly()).unwrapTracker.contains(true))
+        emptyToNull = property
           .refine { case d: DateSchema => d }(d => EmptyValueIsNull(d))
           .orRefine { case dt: DateTimeSchema => dt }(dt => EmptyValueIsNull(dt))
           .orRefine { case s: StringSchema => s }(s => EmptyValueIsNull(s))
           .toOption
           .flatten
           .getOrElse(EmptyIsEmpty)
-      val dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
-      val fallbackRawType = LiteralRawType(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
+        dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
-      for {
         (tpe, classDep, rawType) <- meta match {
           case core.Resolved(declType, classDep, _, rawType) =>
             Target.pure((declType, classDep, rawType))

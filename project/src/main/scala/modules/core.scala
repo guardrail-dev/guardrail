@@ -12,9 +12,9 @@ object core {
     commonModule("core")
       .settings(
         libraryDependencies ++= Seq(
-          "io.swagger.parser.v3"        % "swagger-parser"                % "2.1.2",
+          "io.swagger.parser.v3"        % "swagger-parser"                % "2.1.13",
         ) ++ Seq(
-          "org.scala-lang.modules"      %% "scala-collection-compat"      % "2.8.1",
+          "org.scala-lang.modules"      %% "scala-collection-compat"      % "2.10.0",
           "org.tpolecat"                %% "atto-core"                    % "0.9.5",
           "org.typelevel"               %% "cats-core"                    % catsVersion,
           "org.typelevel"               %% "cats-kernel"                  % catsVersion,
