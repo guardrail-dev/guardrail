@@ -437,6 +437,33 @@ object ProtocolGenerator {
           .orRefine { case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s }(s =>
             fromEnum(nestedClassName.last, s, dtoPackage, components).map(Option(_))
           )
+          .orRefine { case m: MapSchema => m } { m =>
+            // TODO: #1591: What we are emitting here is the inner class `Z` in the expression:
+            //                  `foo: Option[Map[String, Z]]`
+            //              Unfortunately, that means that if we wanted to properly parse and incorporate
+            //              those fields, we would need to do something more creative like
+            //                  `case class Bar(prop: A, prop2: B, extra: Map[String, Z])`
+            //              so we could do
+            //                  `foo: Option[Bar]`
+            //              we would need an extra className for `Bar` (instead of just using nestedClassName),
+            //              as well as to be more choosy about which fields we try to decode with `.as[Z]`,
+            //              since we should intentionally and explicitly skip fields for which we have known
+            //              mappings for, using the `additionalProperties` mapping only for fields we've never seen.
+            NonEmptyList.fromList(m.downField("properties", _.getProperties).indexedDistribute.toList).foreach { props =>
+              println(s"""WARNING: Unsupported mixing of properties and additionalProperties.
+                         |         See https://github.com/guardrail-dev/guardrail/issues/1591
+                         |         Ignored values: ${props.toList.map(_.showHistory).mkString(", ")}
+                         |""".stripMargin)
+            }
+            m.downField("additionalProperties", _.getAdditionalProperties)
+              .indexedDistribute
+              .flatTraverse(
+                _.refine { case x: ObjectSchema => x }(obj =>
+                  fromModel(nestedClassName, obj, List.empty, concreteTypes, definitions, dtoPackage, supportPackage, defaultPropertyRequirement, components)
+                ).toOption.sequence
+              )
+              .widen
+          }
           .getOrElse(Option.empty[Either[String, NestedProtocolElems[L]]].pure[F])
       } yield defn
 

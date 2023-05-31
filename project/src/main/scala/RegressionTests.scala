@@ -84,6 +84,7 @@ object RegressionTests {
     ExampleCase(sampleResource("issues/issue1138.yaml"), "issues.issue1138"),
     ExampleCase(sampleResource("issues/issue1260.yaml"), "issues.issue1260"),
     ExampleCase(sampleResource("issues/issue1218.yaml"), "issues.issue1218").frameworks("scala" -> Set("http4s", "http4s-v0.22")),
+    ExampleCase(sampleResource("issues/issue1591.yaml"), "issues.issue1591"),
     ExampleCase(sampleResource("issues/issue1594.yaml"), "issues.issue1594"),
     ExampleCase(sampleResource("multipart-form-data.yaml"), "multipartFormData"),
     ExampleCase(sampleResource("petstore.json"), "examples").args("--import", "examples.support.PositiveLong"),
