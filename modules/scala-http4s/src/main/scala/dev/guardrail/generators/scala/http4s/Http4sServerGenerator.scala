@@ -1,35 +1,54 @@
 package dev.guardrail.generators.scala.http4s
 
+import _root_.io.swagger.v3.oas.models.Components
+import _root_.io.swagger.v3.oas.models.Operation
+import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.Monad
+import cats.Traverse
 import cats.data.NonEmptyList
 import cats.implicits._
-import cats.Traverse
-import scala.meta._
-import scala.reflect.runtime.universe.typeTag
-
-import dev.guardrail.{ AuthImplementation, Target, UserError }
-import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.core.Tracker
-import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
-import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, LanguageParameters, RenderedRoutes, TracingField }
-import dev.guardrail.generators.syntax._
-import dev.guardrail.generators.operations.TracingLabelFormatter
-import dev.guardrail.generators.scala.syntax._
-import dev.guardrail.generators.scala.{ CirceModelGenerator, ModelGeneratorType, ResponseADTHelper }
-import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.spi.{ ModuleLoadResult, ServerGeneratorLoader }
-import dev.guardrail.terms.{ ContentType, Header, Response, Responses }
-import dev.guardrail.terms.server._
-import dev.guardrail.shims._
-import dev.guardrail.terms.{ RouteMeta, SecurityScheme }
-
-import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
-import _root_.io.swagger.v3.oas.models.Operation
-import dev.guardrail.terms.SecurityRequirements
+import dev.guardrail.AuthImplementation
+import dev.guardrail.AuthImplementation.Custom
 import dev.guardrail.AuthImplementation.Disable
 import dev.guardrail.AuthImplementation.Native
 import dev.guardrail.AuthImplementation.Simple
-import dev.guardrail.AuthImplementation.Custom
+import dev.guardrail._
+import dev.guardrail.core.Tracker
+import dev.guardrail.core.extract.ServerRawResponse
+import dev.guardrail.core.extract.TracingLabel
+import dev.guardrail.generators.CustomExtractionField
+import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.generators.LanguageParameters
+import dev.guardrail.generators.RenderedRoutes
+import dev.guardrail.generators.Server
+import dev.guardrail.generators.Servers
+import dev.guardrail.generators.TracingField
+import dev.guardrail.generators.operations.TracingLabelFormatter
+import dev.guardrail.generators.scala.CirceModelGenerator
+import dev.guardrail.generators.scala.ModelGeneratorType
+import dev.guardrail.generators.scala.ResponseADTHelper
+import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.syntax._
+import dev.guardrail.generators.spi.ModuleLoadResult
+import dev.guardrail.generators.spi.ServerGeneratorLoader
+import dev.guardrail.generators.syntax._
+import dev.guardrail.shims._
+import dev.guardrail.terms.CollectionsLibTerms
+import dev.guardrail.terms.ContentType
+import dev.guardrail.terms.Header
+import dev.guardrail.terms.LanguageTerms
+import dev.guardrail.terms.Response
+import dev.guardrail.terms.Responses
+import dev.guardrail.terms.RouteMeta
+import dev.guardrail.terms.SecurityRequirements
+import dev.guardrail.terms.SecurityScheme
+import dev.guardrail.terms.SwaggerTerms
+import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.StrictProtocolElems
+import dev.guardrail.terms.server._
+
+import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 class Http4sServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
@@ -60,31 +79,126 @@ object Http4sServerGenerator {
 }
 
 class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms[ScalaLanguage, Target] {
-
   val customExtractionTypeName: Type.Name = Type.Name("E")
   val authContextTypeName: Type.Name      = Type.Name("AuthContext")
   val authErrorTypeName: Type.Name        = Type.Name("AuthError")
   val authSchemesTypeName: Type.Name      = Type.Name("AuthSchemes")
   val authRequirementTypeName: Type.Name  = Type.Name("AuthRequirement")
 
+  override def fromSwagger(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[ScalaLanguage#Import])(
+      groupedRoutes: List[(List[String], List[RouteMeta])]
+  )(
+      protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Fw: FrameworkTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[Servers[ScalaLanguage]] = {
+    import Sw._
+    import Sc._
+
+    for {
+      extraImports       <- getExtraImports(context.tracing, supportPackage)
+      supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
+      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+        val routes = unsortedRoutes
+          .groupBy(_.path.unwrapTracker.indexOf('{'))
+          .view
+          .mapValues(_.sortBy(r => (r.path.unwrapTracker, r.method)))
+          .toList
+          .sortBy(_._1)
+          .flatMap(_._2)
+        for {
+          resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
+          handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
+
+          responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
+            for {
+              operationId           <- getOperationId(operation)
+              responses             <- Responses.getResponses(operationId, operation, protocolElems, components)
+              responseClsName       <- formatTypeName(operationId, Some("Response"))
+              responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              methodName            <- formatMethodName(operationId)
+              parameters            <- route.getParameters[ScalaLanguage, Target](components, protocolElems)
+              customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
+              tracingField          <- buildTracingFields(operation, className, context.tracing)
+            } yield (
+              responseDefinitions,
+              GenerateRouteMeta(operationId, methodName, responseClsName, customExtractionField, tracingField, route, parameters, responses)
+            )
+          }
+          (responseDefinitions, serverOperations) = responseServerPair.unzip
+          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+            case Nil => SecurityExposure.Undefined
+            case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
+          }
+          renderedRoutes <- generateRoutes(
+            context.tracing,
+            resourceName,
+            handlerName,
+            basePath,
+            serverOperations,
+            protocolElems,
+            securitySchemes,
+            securityExposure,
+            context.authImplementation
+          )
+          handlerSrc <- renderHandler(
+            handlerName,
+            renderedRoutes.methodSigs,
+            renderedRoutes.handlerDefinitions,
+            responseDefinitions.flatten,
+            context.customExtraction,
+            context.authImplementation,
+            securityExposure
+          )
+          extraRouteParams <- getExtraRouteParams(
+            resourceName,
+            context.customExtraction,
+            context.tracing,
+            context.authImplementation,
+            securityExposure
+          )
+          classSrc <- renderClass(
+            resourceName,
+            handlerName,
+            renderedRoutes.classAnnotations,
+            renderedRoutes.routes,
+            extraRouteParams,
+            responseDefinitions.flatten,
+            renderedRoutes.supportDefinitions,
+            renderedRoutes.securitySchemesDefinitions,
+            context.customExtraction,
+            context.authImplementation
+          )
+        } yield Server[ScalaLanguage](className, frameworkImports ++ extraImports, handlerSrc, classSrc)
+      }
+    } yield Servers[ScalaLanguage](servers, supportDefinitions)
+  }
+
   private val bodyUtf8Decode = version match {
     case Http4sVersion.V0_22 => q"utf8Decode"
     case Http4sVersion.V0_23 => q"utf8.decode"
   }
 
-  def splitOperationParts(operationId: String): (List[String], String) = {
+  private def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)
   }
+
   implicit def MonadF: Monad[Target] = Target.targetInstances
-  def generateResponseDefinitions(
+
+  private def generateResponseDefinitions(
       responseClsName: String,
       responses: Responses[ScalaLanguage],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]]
   ) =
     Target.pure(ResponseADTHelper.generateResponseDefinitions(responseClsName, responses, protocolElems))
 
-  def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
+  private def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
     for {
       _ <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
       res <-
@@ -103,7 +217,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         } else Target.pure(None)
     } yield res
 
-  def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
+  private def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
     Target.log.function("buildTracingFields")(for {
       _ <- Target.log.debug(s"Args: ${operation}, ${resourceName}, ${tracing}")
       res <-
@@ -123,7 +237,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         } else Target.pure(None)
     } yield res)
 
-  override def generateRoutes(
+  private def generateRoutes(
       tracing: Boolean,
       resourceName: String,
       handlerName: String,
@@ -247,7 +361,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
   private def securitySchemeNameToClassName(name: String): Term.Name =
     Term.Name(name.toPascalCase)
 
-  override def renderHandler(
+  private def renderHandler(
       handlerName: String,
       methodSigs: List[scala.meta.Decl.Def],
       handlerDefinitions: List[scala.meta.Stat],
@@ -270,7 +384,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     }
   """)
 
-  def getExtraRouteParams(
+  private def getExtraRouteParams(
       resourceName: String,
       customExtraction: Boolean,
       tracing: Boolean,
@@ -314,13 +428,13 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     } yield customExtraction_.toList ::: tracing_.toList ::: authentication_.toList ::: List(mapRoute))
 
-  def generateSupportDefinitions(
+  private def generateSupportDefinitions(
       tracing: Boolean,
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
   ) =
     Target.pure(List.empty)
 
-  def renderClass(
+  private def renderClass(
       resourceName: String,
       handlerName: String,
       annotations: List[scala.meta.Mod.Annot],
@@ -371,7 +485,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       )
     )
 
-  def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
+  private def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
     Target.log.function("getExtraImports")(
       for {
         _ <- Target.log.debug(s"Args: ${tracing}")
@@ -382,7 +496,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       )
     )
 
-  def httpMethodToHttp4s(method: HttpMethod): Target[Term.Name] = method match {
+  private def httpMethodToHttp4s(method: HttpMethod): Target[Term.Name] = method match {
     case HttpMethod.DELETE => Target.pure(Term.Name("DELETE"))
     case HttpMethod.GET    => Target.pure(Term.Name("GET"))
     case HttpMethod.PATCH  => Target.pure(Term.Name("PATCH"))
@@ -392,13 +506,13 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     case other             => Target.raiseUserError(s"Unknown method: ${other}")
   }
 
-  def pathStrToHttp4s(basePath: Option[String], path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
+  private def pathStrToHttp4s(basePath: Option[String], path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
     (basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
       case ""        => Target.pure((p"${Term.Name("Root")}", None))
       case finalPath => Http4sServerGenerator.generateUrlPathExtractors(Tracker.cloneHistory(path, finalPath), pathArgs, CirceModelGenerator.V012)
     }
 
-  def directivesFromParams[T](
+  private def directivesFromParams[T](
       required: LanguageParameter[ScalaLanguage] => Type => Target[T],
       multi: LanguageParameter[ScalaLanguage] => Type => (Term => Term) => Target[T],
       multiOpt: LanguageParameter[ScalaLanguage] => Type => (Term => Term) => Target[T],
@@ -434,7 +548,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     } yield directives
 
-  def bodyToHttp4s(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
+  private def bodyToHttp4s(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
     Target.pure(
       body.map { case LanguageParameter(_, _, paramName, _, _) =>
         content => q"""
@@ -456,9 +570,9 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     )
 
-  case class Param(generator: Option[Enumerator.Generator], matcher: Option[(Term, Pat)], handlerCallArg: Term)
+  private case class Param(generator: Option[Enumerator.Generator], matcher: Option[(Term, Pat)], handlerCallArg: Term)
 
-  def headersToHttp4s: List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
+  private def headersToHttp4s: List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
     directivesFromParams(
       arg => {
         case t"String" =>
@@ -499,7 +613,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     )
 
-  def qsToHttp4s(methodName: String): List[LanguageParameter[ScalaLanguage]] => Target[Option[Pat]] =
+  private def qsToHttp4s(methodName: String): List[LanguageParameter[ScalaLanguage]] => Target[Option[Pat]] =
     params =>
       directivesFromParams(
         arg => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
@@ -512,7 +626,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
           Some(xs.foldLeft[Pat](x) { case (a, n) => p"${a} +& ${n}" })
       }
 
-  def formToHttp4s: List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
+  private def formToHttp4s: List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
     directivesFromParams(
       arg => {
         case t"String" =>
@@ -587,7 +701,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     )
 
-  def asyncFormToHttp4s(methodName: String): List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
+  private def asyncFormToHttp4s(methodName: String): List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
     directivesFromParams(
       arg =>
         elemType =>
@@ -717,7 +831,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
             }
     )
 
-  case class RenderedRoute(methodName: String, route: Case, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
+  private case class RenderedRoute(methodName: String, route: Case, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
 
   private def generateRoute(
       resourceName: String,
@@ -999,7 +1113,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     q"""_root_.cats.data.NonEmptyList.of(..$orElements)"""
   }
 
-  def createHttp4sHeaders(headers: List[Header[ScalaLanguage]]): (Term.Name, List[Defn.Val]) = {
+  private def createHttp4sHeaders(headers: List[Header[ScalaLanguage]]): (Term.Name, List[Defn.Val]) = {
     val (names, definitions) = headers.map { case Header(name, required, _, termName) =>
       val nameLiteral = Lit.String(name)
       val headerName  = Term.Name(s"${name.toCamelCase}Header")
@@ -1012,21 +1126,21 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     (headersTerm, definitions :+ allHeaders)
   }
 
-  def combineRouteTerms(terms: List[Case]): Target[Term] =
+  private def combineRouteTerms(terms: List[Case]): Target[Term] =
     Target.log.function("combineRouteTerms")(for {
       _      <- Target.log.debug(s"Args: <${terms.length} routes>")
       routes <- Target.fromOption(NonEmptyList.fromList(terms), UserError("Generated no routes, no source to generate"))
       _      <- routes.traverse(route => Target.log.debug(route.toString))
     } yield scala.meta.Term.PartialFunction(routes.toList))
 
-  def generateSupportDefinitions(route: RouteMeta, parameters: LanguageParameters[ScalaLanguage]): Target[List[Defn]] =
+  private def generateSupportDefinitions(route: RouteMeta, parameters: LanguageParameters[ScalaLanguage]): Target[List[Defn]] =
     for {
       operation <- Target.pure(route.operation)
 
       pathArgs = parameters.pathParams
     } yield generatePathParamExtractors(pathArgs)
 
-  def generatePathParamExtractors(pathArgs: List[LanguageParameter[ScalaLanguage]]): List[Defn] =
+  private def generatePathParamExtractors(pathArgs: List[LanguageParameter[ScalaLanguage]]): List[Defn] =
     pathArgs
       .map(_.argType)
       .flatMap {
@@ -1055,7 +1169,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         """
       }
 
-  def modifiedOptionalMultiQueryParamDecoderMatcher(matcherName: Term.Name, container: Type, argName: Lit.String, tpe: Type, transform: Term => Term) =
+  private def modifiedOptionalMultiQueryParamDecoderMatcher(matcherName: Term.Name, container: Type, argName: Lit.String, tpe: Type, transform: Term => Term) =
     q"""
       object ${matcherName} {
         def unapply(params: Map[String, collection.Seq[String]]): Option[Option[$container[$tpe]]] = {
@@ -1069,7 +1183,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     """
 
-  def modifiedQueryParamDecoderMatcher(matcherName: Term.Name, container: Type, argName: Lit.String, tpe: Type, transform: Term => Term) =
+  private def modifiedQueryParamDecoderMatcher(matcherName: Term.Name, container: Type, argName: Lit.String, tpe: Type, transform: Term => Term) =
     q"""
       object ${matcherName} {
         def unapply(params: Map[String, collection.Seq[String]]): Option[${container}[${tpe}]] = {
@@ -1082,7 +1196,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     """
 
-  def generateQueryParamMatchers(methodName: String, qsArgs: List[LanguageParameter[ScalaLanguage]]): List[Defn] = {
+  private def generateQueryParamMatchers(methodName: String, qsArgs: List[LanguageParameter[ScalaLanguage]]): List[Defn] = {
     val (decoders, matchers) = qsArgs
       .traverse { case LanguageParameter(_, param, _, argName, argType) =>
         val containerTransformations = Map[String, Term => Term](
@@ -1141,7 +1255,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
   /** It's not possible to use backticks inside pattern matching as it has different semantics: backticks inside match are just references to an already
     * existing bindings.
     */
-  def prepareParameters[F[_]: Traverse](parameters: F[LanguageParameter[ScalaLanguage]]): Target[F[LanguageParameter[ScalaLanguage]]] =
+  private def prepareParameters[F[_]: Traverse](parameters: F[LanguageParameter[ScalaLanguage]]): Target[F[LanguageParameter[ScalaLanguage]]] =
     if (parameters.exists(param => param.paramName.syntax != param.paramName.value)) {
       // let's try to prefix them all with underscore and see if it helps
       for {
@@ -1160,7 +1274,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       Target.pure(parameters)
     }
 
-  def generateCodecs(
+  private def generateCodecs(
       methodName: String,
       bodyArgs: Option[LanguageParameter[ScalaLanguage]],
       responses: Responses[ScalaLanguage],
@@ -1172,7 +1286,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       responses
     )
 
-  def generateDecoders(methodName: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
+  private def generateDecoders(methodName: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
     bodyArgs.toList.flatMap { case LanguageParameter(_, _, _, _, argType) =>
       List(
         q"protected[this] val ${Pat.Typed(Pat.Var(Term.Name(s"${methodName.uncapitalized}Decoder")), t"EntityDecoder[F, $argType]")} = ${ResponseADTHelper
@@ -1180,7 +1294,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       )
     }
 
-  def generateEncoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
+  private def generateEncoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
     for {
       response    <- responses.value
       (_, tpe, _) <- response.value
@@ -1189,21 +1303,21 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       q"protected[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${ResponseADTHelper.generateEncoder(tpe, contentTypes)}"
     }
 
-  def generateResponseGenerators(methodName: String, responses: Responses[ScalaLanguage]): List[Defn.Val] =
+  private def generateResponseGenerators(methodName: String, responses: Responses[ScalaLanguage]): List[Defn.Val] =
     for {
       response <- responses.value
       if response.value.nonEmpty
     } yield q"protected[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}EntityResponseGenerator"))} = ${ResponseADTHelper
         .generateEntityResponseGenerator(q"org.http4s.Status.${response.statusCodeName}")}"
 
-  def generateTracingExtractor(methodName: String, tracingField: Term): Defn.Object =
+  private def generateTracingExtractor(methodName: String, tracingField: Term): Defn.Object =
     q"""
        object ${Term.Name(s"usingFor${methodName.capitalize}")} {
          def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> $tracingField(r))
        }
      """
 
-  def generateCustomExtractionFieldsExtractor(methodName: String, extractField: Term): Defn.Object =
+  private def generateCustomExtractionFieldsExtractor(methodName: String, extractField: Term): Defn.Object =
     q"""
        object ${Term.Name(s"extractorFor${methodName.capitalize}")} {
          def unapply(r: Request[F]): Some[(Request[F], $customExtractionTypeName)] = Some(r -> $extractField(r))

@@ -6,50 +6,67 @@ import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier.Keyword._
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, PrimitiveType, Type }
+import com.github.javaparser.ast.Node
+import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.`type`.ClassOrInterfaceType
+import com.github.javaparser.ast.`type`.PrimitiveType
+import com.github.javaparser.ast.`type`.Type
 import com.github.javaparser.ast.body._
 import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.github.javaparser.ast.{ Node, NodeList }
-import io.swagger.v3.oas.models.Operation
-import io.swagger.v3.oas.models.responses.ApiResponse
-import scala.compat.java8.OptionConverters._
-import scala.language.existentials
-import scala.reflect.runtime.universe.typeTag
-import scala.util.Try
-
 import dev.guardrail.AuthImplementation
+import dev.guardrail.Context
+import dev.guardrail.Target
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.ServerRawResponse
+import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.generators.LanguageParameters
 import dev.guardrail.generators.RenderedRoutes
+import dev.guardrail.generators.Server
+import dev.guardrail.generators.Servers
 import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.SerializationHelpers
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.{ CollectionsGeneratorLoader, ModuleLoadResult, ServerGeneratorLoader }
-import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import dev.guardrail.generators.spi.CollectionsGeneratorLoader
+import dev.guardrail.generators.spi.ModuleLoadResult
+import dev.guardrail.generators.spi.ServerGeneratorLoader
+import dev.guardrail.shims._
+import dev.guardrail.terms.AnyContentType
+import dev.guardrail.terms.ApplicationJson
+import dev.guardrail.terms.BinaryContent
+import dev.guardrail.terms.CollectionsLibTerms
+import dev.guardrail.terms.ContentType
+import dev.guardrail.terms.LanguageTerms
+import dev.guardrail.terms.MultipartFormData
+import dev.guardrail.terms.OctetStream
+import dev.guardrail.terms.Response
+import dev.guardrail.terms.Responses
+import dev.guardrail.terms.RouteMeta
+import dev.guardrail.terms.SecurityScheme
+import dev.guardrail.terms.SwaggerTerms
+import dev.guardrail.terms.TextContent
+import dev.guardrail.terms.TextPlain
+import dev.guardrail.terms.UrlencodedFormData
+import dev.guardrail.terms.collections.CollectionsAbstraction
+import dev.guardrail.terms.collections.JavaStdLibCollections
+import dev.guardrail.terms.collections.JavaVavrCollections
+import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.ADT
+import dev.guardrail.terms.protocol.ClassDefinition
+import dev.guardrail.terms.protocol.EnumDefinition
+import dev.guardrail.terms.protocol.RandomType
+import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server._
-import dev.guardrail.shims.OperationExt
-import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
-import dev.guardrail.terms.{
-  AnyContentType,
-  ApplicationJson,
-  BinaryContent,
-  CollectionsLibTerms,
-  ContentType,
-  MultipartFormData,
-  OctetStream,
-  Response,
-  Responses,
-  RouteMeta,
-  SecurityScheme,
-  TextContent,
-  TextPlain,
-  UrlencodedFormData
-}
-import dev.guardrail.Target
-import dev.guardrail.terms.protocol.{ ADT, ClassDefinition, EnumDefinition, RandomType, StrictProtocolElems }
+import io.swagger.v3.oas.models.Components
+import io.swagger.v3.oas.models.Operation
+import io.swagger.v3.oas.models.responses.ApiResponse
+
+import scala.compat.java8.OptionConverters._
+import scala.language.existentials
+import scala.reflect.runtime.universe.typeTag
+import scala.util.Try
 
 class SpringMvcServerGeneratorLoader extends ServerGeneratorLoader {
   type L = JavaLanguage
@@ -70,9 +87,103 @@ object SpringMvcServerGenerator {
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ServerTerms[JavaLanguage, Target] {
-  import Ca._
 
   override implicit def MonadF: Monad[Target] = Target.targetInstances
+
+  override def fromSwagger(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[JavaLanguage#Import])(
+      groupedRoutes: List[(List[String], List[RouteMeta])]
+  )(
+      protocolElems: List[StrictProtocolElems[JavaLanguage]],
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Fw: FrameworkTerms[JavaLanguage, Target],
+      Sc: LanguageTerms[JavaLanguage, Target],
+      Cl: CollectionsLibTerms[JavaLanguage, Target],
+      Sw: SwaggerTerms[JavaLanguage, Target]
+  ): Target[Servers[JavaLanguage]] = {
+    import Sw._
+    import Sc._
+    import dev.guardrail._
+
+    for {
+      extraImports       <- getExtraImports(context.tracing, supportPackage)
+      supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
+      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+        val routes = unsortedRoutes
+          .groupBy(_.path.unwrapTracker.indexOf('{'))
+          .view
+          .mapValues(_.sortBy(r => (r.path.unwrapTracker, r.method)))
+          .toList
+          .sortBy(_._1)
+          .flatMap(_._2)
+        for {
+          resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
+          handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
+
+          responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
+            for {
+              operationId           <- getOperationId(operation)
+              responses             <- Responses.getResponses(operationId, operation, protocolElems, components)
+              responseClsName       <- formatTypeName(operationId, Some("Response"))
+              responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              methodName            <- formatMethodName(operationId)
+              parameters            <- route.getParameters[JavaLanguage, Target](components, protocolElems)
+              customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
+              tracingField          <- buildTracingFields(operation, className, context.tracing)
+            } yield (
+              responseDefinitions,
+              GenerateRouteMeta(operationId, methodName, responseClsName, customExtractionField, tracingField, route, parameters, responses)
+            )
+          }
+          (responseDefinitions, serverOperations) = responseServerPair.unzip
+          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+            case Nil => SecurityExposure.Undefined
+            case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
+          }
+          renderedRoutes <- generateRoutes(
+            context.tracing,
+            resourceName,
+            handlerName,
+            basePath,
+            serverOperations,
+            protocolElems,
+            securitySchemes,
+            securityExposure,
+            context.authImplementation
+          )
+          handlerSrc <- renderHandler(
+            handlerName,
+            renderedRoutes.methodSigs,
+            renderedRoutes.handlerDefinitions,
+            responseDefinitions.flatten,
+            context.customExtraction,
+            context.authImplementation,
+            securityExposure
+          )
+          extraRouteParams <- getExtraRouteParams(
+            resourceName,
+            context.customExtraction,
+            context.tracing,
+            context.authImplementation,
+            securityExposure
+          )
+          classSrc <- renderClass(
+            resourceName,
+            handlerName,
+            renderedRoutes.classAnnotations,
+            renderedRoutes.routes,
+            extraRouteParams,
+            responseDefinitions.flatten,
+            renderedRoutes.supportDefinitions,
+            renderedRoutes.securitySchemesDefinitions,
+            context.customExtraction,
+            context.authImplementation
+          )
+        } yield Server[JavaLanguage](className, frameworkImports ++ extraImports, handlerSrc, classSrc)
+      }
+    } yield Servers[JavaLanguage](servers, supportDefinitions)
+  }
 
   @SuppressWarnings(Array("org.wartremover.warts.TripleQuestionMark"))
   private def toSpringMediaType: ContentType => Expression = {
@@ -308,7 +419,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
     }
   }
 
-  override def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
+  private def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
     List(
       "java.util.Optional",
       "java.util.concurrent.CompletionStage",
@@ -325,21 +436,21 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       "org.springframework.web.multipart.MultipartFile"
     ).traverse(safeParseRawImport)
 
-  override def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
+  private def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
     if (customExtraction) {
       Target.raiseUserError(s"Custom Extraction is not yet supported by this framework")
     } else {
       Target.pure(Option.empty)
     }
 
-  override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
+  private def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
     if (tracing) {
       Target.raiseUserError(s"Tracing is not yet supported by this framework")
     } else {
       Target.pure(Option.empty)
     }
 
-  override def generateRoutes(
+  private def generateRoutes(
       tracing: Boolean,
       resourceName: String,
       handlerName: String,
@@ -354,6 +465,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       resourceType <- safeParseClassOrInterfaceType(resourceName)
       handlerType  <- safeParseClassOrInterfaceType(handlerName)
     } yield {
+      import Ca._
       val basePathComponents = basePath.toList.flatMap(splitPathComponents)
       val commonPathPrefix   = findPathPrefix(routes.map(_.routeMeta.path.unwrapTracker))
 
@@ -718,7 +830,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       RenderedRoutes[JavaLanguage](routeMethods, annotations, handlerMethodSigs, supportDefinitions, List.empty, List.empty)
     }
 
-  override def getExtraRouteParams(
+  private def getExtraRouteParams(
       resourceName: String,
       customExtraction: Boolean,
       tracing: Boolean,
@@ -737,7 +849,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
         } else Target.pure(List.empty)
     } yield customExtraction ::: tracing
 
-  override def generateResponseDefinitions(
+  private def generateResponseDefinitions(
       responseClsName: String,
       responses: Responses[JavaLanguage],
       protocolElems: List[StrictProtocolElems[JavaLanguage]]
@@ -755,7 +867,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       abstractResponseClass :: Nil
     }
 
-  override def generateSupportDefinitions(
+  private def generateSupportDefinitions(
       tracing: Boolean,
       securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
   ) =
@@ -763,7 +875,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       shower <- SerializationHelpers.showerSupportDef
     } yield List(shower)
 
-  override def renderClass(
+  private def renderClass(
       className: String,
       handlerName: String,
       classAnnotations: List[com.github.javaparser.ast.expr.AnnotationExpr],
@@ -779,7 +891,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       safeParseSimpleName(handlerName) >>
       Target.pure(doRenderClass(className, classAnnotations, supportDefinitions, combinedRouteTerms) :: Nil)
 
-  override def renderHandler(
+  private def renderHandler(
       handlerName: String,
       methodSigs: List[com.github.javaparser.ast.body.MethodDeclaration],
       handlerDefinitions: List[com.github.javaparser.ast.Node],
