@@ -8,7 +8,7 @@ import java.nio.file.Path
 import java.net.URI
 
 import dev.guardrail.core.{ SupportDefinition, Tracker }
-import dev.guardrail.generators.{ ClientGenerator, Clients, ProtocolDefinitions, ProtocolGenerator, Servers }
+import dev.guardrail.generators.{ Clients, ProtocolDefinitions, ProtocolGenerator, Servers }
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -87,8 +87,7 @@ object Common {
       codegen <- kind match {
         case CodegenTarget.Client =>
           for {
-            clientMeta <- ClientGenerator
-              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes, components)
+            clientMeta <- C.fromSwagger(context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes, components)
             Clients(clients, supportDefinitions) = clientMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions, frameworkImplicits)

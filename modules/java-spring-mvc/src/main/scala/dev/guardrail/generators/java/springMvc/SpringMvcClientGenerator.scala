@@ -1,15 +1,17 @@
 package dev.guardrail.generators.java.springMvc
 
+import _root_.io.swagger.v3.oas.models.Components
 import cats.data.NonEmptyList
-import java.net.URI
-
-import dev.guardrail.Target
-import dev.guardrail.generators.LanguageParameters
+import dev.guardrail._
+import dev.guardrail.core.Tracker
+import dev.guardrail.generators.Clients
 import dev.guardrail.generators.java.JavaLanguage
-import dev.guardrail.terms.Responses
+import dev.guardrail.terms._
 import dev.guardrail.terms.client.ClientTerms
+import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.terms.{ CollectionsLibTerms, RouteMeta, SecurityScheme }
+
+import java.net.URI
 
 object SpringMvcClientGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target]): ClientTerms[JavaLanguage, Target] =
@@ -17,57 +19,21 @@ object SpringMvcClientGenerator {
 }
 
 class SpringMvcClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ClientTerms[JavaLanguage, Target] {
-  def MonadF = Target.targetInstances
-  def generateClientOperation(
-      className: List[String],
-      responseClsName: String,
-      tracing: Boolean,
-      securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
-      parameters: LanguageParameters[JavaLanguage]
-  )(
-      route: RouteMeta,
-      methodName: String,
-      responses: Responses[JavaLanguage]
-  ) =
-    Target.raiseUserError("spring client generation is not currently supported")
-  def getImports(tracing: Boolean) =
-    Target.raiseUserError("spring client generation is not currently supported")
-  def getExtraImports(tracing: Boolean) =
-    Target.raiseUserError("spring client generation is not currently supported")
-  def clientClsArgs(
-      tracingName: Option[String],
-      serverUrls: Option[NonEmptyList[URI]],
-      tracing: Boolean
-  ) =
-    Target.raiseUserError("spring client generation is not currently supported")
-  def generateResponseDefinitions(
-      responseClsName: String,
-      responses: Responses[JavaLanguage],
-      protocolElems: List[StrictProtocolElems[JavaLanguage]]
-  ) =
-    Target.raiseUserError("spring client generation is not currently supported")
-  def generateSupportDefinitions(
-      tracing: Boolean,
-      securitySchemes: Map[String, SecurityScheme[JavaLanguage]]
-  ) =
-    Target.raiseUserError("spring client generation is not currently supported")
-  def buildStaticDefns(
-      clientName: String,
-      tracingName: Option[String],
-      serverUrls: Option[NonEmptyList[URI]],
-      ctorArgs: List[List[com.github.javaparser.ast.body.Parameter]],
-      tracing: Boolean
-  ) =
-    Target.raiseUserError("spring client generation is not currently supported")
-  def buildClient(
-      clientName: String,
-      tracingName: Option[String],
+  override def MonadF = Target.targetInstances
+
+  override def fromSwagger(context: Context, frameworkImports: List[JavaLanguage#Import])(
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
-      ctorArgs: List[List[com.github.javaparser.ast.body.Parameter]],
-      clientCalls: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      supportDefinitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
-      tracing: Boolean
-  ) =
+      groupedRoutes: List[(List[String], List[RouteMeta])]
+  )(
+      protocolElems: List[StrictProtocolElems[JavaLanguage]],
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Fw: FrameworkTerms[JavaLanguage, Target],
+      Sc: LanguageTerms[JavaLanguage, Target],
+      Cl: CollectionsLibTerms[JavaLanguage, Target],
+      Sw: SwaggerTerms[JavaLanguage, Target]
+  ): Target[Clients[JavaLanguage]] =
     Target.raiseUserError("spring client generation is not currently supported")
 }

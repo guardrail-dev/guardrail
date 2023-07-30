@@ -1,25 +1,36 @@
 package dev.guardrail.generators.scala.http4s
 
+import _root_.io.swagger.v3.oas.models.Components
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
+import dev.guardrail._
+import dev.guardrail.core.SupportDefinition
+import dev.guardrail.core.Tracker
+import dev.guardrail.generators.Client
+import dev.guardrail.generators.Clients
+import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.generators.LanguageParameters
+import dev.guardrail.generators.RawParameterName
+import dev.guardrail.generators.RenderedClientOperation
+import dev.guardrail.generators.scala.ResponseADTHelper
+import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.syntax._
+import dev.guardrail.generators.spi.ClientGeneratorLoader
+import dev.guardrail.generators.spi.ModuleLoadResult
+import dev.guardrail.generators.syntax._
+import dev.guardrail.shims._
+import dev.guardrail.terms._
+import dev.guardrail.terms.client.ClientTerms
+import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.StaticDefns
+import dev.guardrail.terms.protocol.StrictProtocolElems
+
 import java.net.URI
+import scala.collection.immutable.Seq
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
-import scala.collection.immutable.Seq
-
-import dev.guardrail.Target
-import dev.guardrail.core.{ SupportDefinition, Tracker }
-import dev.guardrail.generators.scala.syntax._
-import dev.guardrail.generators.scala.{ ResponseADTHelper, ScalaLanguage }
-import dev.guardrail.generators.spi.{ ClientGeneratorLoader, ModuleLoadResult }
-import dev.guardrail.generators.syntax._
-import dev.guardrail.generators.{ LanguageParameter, LanguageParameters, RawParameterName, RenderedClientOperation }
-import dev.guardrail.shims._
-import dev.guardrail.terms.client.ClientTerms
-import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
-import dev.guardrail.terms.{ ApplicationJson, ContentType, Header, MultipartFormData, OctetStream, Responses, RouteMeta, SecurityScheme, TextPlain }
 
 class Http4sClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
@@ -40,7 +51,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
   @deprecated("Please specify which http4s version to use", "0.72.0")
   def this() = this(Http4sVersion.V0_23)
 
-  implicit def MonadF: Monad[Target] = Target.targetInstances
+  override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
@@ -55,6 +66,68 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
   private[this] def formatHost(serverUrls: Option[NonEmptyList[URI]]): Term.Param =
     serverUrls
       .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
+
+  override def fromSwagger(context: Context, frameworkImports: List[ScalaLanguage#Import])(
+      serverUrls: Option[NonEmptyList[URI]],
+      basePath: Option[String],
+      groupedRoutes: List[(List[String], List[RouteMeta])]
+  )(
+      protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Fw: FrameworkTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[Clients[ScalaLanguage]] = {
+    import Sc._
+    import Sw._
+
+    for {
+      clientImports      <- getImports(context.tracing)
+      clientExtraImports <- getExtraImports(context.tracing)
+      supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
+      clients <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+        val routes = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
+        for {
+          clientName <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
+          responseClientPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
+            for {
+              operationId         <- getOperationId(operation)
+              responses           <- Responses.getResponses[ScalaLanguage, Target](operationId, operation, protocolElems, components)
+              responseClsName     <- formatTypeName(operationId, Some("Response"))
+              responseDefinitions <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              parameters          <- route.getParameters[ScalaLanguage, Target](components, protocolElems)
+              methodName          <- formatMethodName(operationId)
+              clientOp <- generateClientOperation(className, responseClsName, context.tracing, securitySchemes, parameters)(route, methodName, responses)
+            } yield (responseDefinitions, clientOp)
+          }
+          (responseDefinitions, clientOperations) = responseClientPair.unzip
+          tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
+          ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
+          staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
+          client <- buildClient(
+            clientName,
+            tracingName,
+            serverUrls,
+            basePath,
+            ctorArgs,
+            clientOperations.map(_.clientOperation),
+            clientOperations.flatMap(_.supportDefinitions),
+            context.tracing
+          )
+        } yield Client[ScalaLanguage](
+          className,
+          clientName,
+          clientImports ++ frameworkImports ++ clientExtraImports,
+          staticDefns,
+          client,
+          responseDefinitions.flatten
+        )
+      }
+    } yield Clients[ScalaLanguage](clients, supportDefinitions)
+  }
 
   def generateClientOperation(
       className: List[String],
