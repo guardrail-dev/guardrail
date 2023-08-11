@@ -7,7 +7,7 @@ import sbt.Keys._
 
 object javaSpringMvc {
   val javaxAnnotationVersion = "1.3.2"
-  val scalatestVersion       = "3.2.16"
+  val scalatestVersion       = "3.2.13"
   val springBootVersion      = "2.7.11"
 
   val dependencies = Seq(
