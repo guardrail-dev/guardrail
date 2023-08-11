@@ -1,3 +1,3 @@
-addSbtPlugin("ch.epfl.scala" % "sbt-version-policy" % "2.0.1")
+addSbtPlugin("ch.epfl.scala" % "sbt-version-policy" % "2.1.3")
 
 libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % "always"

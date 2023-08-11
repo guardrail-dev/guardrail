@@ -12,11 +12,11 @@ object scalaAkkaHttp {
   val catsVersion            = "2.8.0"
   val circeVersion           = "0.14.3"
   val hibernateVersion       = "6.2.5.Final"
-  val jacksonVersion         = "2.14.2"
+  val jacksonVersion         = "2.14.3"
   val javaxAnnotationVersion = "1.3.2"
   val javaxElVersion         = "3.0.0"
   val jaxbApiVersion         = "2.3.1"
-  val refinedVersion         = "0.10.1"
+  val refinedVersion         = "0.10.3"
   val scalatestVersion       = "3.2.13"
 
   val dependencies = Seq(
