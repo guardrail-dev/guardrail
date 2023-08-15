@@ -10,7 +10,7 @@ object scalaHttp4s {
   val circeVersion           = "0.14.3"
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
-  val scalatestVersion       = "3.2.13"
+  val scalatestVersion       = "3.2.16"
 
   val dependenciesV0_22 = {
     val catsEffectVersion      = "2.5.4"
@@ -37,9 +37,9 @@ object scalaHttp4s {
   }
 
   val dependencies = {
-    val catsEffectVersion      = "3.4.11"
+    val catsEffectVersion      = "3.5.1"
     val http4sVersion          = "0.23.18"
-    val http4sBlazeVersion     = "0.23.14"
+    val http4sBlazeVersion     = "0.23.15"
     val refinedVersion         = "0.10.3"
 
     Seq(

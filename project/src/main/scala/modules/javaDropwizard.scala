@@ -12,7 +12,7 @@ object javaDropwizard {
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
   val jerseyVersion          = "2.25.1"
-  val scalatestVersion       = "3.2.13"
+  val scalatestVersion       = "3.2.16"
   val vavrVersion            = "0.10.3"
 
   val dependencies = Seq(
