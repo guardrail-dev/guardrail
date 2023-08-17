@@ -6,16 +6,16 @@ import sbt._
 import sbt.Keys._
 
 object scalaHttp4s {
-  val catsVersion            = "2.8.0"
+  val catsVersion            = "2.10.0"
   val circeVersion           = "0.14.3"
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
-  val scalatestVersion       = "3.2.13"
+  val scalatestVersion       = "3.2.16"
 
   val dependenciesV0_22 = {
     val catsEffectVersion      = "2.5.4"
     val http4sVersion          = "0.22.7"
-    val refinedVersion         = "0.10.1"
+    val refinedVersion         = "0.11.0"
 
     Seq(
       "javax.annotation" %  "javax.annotation-api"  % javaxAnnotationVersion, // for jdk11
@@ -37,10 +37,10 @@ object scalaHttp4s {
   }
 
   val dependencies = {
-    val catsEffectVersion      = "3.4.7"
-    val http4sVersion          = "0.23.18"
-    val http4sBlazeVersion     = "0.23.12"
-    val refinedVersion         = "0.10.1"
+    val catsEffectVersion      = "3.5.1"
+    val http4sVersion          = "0.23.23"
+    val http4sBlazeVersion     = "0.23.15"
+    val refinedVersion         = "0.11.0"
 
     Seq(
       "javax.annotation" %  "javax.annotation-api"  % javaxAnnotationVersion, // for jdk11

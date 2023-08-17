@@ -12,7 +12,7 @@ object javaDropwizard {
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
   val jerseyVersion          = "2.25.1"
-  val scalatestVersion       = "3.2.13"
+  val scalatestVersion       = "3.2.16"
   val vavrVersion            = "0.10.3"
 
   val dependencies = Seq(
@@ -22,7 +22,7 @@ object javaDropwizard {
     "io.dropwizard"              %  "dropwizard-forms"       % dropwizardVersion,
     "org.asynchttpclient"        %  "async-http-client"      % ahcVersion,
     "junit"                      %  "junit"                  % "4.13.2"             % Test,
-    "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.13"            % Test,
+    "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.15.1"            % Test,
     "com.github.sbt"               %  "junit-interface"        % "0.13.3"             % Test,
     "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
     "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
