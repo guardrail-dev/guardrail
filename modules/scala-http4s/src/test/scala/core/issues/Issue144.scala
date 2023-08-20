@@ -40,7 +40,7 @@ class Issue144 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         q"""
       class Resource[F[_]](mapRoute: (String, Request[F], F[Response[F]]) => F[Response[F]] = (_: String, _: Request[F], r: F[Response[F]]) => r)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
         import Resource._
-        private[this] val getEpochSecondsDecoder: EntityDecoder[F, Long] = jsonOf[F, Long]
+        protected[this] val getEpochSecondsDecoder: EntityDecoder[F, Long] = jsonOf[F, Long]
         def routes(handler: Handler[F]): HttpRoutes[F] = HttpRoutes.of {
           {
             case req @ GET -> Root =>

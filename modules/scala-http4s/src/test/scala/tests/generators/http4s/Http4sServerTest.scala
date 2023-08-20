@@ -153,18 +153,18 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         implicit val OrderStatusQueryParamDecoder: QueryParamDecoder[OrderStatus] = (value: QueryParameterValue) => _root_.io.circe.Json.fromString(value.value).as[OrderStatus].leftMap(t => ParseFailure("Query decoding failed", t.getMessage)).toValidatedNel
         object GetOrderByIdStatusMatcher extends QueryParamDecoderMatcher[OrderStatus]("status")
         object PutBarBarMatcher extends QueryParamDecoderMatcher[Long]("bar")
-        private[this] val getFooBarOkEncoder = jsonEncoderOf[F, Boolean]
-        private[this] val getFooBarOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getFooBarOkEncoder = jsonEncoderOf[F, Boolean]
+        protected[this] val getFooBarOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }
-        private[this] val getFooOkEncoder = jsonEncoderOf[F, Boolean]
-        private[this] val getFooOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getFooOkEncoder = jsonEncoderOf[F, Boolean]
+        protected[this] val getFooOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }
-        private[this] val getOrderByIdOkEncoder = jsonEncoderOf[F, Order]
-        private[this] val getOrderByIdOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getOrderByIdOkEncoder = jsonEncoderOf[F, Order]
+        protected[this] val getOrderByIdOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }
@@ -244,18 +244,18 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         object usingForGetOrderById { def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:getOrderById")(r)) }
         object usingForGetRoot { def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:getRoot")(r)) }
         object usingForPutBar { def unapply(r: Request[F]): Some[(Request[F], TraceBuilder[F])] = Some(r -> trace("store:putBar")(r)) }
-        private[this] val getFooBarOkEncoder = jsonEncoderOf[F, Boolean]
-        private[this] val getFooBarOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getFooBarOkEncoder = jsonEncoderOf[F, Boolean]
+        protected[this] val getFooBarOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }
-        private[this] val getFooOkEncoder = jsonEncoderOf[F, Boolean]
-        private[this] val getFooOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getFooOkEncoder = jsonEncoderOf[F, Boolean]
+        protected[this] val getFooOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }
-        private[this] val getOrderByIdOkEncoder = jsonEncoderOf[F, Order]
-        private[this] val getOrderByIdOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getOrderByIdOkEncoder = jsonEncoderOf[F, Order]
+        protected[this] val getOrderByIdOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }
@@ -334,18 +334,18 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         object extractorForGetOrderById { def unapply(r: Request[F]): Some[(Request[F], E)] = Some(r -> customExtract("getOrderById")(r)) }
         object extractorForGetRoot { def unapply(r: Request[F]): Some[(Request[F], E)] = Some(r -> customExtract("getRoot")(r)) }
         object extractorForPutBar { def unapply(r: Request[F]): Some[(Request[F], E)] = Some(r -> customExtract("putBar")(r)) }
-        private[this] val getFooBarOkEncoder = jsonEncoderOf[F, Boolean]
-        private[this] val getFooBarOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getFooBarOkEncoder = jsonEncoderOf[F, Boolean]
+        protected[this] val getFooBarOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }
-        private[this] val getFooOkEncoder = jsonEncoderOf[F, Boolean]
-        private[this] val getFooOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getFooOkEncoder = jsonEncoderOf[F, Boolean]
+        protected[this] val getFooOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }
-        private[this] val getOrderByIdOkEncoder = jsonEncoderOf[F, Order]
-        private[this] val getOrderByIdOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
+        protected[this] val getOrderByIdOkEncoder = jsonEncoderOf[F, Order]
+        protected[this] val getOrderByIdOkEntityResponseGenerator = new org.http4s.dsl.impl.EntityResponseGenerator[F, F] {
           def status = org.http4s.Status.Ok
           val liftG = cats.arrow.FunctionK.id
         }

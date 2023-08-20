@@ -1175,7 +1175,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
   def generateDecoders(methodName: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
     bodyArgs.toList.flatMap { case LanguageParameter(_, _, _, _, argType) =>
       List(
-        q"private[this] val ${Pat.Typed(Pat.Var(Term.Name(s"${methodName.uncapitalized}Decoder")), t"EntityDecoder[F, $argType]")} = ${ResponseADTHelper
+        q"protected[this] val ${Pat.Typed(Pat.Var(Term.Name(s"${methodName.uncapitalized}Decoder")), t"EntityDecoder[F, $argType]")} = ${ResponseADTHelper
             .generateDecoder(argType, consumes)}"
       )
     }
@@ -1186,14 +1186,14 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       (_, tpe, _) <- response.value
     } yield {
       val contentTypes = response.value.map(_._1).map(List(_)).getOrElse(produces) // for OpenAPI 3.x we should take ContentType from the response
-      q"private[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${ResponseADTHelper.generateEncoder(tpe, contentTypes)}"
+      q"protected[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${ResponseADTHelper.generateEncoder(tpe, contentTypes)}"
     }
 
   def generateResponseGenerators(methodName: String, responses: Responses[ScalaLanguage]): List[Defn.Val] =
     for {
       response <- responses.value
       if response.value.nonEmpty
-    } yield q"private[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}EntityResponseGenerator"))} = ${ResponseADTHelper
+    } yield q"protected[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}EntityResponseGenerator"))} = ${ResponseADTHelper
         .generateEntityResponseGenerator(q"org.http4s.Status.${response.statusCodeName}")}"
 
   def generateTracingExtractor(methodName: String, tracingField: Term): Defn.Object =
