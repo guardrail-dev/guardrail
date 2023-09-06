@@ -24,7 +24,7 @@ object javaDropwizard {
     "junit"                      %  "junit"                  % "4.13.2"             % Test,
     "nl.jqno.equalsverifier"     %  "equalsverifier"         % "3.15.2"            % Test,
     "com.github.sbt"               %  "junit-interface"        % "0.13.3"             % Test,
-    "com.github.tomakehurst"     %  "wiremock"               % "2.27.2"           % Test,
+    "com.github.tomakehurst"     %  "wiremock"               % "3.0.1"           % Test,
     "io.dropwizard"              %  "dropwizard-testing"     % dropwizardVersion  % Test,
     "org.glassfish.jersey.test-framework.providers" % "jersey-test-framework-provider-grizzly2" % jerseyVersion % Test
   ) ++ Seq(
