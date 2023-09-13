@@ -73,6 +73,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
+  @SuppressWarnings(Array("org.wartremover.warts.TripleQuestionMark"))
   private def toJaxRsAnnotationName: ContentType => Expression = {
     case _: ApplicationJson    => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON")
     case _: UrlencodedFormData => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED")

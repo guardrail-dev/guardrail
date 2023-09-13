@@ -54,6 +54,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
     Set("Boolean", "Byte", "Char", "Short", "Int", "Long", "BigInt", "Float", "Double", "BigDecimal", "String", "OffsetDateTime", "LocalDateTime")
   private val CONTAINER_TYPES = Seq("Vector", "List", "Seq", "IndexedSeq", "Iterable", "Map")
 
+  @SuppressWarnings(Array("org.wartremover.warts.TripleQuestionMark"))
   private def toJaxRsAnnotationName: ContentType => Term = {
     case _: ApplicationJson    => q"MediaType.APPLICATION_JSON"
     case _: UrlencodedFormData => q"MediaType.APPLICATION_FORM_URLENCODED"

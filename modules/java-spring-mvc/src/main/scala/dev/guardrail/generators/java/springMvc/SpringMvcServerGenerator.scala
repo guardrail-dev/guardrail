@@ -74,6 +74,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
 
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
+  @SuppressWarnings(Array("org.wartremover.warts.TripleQuestionMark"))
   private def toSpringMediaType: ContentType => Expression = {
     case _: ApplicationJson    => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_JSON_VALUE")
     case _: UrlencodedFormData => new FieldAccessExpr(new NameExpr("MediaType"), "APPLICATION_FORM_URLENCODED_VALUE")
