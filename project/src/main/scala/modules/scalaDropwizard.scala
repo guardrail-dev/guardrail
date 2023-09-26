@@ -8,7 +8,7 @@ import sbt.Keys._
 object scalaDropwizard {
   val catsVersion            = "2.10.0"
   val dropwizardScalaVersion = "1.3.7-1"
-  val dropwizardVersion      = "1.3.29"
+  val dropwizardVersion      = "4.0.2"
   val jacksonVersion         = "2.15.2"
   val javaxAnnotationVersion = "1.3.2"
   val jaxbApiVersion         = "2.3.1"
