@@ -1,23 +1,42 @@
 package dev.guardrail.generators.scala.circe
 
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
+import _root_.io.swagger.v3.oas.models.{ Components, OpenAPI }
+import cats.Foldable
 import cats.Monad
 import cats.data.{ NonEmptyList, NonEmptyVector }
 import cats.syntax.all._
-
+import scala.jdk.CollectionConverters._
 import scala.meta.{ Defn, _ }
 import scala.reflect.runtime.universe.typeTag
+
 import dev.guardrail.core
-import dev.guardrail.core.extract.{ DataRedaction, EmptyValueIsNull }
+import dev.guardrail.core.extract.{ DataRedaction, Default, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
-import dev.guardrail.core.{ DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, ReifiedRawType, ResolvedType, SupportDefinition, Tracker }
-import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
-import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
-import dev.guardrail.generators.RawParameterName
+import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, Mappish, ReifiedRawType, SupportDefinition, Tracker }
+import dev.guardrail.generators.ProtocolGenerator.{ WrapEnumSchema, wrapNumberEnumSchema, wrapObjectEnumSchema, wrapStringEnumSchema }
+import dev.guardrail.generators.protocol.{ ClassChild, ClassHierarchy, ClassParent }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator.WithValidations
+import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
+import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
+import dev.guardrail.generators.{ ProtocolDefinitions, RawParameterName }
+import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{ ProtocolTerms, RenderedEnum, RenderedIntEnum, RenderedLongEnum, RenderedStringEnum }
+import dev.guardrail.terms.{
+  CollectionsLibTerms,
+  HeldEnum,
+  IntHeldEnum,
+  LanguageTerms,
+  LongHeldEnum,
+  ProtocolTerms,
+  RenderedEnum,
+  RenderedIntEnum,
+  RenderedLongEnum,
+  RenderedStringEnum,
+  StringHeldEnum,
+  SwaggerTerms
+}
 import dev.guardrail.{ SwaggerUtil, Target, UserError }
 
 class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
@@ -46,6 +65,794 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
+  import Target.targetInstances // TODO: Remove me. This resolves implicit ambiguity from MonadChain
+
+  override def fromSwagger(
+      swagger: Tracker[OpenAPI],
+      dtoPackage: List[String],
+      supportPackage: NonEmptyList[String],
+      defaultPropertyRequirement: PropertyRequirement
+  )(implicit
+      F: FrameworkTerms[ScalaLanguage, Target],
+      P: ProtocolTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[ProtocolDefinitions[ScalaLanguage]] = {
+    import Sc._
+
+    val components  = swagger.downField("components", _.getComponents())
+    val definitions = components.flatDownField("schemas", _.getSchemas()).indexedCosequence
+    Sw.log.function("ProtocolGenerator.fromSwagger")(for {
+      (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
+
+      concreteTypes <- SwaggerUtil.extractConcreteTypes[ScalaLanguage, Target](definitions.value, components)
+      polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
+      elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
+        model
+          .refine { case c: ComposedSchema => c }(comp =>
+            for {
+              formattedClsName <- formatTypeName(clsName)
+              parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components)
+              model <- fromModel(
+                clsName = NonEmptyList.of(formattedClsName),
+                model = comp,
+                parents = parents,
+                concreteTypes = concreteTypes,
+                definitions = definitions.value,
+                dtoPackage = dtoPackage,
+                supportPackage = supportPackage.toList,
+                defaultPropertyRequirement = defaultPropertyRequirement,
+                components = components
+              )
+              alias <- modelTypeAlias(formattedClsName, comp, components)
+            } yield model.getOrElse(alias)
+          )
+          .orRefine { case a: ArraySchema => a }(arr =>
+            for {
+              formattedClsName <- formatTypeName(clsName)
+              array            <- fromArray(formattedClsName, arr, concreteTypes, components)
+            } yield array
+          )
+          .orRefine { case o: ObjectSchema => o }(m =>
+            for {
+              formattedClsName <- formatTypeName(clsName)
+              enum             <- fromEnum[Object](formattedClsName, m, dtoPackage, components)
+              model <- fromModel(
+                NonEmptyList.of(formattedClsName),
+                m,
+                List.empty,
+                concreteTypes,
+                definitions.value,
+                dtoPackage,
+                supportPackage.toList,
+                defaultPropertyRequirement,
+                components
+              )
+              alias <- modelTypeAlias(formattedClsName, m, components)
+            } yield enum.orElse(model).getOrElse(alias)
+          )
+          .orRefine { case x: StringSchema => x }(x =>
+            for {
+              formattedClsName <- formatTypeName(clsName)
+              enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
+              model <- fromModel(
+                NonEmptyList.of(formattedClsName),
+                x,
+                List.empty,
+                concreteTypes,
+                definitions.value,
+                dtoPackage,
+                supportPackage.toList,
+                defaultPropertyRequirement,
+                components
+              )
+              customTypeName <- SwaggerUtil.customTypeName(x)
+              (declType, _)  <- SwaggerUtil.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              alias          <- typeAlias(formattedClsName, declType)
+            } yield enum.orElse(model).getOrElse(alias)
+          )
+          .orRefine { case x: IntegerSchema => x }(x =>
+            for {
+              formattedClsName <- formatTypeName(clsName)
+              enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
+              model <- fromModel(
+                NonEmptyList.of(formattedClsName),
+                x,
+                List.empty,
+                concreteTypes,
+                definitions.value,
+                dtoPackage,
+                supportPackage.toList,
+                defaultPropertyRequirement,
+                components
+              )
+              customTypeName <- SwaggerUtil.customTypeName(x)
+              (declType, _)  <- SwaggerUtil.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              alias          <- typeAlias(formattedClsName, declType)
+            } yield enum.orElse(model).getOrElse(alias)
+          )
+          .valueOr(x =>
+            for {
+              formattedClsName <- formatTypeName(clsName)
+              customTypeName   <- SwaggerUtil.customTypeName(x)
+              (declType, _)    <- SwaggerUtil.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              res              <- typeAlias(formattedClsName, declType)
+            } yield res
+          )
+      }
+      protoImports      <- protocolImports()
+      pkgImports        <- packageObjectImports()
+      pkgObjectContents <- packageObjectContents()
+      implicitsObject   <- implicitsObject()
+
+      polyADTElems <- ProtocolElems.resolve[ScalaLanguage, Target](polyADTs)
+      strictElems  <- ProtocolElems.resolve[ScalaLanguage, Target](elems)
+    } yield ProtocolDefinitions[ScalaLanguage](strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents, implicitsObject))
+  }
+
+  private[this] def getRequiredFieldsRec(root: Tracker[Schema[_]]): List[String] = {
+    @scala.annotation.tailrec
+    def work(values: List[Tracker[Schema[_]]], acc: List[String]): List[String] = {
+      val required: List[String] = values.flatMap(_.downField("required", _.getRequired()).unwrapTracker)
+      val next: List[Tracker[Schema[_]]] =
+        for {
+          a <- values
+          b <- a.refine { case x: ComposedSchema => x }(_.downField("allOf", _.getAllOf())).toOption.toList
+          c <- b.indexedDistribute
+        } yield c
+
+      val newRequired = acc ++ required
+
+      next match {
+        case next @ (_ :: _) => work(next, newRequired)
+        case Nil             => newRequired
+      }
+    }
+    work(List(root), Nil)
+  }
+
+  private[this] def fromEnum[A](
+      clsName: String,
+      schema: Tracker[Schema[A]],
+      dtoPackage: List[String],
+      components: Tracker[Option[Components]]
+  )(implicit
+      P: ProtocolTerms[ScalaLanguage, Target],
+      F: FrameworkTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target],
+      wrapEnumSchema: WrapEnumSchema[A]
+  ): Target[Either[String, EnumDefinition[ScalaLanguage]]] = {
+    import Sc._
+    import Sw._
+
+    def validProg(held: HeldEnum, tpe: scala.meta.Type, fullType: scala.meta.Type): Target[EnumDefinition[ScalaLanguage]] =
+      for {
+        (pascalValues, wrappedValues) <- held match {
+          case StringHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(elem)
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedStringEnum[ScalaLanguage](elems)
+            } yield (pascalValues, wrappedValues)
+          case IntHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(s"${clsName}${elem}") // TODO: Push this string into LanguageTerms
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedIntEnum[ScalaLanguage](elems)
+            } yield (pascalValues, wrappedValues)
+          case LongHeldEnum(value) =>
+            for {
+              elems <- value.traverse { elem =>
+                for {
+                  termName  <- formatEnumName(s"${clsName}${elem}") // TODO: Push this string into LanguageTerms
+                  valueTerm <- pureTermName(termName)
+                  accessor  <- buildAccessor(clsName, termName)
+                } yield (elem, valueTerm, accessor)
+              }
+              pascalValues  = elems.map(_._2)
+              wrappedValues = RenderedLongEnum[ScalaLanguage](elems)
+            } yield (pascalValues, wrappedValues)
+        }
+        members <- renderMembers(clsName, wrappedValues)
+        encoder <- encodeEnum(clsName, tpe)
+        decoder <- decodeEnum(clsName, tpe)
+
+        defn        <- renderClass(clsName, tpe, wrappedValues)
+        staticDefns <- renderStaticDefns(clsName, tpe, members, pascalValues, encoder, decoder)
+        classType   <- pureTypeName(clsName)
+      } yield EnumDefinition[ScalaLanguage](clsName, classType, fullType, wrappedValues, defn, staticDefns)
+
+    for {
+      enum          <- extractEnum(schema.map(wrapEnumSchema))
+      customTpeName <- SwaggerUtil.customTypeName(schema)
+      (tpe, _)      <- SwaggerUtil.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
+      fullType      <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
+      res           <- enum.traverse(validProg(_, tpe, fullType))
+    } yield res
+  }
+
+  private[this] def getPropertyRequirement(
+      schema: Tracker[Schema[_]],
+      isRequired: Boolean,
+      defaultPropertyRequirement: PropertyRequirement
+  ): PropertyRequirement =
+    (for {
+      isNullable <- schema.downField("nullable", _.getNullable)
+    } yield (isRequired, isNullable) match {
+      case (true, None)         => PropertyRequirement.Required
+      case (true, Some(false))  => PropertyRequirement.Required
+      case (true, Some(true))   => PropertyRequirement.RequiredNullable
+      case (false, None)        => defaultPropertyRequirement
+      case (false, Some(false)) => PropertyRequirement.Optional
+      case (false, Some(true))  => PropertyRequirement.OptionalNullable
+    }).unwrapTracker
+
+  /** Handle polymorphic model
+    */
+  private[this] def fromPoly(
+      hierarchy: ClassParent[ScalaLanguage],
+      concreteTypes: List[PropMeta[ScalaLanguage]],
+      definitions: List[(String, Tracker[Schema[_]])],
+      dtoPackage: List[String],
+      supportPackage: List[String],
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
+  )(implicit
+      F: FrameworkTerms[ScalaLanguage, Target],
+      P: ProtocolTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[ProtocolElems[ScalaLanguage]] = {
+    import Sc._
+
+    def child(hierarchy: ClassHierarchy[ScalaLanguage]): List[String] =
+      hierarchy.children.map(_.name) ::: hierarchy.children.flatMap(child)
+    def parent(hierarchy: ClassHierarchy[ScalaLanguage]): List[String] =
+      if (hierarchy.children.nonEmpty) hierarchy.name :: hierarchy.children.flatMap(parent)
+      else Nil
+
+    val children      = child(hierarchy).diff(parent(hierarchy)).distinct
+    val discriminator = hierarchy.discriminator
+
+    for {
+      parents <- hierarchy.model
+        .refine[Target[List[SuperClass[ScalaLanguage]]]] { case c: ComposedSchema => c }(
+          extractParents(_, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
+        )
+        .getOrElse(List.empty[SuperClass[ScalaLanguage]].pure[Target])
+      props <- extractProperties(hierarchy.model)
+      requiredFields = hierarchy.required ::: hierarchy.children.flatMap(_.required)
+      params <- props.traverse { case (name, prop) =>
+        for {
+          typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
+          propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
+          customType <- SwaggerUtil.customTypeName(prop)
+          resolvedType <- SwaggerUtil
+            .propMeta[ScalaLanguage, Target](
+              prop,
+              components
+            ) // TODO: This should be resolved via an alternate mechanism that maintains references all the way through, instead of re-deriving and assuming that references are valid
+          defValue  <- defaultValue(typeName, prop, propertyRequirement, definitions)
+          fieldName <- formatFieldName(name)
+          res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
+            name,
+            fieldName,
+            prop,
+            resolvedType,
+            propertyRequirement,
+            customType.isDefined,
+            defValue
+          )
+        } yield res
+      }
+      definition  <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
+      encoder     <- encodeADT(hierarchy.name, hierarchy.discriminator, children)
+      decoder     <- decodeADT(hierarchy.name, hierarchy.discriminator, children)
+      staticDefns <- renderADTStaticDefns(hierarchy.name, discriminator, encoder, decoder)
+      tpe         <- pureTypeName(hierarchy.name)
+      fullType    <- selectType(NonEmptyList.fromList(dtoPackage :+ hierarchy.name).getOrElse(NonEmptyList.of(hierarchy.name)))
+    } yield ADT[ScalaLanguage](
+      name = hierarchy.name,
+      tpe = tpe,
+      fullType = fullType,
+      trt = definition,
+      staticDefns = staticDefns
+    )
+  }
+
+  private def extractParents(
+      elem: Tracker[ComposedSchema],
+      definitions: List[(String, Tracker[Schema[_]])],
+      concreteTypes: List[PropMeta[ScalaLanguage]],
+      dtoPackage: List[String],
+      supportPackage: List[String],
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
+  )(implicit
+      F: FrameworkTerms[ScalaLanguage, Target],
+      P: ProtocolTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[List[SuperClass[ScalaLanguage]]] = {
+    import Sc._
+
+    for {
+      a <- extractSuperClass(elem, definitions)
+      supper <- a.flatTraverse { case (clsName, _extends, interfaces) =>
+        val concreteInterfacesWithClass = for {
+          interface      <- interfaces
+          (cls, tracker) <- definitions
+          result <- tracker
+            .refine[Tracker[Schema[_]]] {
+              case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x
+            }(
+              identity _
+            )
+            .orRefine { case x: Schema[_] if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x }(identity _)
+            .toOption
+        } yield cls -> result
+        val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
+        val classMapping = (for {
+          (cls, schema) <- concreteInterfacesWithClass
+          (name, _)     <- schema.downField("properties", _.getProperties).indexedDistribute.value
+        } yield (name, cls)).toMap
+        for {
+          _extendsProps <- extractProperties(_extends)
+          requiredFields = getRequiredFieldsRec(_extends) ++ concreteInterfaces.flatMap(getRequiredFieldsRec)
+          _withProps <- concreteInterfaces.traverse(extractProperties)
+          props = _extendsProps ++ _withProps.flatten
+          (params, _) <- prepareProperties(
+            NonEmptyList.of(clsName),
+            classMapping,
+            props,
+            requiredFields,
+            concreteTypes,
+            definitions,
+            dtoPackage,
+            supportPackage,
+            defaultPropertyRequirement,
+            components
+          )
+          interfacesCls = interfaces.flatMap(_.downField("$ref", _.get$ref).unwrapTracker.map(_.split("/").last))
+          tpe <- parseTypeName(clsName)
+
+          discriminators <- (_extends :: concreteInterfaces).flatTraverse(
+            _.refine[Target[List[Discriminator[ScalaLanguage]]]] { case m: ObjectSchema => m }(m => Discriminator.fromSchema(m).map(_.toList))
+              .getOrElse(List.empty[Discriminator[ScalaLanguage]].pure[Target])
+          )
+        } yield tpe
+          .map(
+            SuperClass[ScalaLanguage](
+              clsName,
+              _,
+              interfacesCls,
+              params,
+              discriminators
+            )
+          )
+          .toList
+      }
+
+    } yield supper
+  }
+
+  private[this] def fromModel(
+      clsName: NonEmptyList[String],
+      model: Tracker[Schema[_]],
+      parents: List[SuperClass[ScalaLanguage]],
+      concreteTypes: List[PropMeta[ScalaLanguage]],
+      definitions: List[(String, Tracker[Schema[_]])],
+      dtoPackage: List[String],
+      supportPackage: List[String],
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
+  )(implicit
+      F: FrameworkTerms[ScalaLanguage, Target],
+      P: ProtocolTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[Either[String, ClassDefinition[ScalaLanguage]]] = {
+    import Sc._
+
+    for {
+      props <- extractProperties(model)
+      requiredFields = getRequiredFieldsRec(model)
+      (params, nestedDefinitions) <- prepareProperties(
+        clsName,
+        Map.empty,
+        props,
+        requiredFields,
+        concreteTypes,
+        definitions,
+        dtoPackage,
+        supportPackage,
+        defaultPropertyRequirement,
+        components
+      )
+      encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
+      decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
+      tpe         <- parseTypeName(clsName.last)
+      fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
+      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
+      nestedClasses <- nestedDefinitions.flatTraverse {
+        case classDefinition: ClassDefinition[ScalaLanguage] =>
+          for {
+            widenClass          <- widenClassDefinition(classDefinition.cls)
+            companionTerm       <- pureTermName(classDefinition.name)
+            companionDefinition <- wrapToObject(companionTerm, classDefinition.staticDefns.extraImports, classDefinition.staticDefns.definitions)
+            widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
+          } yield List(widenClass) ++ widenCompanion.fold(classDefinition.staticDefns.definitions)(List(_))
+        case enumDefinition: EnumDefinition[ScalaLanguage] =>
+          for {
+            widenClass          <- widenClassDefinition(enumDefinition.cls)
+            companionTerm       <- pureTermName(enumDefinition.name)
+            companionDefinition <- wrapToObject(companionTerm, enumDefinition.staticDefns.extraImports, enumDefinition.staticDefns.definitions)
+            widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
+          } yield List(widenClass) ++ widenCompanion.fold(enumDefinition.staticDefns.definitions)(List(_))
+      }
+      defn <- renderDTOClass(clsName.last, supportPackage, params, parents)
+    } yield {
+      val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ nestedClasses)
+      if (parents.isEmpty && props.isEmpty) Left("Entity isn't model"): Either[String, ClassDefinition[ScalaLanguage]]
+      else tpe.toRight("Empty entity name").map(ClassDefinition[ScalaLanguage](clsName.last, _, fullType, defn, finalStaticDefns, parents))
+    }
+
+  }
+
+  private def prepareProperties(
+      clsName: NonEmptyList[String],
+      propertyToTypeLookup: Map[String, String],
+      props: List[(String, Tracker[Schema[_]])],
+      requiredFields: List[String],
+      concreteTypes: List[PropMeta[ScalaLanguage]],
+      definitions: List[(String, Tracker[Schema[_]])],
+      dtoPackage: List[String],
+      supportPackage: List[String],
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
+  )(implicit
+      F: FrameworkTerms[ScalaLanguage, Target],
+      P: ProtocolTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[(List[ProtocolParameter[ScalaLanguage]], List[NestedProtocolElems[ScalaLanguage]])] = {
+    import Sc._
+    def getClsName(name: String): NonEmptyList[String] = propertyToTypeLookup.get(name).map(NonEmptyList.of(_)).getOrElse(clsName)
+
+    def processProperty(name: String, schema: Tracker[Schema[_]]): Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]] =
+      for {
+        nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
+        defn <- schema
+          .refine[Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]]] { case x: ObjectSchema => x }(o =>
+            for {
+              defn <- fromModel(
+                nestedClassName,
+                o,
+                List.empty,
+                concreteTypes,
+                definitions,
+                dtoPackage,
+                supportPackage,
+                defaultPropertyRequirement,
+                components
+              )
+            } yield Option(defn)
+          )
+          .orRefine { case o: ComposedSchema => o }(o =>
+            for {
+              parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
+              maybeClassDefinition <- fromModel(
+                nestedClassName,
+                o,
+                parents,
+                concreteTypes,
+                definitions,
+                dtoPackage,
+                supportPackage,
+                defaultPropertyRequirement,
+                components
+              )
+            } yield Option(maybeClassDefinition)
+          )
+          .orRefine { case a: ArraySchema => a }(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
+          .orRefine { case s: StringSchema if Option(s.getEnum).map(_.asScala).exists(_.nonEmpty) => s }(s =>
+            fromEnum(nestedClassName.last, s, dtoPackage, components).map(Option(_))
+          )
+          .getOrElse(Option.empty[Either[String, NestedProtocolElems[ScalaLanguage]]].pure[Target])
+      } yield defn
+
+    for {
+      paramsAndNestedDefinitions <- props.traverse[Target, (Tracker[ProtocolParameter[ScalaLanguage]], Option[NestedProtocolElems[ScalaLanguage]])] {
+        case (name, schema) =>
+          for {
+            typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
+            tpe                   <- selectType(typeName)
+            maybeNestedDefinition <- processProperty(name, schema)
+            resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema, components)
+            customType            <- SwaggerUtil.customTypeName(schema)
+            propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
+            defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
+            fieldName <- formatFieldName(name)
+            parameter <- transformProperty(getClsName(name).last, dtoPackage, supportPackage, concreteTypes)(
+              name,
+              fieldName,
+              schema,
+              resolvedType,
+              propertyRequirement,
+              customType.isDefined,
+              defValue
+            )
+          } yield (Tracker.cloneHistory(schema, parameter), maybeNestedDefinition.flatMap(_.toOption))
+      }
+      (params, nestedDefinitions) = paramsAndNestedDefinitions.unzip
+      deduplicatedParams <- deduplicateParams(params)
+      unconflictedParams <- fixConflictingNames(deduplicatedParams)
+    } yield (unconflictedParams, nestedDefinitions.flatten)
+  }
+
+  private def deduplicateParams(
+      params: List[Tracker[ProtocolParameter[ScalaLanguage]]]
+  )(implicit Sw: SwaggerTerms[ScalaLanguage, Target], Sc: LanguageTerms[ScalaLanguage, Target]): Target[List[ProtocolParameter[ScalaLanguage]]] = {
+    import Sc._
+    Foldable[List]
+      .foldLeftM[Target, Tracker[ProtocolParameter[ScalaLanguage]], List[ProtocolParameter[ScalaLanguage]]](
+        params,
+        List.empty[ProtocolParameter[ScalaLanguage]]
+      ) { (s, ta) =>
+        val a = ta.unwrapTracker
+        s.find(p => p.name == a.name) match {
+          case None => (a :: s).pure[Target]
+          case Some(duplicate) =>
+            for {
+              newDefaultValue <- findCommonDefaultValue(ta.showHistory, a.defaultValue, duplicate.defaultValue)
+              newRawType      <- findCommonRawType(ta.showHistory, a.rawType, duplicate.rawType)
+            } yield {
+              val emptyToNull        = if (Set(a.emptyToNull, duplicate.emptyToNull).contains(EmptyIsNull)) EmptyIsNull else EmptyIsEmpty
+              val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
+              val mergedParameter = ProtocolParameter[ScalaLanguage](
+                a.term,
+                a.baseType,
+                a.name,
+                a.dep,
+                newRawType,
+                a.readOnlyKey.orElse(duplicate.readOnlyKey),
+                emptyToNull,
+                redactionBehaviour,
+                a.propertyRequirement,
+                newDefaultValue,
+                a.propertyValidation
+              )
+              mergedParameter :: s.filter(_.name != a.name)
+            }
+        }
+      }
+      .map(_.reverse)
+  }
+
+  private def fixConflictingNames(
+      params: List[ProtocolParameter[ScalaLanguage]]
+  )(implicit Lt: LanguageTerms[ScalaLanguage, Target]): Target[List[ProtocolParameter[ScalaLanguage]]] = {
+    import Lt._
+    for {
+      paramsWithNames <- params.traverse(param => extractTermNameFromParam(param.term).map((_, param)))
+      counts = paramsWithNames.groupBy(_._1).view.mapValues(_.length).toMap
+      newParams <- paramsWithNames.traverse { case (name, param) =>
+        if (counts.getOrElse(name, 0) > 1) {
+          for {
+            newTermName    <- pureTermName(param.name.value)
+            newMethodParam <- alterMethodParameterName(param.term, newTermName)
+          } yield ProtocolParameter(
+            newMethodParam,
+            param.baseType,
+            param.name,
+            param.dep,
+            param.rawType,
+            param.readOnlyKey,
+            param.emptyToNull,
+            param.dataRedaction,
+            param.propertyRequirement,
+            param.defaultValue,
+            param.propertyValidation
+          )
+        } else {
+          param.pure[Target]
+        }
+      }
+    } yield newParams
+  }
+
+  private def modelTypeAlias(clsName: String, abstractModel: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
+      Fw: FrameworkTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[ProtocolElems[ScalaLanguage]] = {
+    import Fw._
+    val model: Option[Tracker[ObjectSchema]] = abstractModel
+      .refine[Option[Tracker[ObjectSchema]]] { case m: ObjectSchema => m }(x => Option(x))
+      .orRefine { case m: ComposedSchema => m }(
+        _.downField("allOf", _.getAllOf()).indexedCosequence
+          .get(1)
+          .flatMap(
+            _.refine { case o: ObjectSchema => o }(Option.apply)
+              .orRefineFallback(_ => None)
+          )
+      )
+      .orRefineFallback(_ => None)
+    for {
+      tpe <- model.fold[Target[scala.meta.Type]](objectType(None)) { m =>
+        for {
+          tpeName       <- SwaggerUtil.customTypeName[ScalaLanguage, Target, Tracker[ObjectSchema]](m)
+          (declType, _) <- SwaggerUtil.determineTypeName[ScalaLanguage, Target](m, Tracker.cloneHistory(m, tpeName), components)
+        } yield declType
+      }
+      res <- typeAlias(clsName, tpe)
+    } yield res
+  }
+
+  private def plainTypeAlias(
+      clsName: String
+  )(implicit Fw: FrameworkTerms[ScalaLanguage, Target], Sc: LanguageTerms[ScalaLanguage, Target]): Target[ProtocolElems[ScalaLanguage]] = {
+    import Fw._
+    for {
+      tpe <- objectType(None)
+      res <- typeAlias(clsName, tpe)
+    } yield res
+  }
+
+  private def typeAlias(clsName: String, tpe: scala.meta.Type): Target[ProtocolElems[ScalaLanguage]] =
+    (RandomType[ScalaLanguage](clsName, tpe): ProtocolElems[ScalaLanguage]).pure[Target]
+
+  private def fromArray(clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[ScalaLanguage]], components: Tracker[Option[Components]])(
+      implicit
+      F: FrameworkTerms[ScalaLanguage, Target],
+      P: ProtocolTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[ProtocolElems[ScalaLanguage]] =
+    for {
+      deferredTpe <- SwaggerUtil.modelMetaType(arr, components)
+      tpe         <- extractArrayType(deferredTpe, concreteTypes)
+      ret         <- typeAlias(clsName, tpe)
+    } yield ret
+
+  /** returns objects grouped into hierarchies
+    */
+  private def groupHierarchies(
+      definitions: Mappish[List, String, Tracker[Schema[_]]]
+  )(implicit
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[(List[ClassParent[ScalaLanguage]], List[(String, Tracker[Schema[_]])])] = {
+
+    def firstInHierarchy(model: Tracker[Schema[_]]): Option[Tracker[ObjectSchema]] =
+      model
+        .refine { case x: ComposedSchema => x } { elem =>
+          definitions.value
+            .collectFirst {
+              case (clsName, element)
+                  if elem.downField("allOf", _.getAllOf).exists(_.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$clsName"))) =>
+                element
+            }
+            .flatMap(
+              _.refine { case x: ComposedSchema => x }(firstInHierarchy)
+                .orRefine { case o: ObjectSchema => o }(x => Option(x))
+                .getOrElse(None)
+            )
+        }
+        .getOrElse(None)
+
+    def children(cls: String): List[ClassChild[ScalaLanguage]] = definitions.value.flatMap { case (clsName, comp) =>
+      comp
+        .refine { case x: ComposedSchema => x }(comp =>
+          if (
+            comp
+              .downField("allOf", _.getAllOf())
+              .exists(x => x.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/$cls")))
+          ) {
+            Some(ClassChild(clsName, comp, children(clsName), getRequiredFieldsRec(comp)))
+          } else None
+        )
+        .getOrElse(None)
+    }
+
+    def classHierarchy(cls: String, model: Tracker[Schema[_]]): Target[Option[ClassParent[ScalaLanguage]]] =
+      model
+        .refine { case c: ComposedSchema => c }(c =>
+          firstInHierarchy(c)
+            .fold(Option.empty[Discriminator[ScalaLanguage]].pure[Target])(Discriminator.fromSchema[ScalaLanguage, Target])
+            .map(_.map((_, getRequiredFieldsRec(c))))
+        )
+        .orRefine { case x: Schema[_] => x }(m => Discriminator.fromSchema(m).map(_.map((_, getRequiredFieldsRec(m)))))
+        .getOrElse(Option.empty[(Discriminator[ScalaLanguage], List[String])].pure[Target])
+        .map(_.map { case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) })
+
+    Sw.log.function("groupHierarchies")(
+      definitions.value
+        .traverse { case (cls, model) =>
+          for {
+            hierarchy <- classHierarchy(cls, model)
+          } yield hierarchy.filterNot(_.children.isEmpty).toLeft((cls, model))
+        }
+        .map(_.partitionEither[ClassParent[ScalaLanguage], (String, Tracker[Schema[_]])](identity))
+    )
+  }
+
+  private def defaultValue(
+      name: NonEmptyList[String],
+      schema: Tracker[Schema[_]],
+      requirement: PropertyRequirement,
+      definitions: List[(String, Tracker[Schema[_]])]
+  )(implicit
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target]
+  ): Target[Option[scala.meta.Term]] = {
+    import Sc._
+    import Cl._
+    val empty = Option.empty[scala.meta.Term].pure[Target]
+    schema.downField("$ref", _.get$ref()).indexedDistribute match {
+      case Some(ref) =>
+        definitions
+          .collectFirst {
+            case (cls, refSchema) if ref.unwrapTracker.endsWith(s"/$cls") =>
+              defaultValue(NonEmptyList.of(cls), refSchema, requirement, definitions)
+          }
+          .getOrElse(empty)
+      case None =>
+        schema
+          .refine { case map: MapSchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => map }(map =>
+            for {
+              customTpe <- SwaggerUtil.customMapTypeName(map)
+              result    <- customTpe.fold(emptyMap().map(Option(_)))(_ => empty)
+            } yield result
+          )
+          .orRefine { case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => arr }(
+            arr =>
+              for {
+                customTpe <- SwaggerUtil.customArrayTypeName(arr)
+                result    <- customTpe.fold(emptyArray().map(Option(_)))(_ => empty)
+              } yield result
+          )
+          .orRefine { case p: BooleanSchema => p }(p => Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_))))
+          .orRefine { case p: NumberSchema if p.getFormat == "double" => p }(p => Default(p).extract[Double].fold(empty)(litDouble(_).map(Some(_))))
+          .orRefine { case p: NumberSchema if p.getFormat == "float" => p }(p => Default(p).extract[Float].fold(empty)(litFloat(_).map(Some(_))))
+          .orRefine { case p: IntegerSchema if p.getFormat == "int32" => p }(p => Default(p).extract[Int].fold(empty)(litInt(_).map(Some(_))))
+          .orRefine { case p: IntegerSchema if p.getFormat == "int64" => p }(p => Default(p).extract[Long].fold(empty)(litLong(_).map(Some(_))))
+          .orRefine { case p: StringSchema if Option(p.getEnum).map(_.asScala).exists(_.nonEmpty) => p }(p =>
+            Default(p).extract[String] match {
+              case Some(defaultEnumValue) =>
+                for {
+                  enumName <- formatEnumName(defaultEnumValue)
+                  result   <- selectTerm(name.append(enumName))
+                } yield Some(result)
+              case None => empty
+            }
+          )
+          .orRefine { case p: StringSchema => p }(p => Default(p).extract[String].fold(empty)(litString(_).map(Some(_))))
+          .getOrElse(empty)
+    }
+  }
+
   private def suffixClsName(prefix: String, clsName: String): Pat.Var = Pat.Var(Term.Name(s"${prefix}${clsName}"))
 
   private def lookupTypeName(tpeName: String, concreteTypes: List[PropMeta[ScalaLanguage]])(f: Type => Type): Option[Type] =
@@ -54,7 +861,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       .map(_.tpe)
       .map(f)
 
-  override def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) = {
+  private def renderMembers(clsName: String, elems: RenderedEnum[ScalaLanguage]) = {
     val fields = elems match {
       case RenderedStringEnum(elems) =>
         elems.map { case (value, termName, _) =>
@@ -77,27 +884,27 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           """))
   }
 
-  override def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
+  private def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
     Target.pure(Some(q"""
           implicit val ${suffixClsName("encode", clsName)}: _root_.io.circe.Encoder[${Type.Name(clsName)}] =
             _root_.io.circe.Encoder[${tpe}].contramap(_.value)
         """))
 
-  override def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
+  private def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
     Target.pure(Some(q"""
       implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] =
         _root_.io.circe.Decoder[${tpe}].emap(value => from(value).toRight(${Term
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
     """))
 
-  override def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
+  private def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
     Target.pure(q"""
       sealed abstract class ${Type.Name(clsName)}(val value: ${tpe}) extends _root_.scala.Product with _root_.scala.Serializable {
         override def toString: String = value.toString
       }
     """)
 
-  override def renderStaticDefns(
+  private def renderStaticDefns(
       clsName: String,
       tpe: scala.meta.Type,
       members: Option[scala.meta.Defn.Object],
@@ -132,7 +939,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   override def buildAccessor(clsName: String, termName: String) =
     Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
 
-  override def extractProperties(swagger: Tracker[Schema[_]]) =
+  private def extractProperties(swagger: Tracker[Schema[_]]) =
     swagger
       .refine[Target[List[(String, Tracker[Schema[_]])]]] { case o: ObjectSchema => o }(m =>
         Target.pure(m.downField("properties", _.getProperties()).indexedCosequence.value)
@@ -150,7 +957,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       )
       .getOrElse(Target.pure(List.empty[(String, Tracker[Schema[_]])]))
 
-  override def transformProperty(
+  private def transformProperty(
       clsName: String,
       dtoPackage: List[String],
       supportPackage: List[String],
@@ -159,7 +966,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       name: String,
       fieldName: String,
       property: Tracker[Schema[_]],
-      meta: ResolvedType[ScalaLanguage],
+      meta: core.ResolvedType[ScalaLanguage],
       requirement: PropertyRequirement,
       isCustomType: Boolean,
       defaultValue: Option[scala.meta.Term]
@@ -248,7 +1055,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       )
     }
 
-  override def renderDTOClass(
+  private def renderDTOClass(
       clsName: String,
       supportPackage: List[String],
       selfParams: List[ProtocolParameter[ScalaLanguage]],
@@ -290,7 +1097,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     Target.pure(code)
   }
 
-  override def encodeModel(
+  private def encodeModel(
       clsName: String,
       dtoPackage: List[String],
       selfParams: List[ProtocolParameter[ScalaLanguage]],
@@ -355,7 +1162,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         """))
   }
 
-  override def decodeModel(
+  private def decodeModel(
       clsName: String,
       dtoPackage: List[String],
       supportPackage: List[String],
@@ -465,7 +1272,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           """)
   }
 
-  override def renderDTOStaticDefns(
+  private def renderDTOStaticDefns(
       clsName: String,
       deps: List[scala.meta.Term.Name],
       encoder: Option[scala.meta.Defn.Val],
@@ -485,7 +1292,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     )
   }
 
-  override def extractArrayType(arr: core.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
+  private def extractArrayType(arr: core.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
     for {
       result <- arr match {
         case core.Resolved(tpe, dep, default, _) => Target.pure(tpe)
@@ -506,10 +1313,10 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       }
     } yield result
 
-  override def extractConcreteTypes(definitions: Either[String, List[PropMeta[ScalaLanguage]]]) =
+  private def extractConcreteTypes(definitions: Either[String, List[PropMeta[ScalaLanguage]]]) =
     definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseUserError _, Target.pure _)
 
-  override def protocolImports() =
+  private def protocolImports() =
     Target.pure(
       List(
         q"import cats.syntax.either._",
@@ -528,7 +1335,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     )
   }
 
-  override def packageObjectImports() =
+  private def packageObjectImports() =
     Target.pure(List.empty)
 
   override def generateSupportDefinitions() = {
@@ -567,7 +1374,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     Target.pure(List(presenceDefinition))
   }
 
-  override def packageObjectContents() =
+  private def packageObjectContents() =
     Target.pure(
       List(
         q"implicit val guardrailDecodeInstant: _root_.io.circe.Decoder[java.time.Instant] = _root_.io.circe.Decoder[java.time.Instant].or(_root_.io.circe.Decoder[_root_.scala.Long].map(java.time.Instant.ofEpochMilli))",
@@ -587,9 +1394,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       )
     )
 
-  override def implicitsObject() = Target.pure(None)
+  private def implicitsObject() = Target.pure(None)
 
-  override def extractSuperClass(
+  private def extractSuperClass(
       swagger: Tracker[ComposedSchema],
       definitions: List[(String, Tracker[Schema[_]])]
   ) = {
@@ -612,7 +1419,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     allParents(swagger)
   }
 
-  override def renderADTStaticDefns(
+  private def renderADTStaticDefns(
       clsName: String,
       discriminator: Discriminator[ScalaLanguage],
       encoder: Option[scala.meta.Defn.Val],
@@ -630,7 +1437,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       )
     )
 
-  override def decodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
+  private def decodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
     val (childrenCases, childrenDiscriminators) = children.map { child =>
       val discriminatorValue = discriminator.mapping
         .collectFirst { case (value, elem) if elem.name == child => value }
@@ -653,7 +1460,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     Target.pure(Some(code))
   }
 
-  override def encodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
+  private def encodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
     val childrenCases = children.map { child =>
       val discriminatorValue = discriminator.mapping
         .collectFirst { case (value, elem) if elem.name == child => value }
@@ -667,7 +1474,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     Target.pure(Some(code))
   }
 
-  override def renderSealedTrait(
+  private def renderSealedTrait(
       className: String,
       params: List[ProtocolParameter[ScalaLanguage]],
       discriminator: Discriminator[ScalaLanguage],

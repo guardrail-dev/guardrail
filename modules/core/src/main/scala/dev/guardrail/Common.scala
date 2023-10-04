@@ -8,7 +8,8 @@ import java.nio.file.Path
 import java.net.URI
 
 import dev.guardrail.core.{ SupportDefinition, Tracker }
-import dev.guardrail.generators.{ Clients, ProtocolDefinitions, ProtocolGenerator, Servers }
+import dev.guardrail.generators.{ Clients, Servers }
+import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -35,12 +36,16 @@ object Common {
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[(ProtocolDefinitions[L], CodegenDefinitions[L])] = {
-    import Fw._
+    import Fw.{ getFrameworkImports, getFrameworkImplicits }
     import Sw._
 
     Sw.log.function("prepareDefinitions")(for {
-      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, _) <- ProtocolGenerator
-        .fromSwagger[L, F](swagger, dtoPackage, supportPackage, context.propertyRequirement)
+      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, _) <- P.fromSwagger(
+        swagger,
+        dtoPackage,
+        supportPackage,
+        context.propertyRequirement
+      )
 
       serverUrls = NonEmptyList.fromList(
         swagger
