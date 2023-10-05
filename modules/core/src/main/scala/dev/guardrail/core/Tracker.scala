@@ -14,13 +14,18 @@ import cats.Functor
   * Tracker heavily utilizes syntax from IndexedFunctor and IndexedDistributive. These classes are similar to Functor and Traversable, except they expose the
   * index into the structure they are walking over. This is used to automatically build the history while walking structures.
   *
-  * val tracker: Tracker[ OpenAPI ] = Tracker(openAPI) val servers: Tracker[List[ Server ]] = tracker.downField("servers", _.getServers) val firstServer:
-  * Tracker[Option[ Server ]] = servers.map(_.headOption) val firstServerUrl: Tracker[Option[ String ]] = firstServer.flatDownField("url", _.getUrl)
+  * ```scala
+  * val tracker: Tracker[OpenAPI]               = Tracker(openAPI)
+  * val servers: Tracker[List[Server]]          = tracker.downField("servers", _.getServers)
+  * val firstServer: Tracker[Option[Server]]    = servers.map(_.headOption)
+  * val firstServerUrl: Tracker[Option[String]] = firstServer.flatDownField("url", _.getUrl)
   *
-  * val trackedUrl: Tracker[Option[ URL ]] = firstServerUrl.map(_.map(new URL(_)))
+  * val trackedUrl: Tracker[Option[URL]] = firstServerUrl.map(_.map(new URL(_)))
   *
-  * // Examples of extracting: val firstServerUrl: Option[ URL ] = trackedUrl.unwrapTracker // Throw away history val firstServerUrl: Target[ URL ] =
-  * trackedUrl.raiseErrorIfEmpty("No Server URL found!") // Append history to the end of the error message
+  * // Examples of extracting:
+  * val firstServerUrl: Option[URL] = trackedUrl.unwrapTracker                             // Throw away history
+  * val firstServerUrl: Target[URL] = trackedUrl.raiseErrorIfEmpty("No Server URL found!") // Append history to the end of the error message
+  * ```
   */
 class Tracker[+A] private[core] (private[core] val get: A, private[core] val history: Vector[String]) {
   override def toString(): String = s"Tracker($get, $history)"
