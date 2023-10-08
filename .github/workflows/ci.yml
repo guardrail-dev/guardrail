@@ -53,7 +53,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
     - name: Set scala version for matrix
       id: set-scala-versions  # The greps on the following line are to ensure as much as possible that we've caught the right line
-      run: echo "::set-output name=scala_versions::$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)"
+      run: echo "scala_versions=$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)" >> $GITHUB_OUTPUT
   java:
     runs-on: ubuntu-20.04
     needs: [core]
