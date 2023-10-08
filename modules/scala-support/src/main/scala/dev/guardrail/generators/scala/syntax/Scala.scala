@@ -22,6 +22,7 @@ package object syntax {
 
   implicit class RichLanguageParameter(value: LanguageParameter.type) {
     import _root_.scala.meta._
+    @SuppressWarnings(Array("org.wartremover.warts.TripleQuestionMark"))
     def fromParam(param: Term.Param, rawType: Option[String] = Some("string"), rawFormat: Option[String] = None): LanguageParameter[ScalaLanguage] =
       param match {
         case param @ Term.Param(_, name, decltype, _) =>
