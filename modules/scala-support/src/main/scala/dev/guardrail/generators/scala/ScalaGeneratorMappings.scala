@@ -8,7 +8,7 @@ import dev.guardrail.generators.spi.{ FrameworkLoader, ModuleMapperLoader }
 import dev.guardrail.UnparseableArgument
 
 object ScalaGeneratorMappings {
-  implicit def scalaInterpreter = new CoreTermInterp[ScalaLanguage](
+  implicit def scalaInterpreter: CoreTermInterp[ScalaLanguage] = new CoreTermInterp[ScalaLanguage](
     "akka-http",
     FrameworkLoader.load[ScalaLanguage](_),
     frameworkName => ModuleMapperLoader.load[ScalaLanguage](frameworkName),

@@ -29,11 +29,11 @@ trait IndexedDistributiveImplicits {
   }
 
   // These don't belong here, but they intersect a lot with the usage of IndexedDistributive
-  implicit def nestedTupleFunctor[F[_], Z](implicit F: Functor[F]) = new Functor[Lambda[Y => F[(Z, Y)]]] {
+  implicit def nestedTupleFunctor[F[_], Z](implicit F: Functor[F]): Functor[Lambda[Y => F[(Z, Y)]]] = new Functor[Lambda[Y => F[(Z, Y)]]] {
     def map[A, B](fa: F[(Z, A)])(f: A => B): F[(Z, B)] = F.map(fa)(_.map(f))
   }
 
-  implicit def nestedTupleFoldable[F[_], Z](implicit F: Foldable[F]) = new Foldable[Lambda[Y => F[(Z, Y)]]] {
+  implicit def nestedTupleFoldable[F[_], Z](implicit F: Foldable[F]): Foldable[Lambda[Y => F[(Z, Y)]]] = new Foldable[Lambda[Y => F[(Z, Y)]]] {
     def foldLeft[A, B](fa: F[(Z, A)], b: B)(f: (B, A) => B): B                           = F.foldLeft(fa, b) { case (b, (z, a)) => f(b, a) }
     def foldRight[A, B](fa: F[(Z, A)], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] = F.foldRight(fa, lb) { case ((z, a), b) => f(a, b) }
   }

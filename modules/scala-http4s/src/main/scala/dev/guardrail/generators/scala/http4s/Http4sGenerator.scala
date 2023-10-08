@@ -1,5 +1,6 @@
 package dev.guardrail.generators.scala.http4s
 
+import cats.Monad
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
@@ -19,7 +20,7 @@ object Http4sGenerator {
 }
 
 class Http4sGenerator private extends FrameworkTerms[ScalaLanguage, Target] {
-  implicit def MonadF = Target.targetInstances
+  implicit def MonadF: Monad[Target] = Target.targetInstances
   def fileType(format: Option[String]) =
     Target.pure(format.fold[Type](t"fs2.Stream[F,Byte]")(Type.Name(_)))
 
