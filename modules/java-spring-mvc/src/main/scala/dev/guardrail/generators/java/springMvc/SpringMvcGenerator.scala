@@ -1,5 +1,6 @@
 package dev.guardrail.generators.java.springMvc
 
+import cats.Monad
 import com.github.javaparser.ast.expr.Name
 import scala.reflect.runtime.universe.typeTag
 
@@ -28,7 +29,7 @@ object SpringMvcGenerator {
 }
 
 class SpringMvcGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends FrameworkTerms[JavaLanguage, Target] {
-  implicit def MonadF                    = Target.targetInstances
+  implicit def MonadF: Monad[Target]     = Target.targetInstances
   def fileType(format: Option[String])   = safeParseType(format.getOrElse("MultipartFile"))
   def objectType(format: Option[String]) = safeParseType("com.fasterxml.jackson.databind.JsonNode")
 

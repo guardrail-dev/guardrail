@@ -33,13 +33,13 @@ trait Framework[L <: LA, F[_]] {
     val newCollectionsLibInterp = collectionsLibInterp
 
     new Framework[L, F] {
-      implicit def ClientInterp                  = newClientInterp
-      implicit def FrameworkInterp               = newFrameworkInterp
-      implicit def ProtocolInterp                = newProtocolInterp
-      implicit def ServerInterp                  = newServerInterp
-      implicit def SwaggerInterp                 = newSwaggerInterp
-      implicit def LanguageInterp                = newLanguageInterp
-      override implicit def CollectionsLibInterp = newCollectionsLibInterp
+      implicit def ClientInterp: ClientTerms[L, F]                          = newClientInterp
+      implicit def FrameworkInterp: FrameworkTerms[L, F]                    = newFrameworkInterp
+      implicit def ProtocolInterp: ProtocolTerms[L, F]                      = newProtocolInterp
+      implicit def ServerInterp: ServerTerms[L, F]                          = newServerInterp
+      implicit def SwaggerInterp: SwaggerTerms[L, F]                        = newSwaggerInterp
+      implicit def LanguageInterp: LanguageTerms[L, F]                      = newLanguageInterp
+      override implicit def CollectionsLibInterp: CollectionsLibTerms[L, F] = newCollectionsLibInterp
     }
   }
 }

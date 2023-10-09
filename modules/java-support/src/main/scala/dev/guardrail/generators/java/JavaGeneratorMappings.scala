@@ -8,7 +8,7 @@ import dev.guardrail.generators.spi.{ FrameworkLoader, ModuleMapperLoader }
 import dev.guardrail.UnparseableArgument
 
 object JavaGeneratorMappings {
-  implicit def javaInterpreter = new CoreTermInterp[JavaLanguage](
+  implicit def javaInterpreter: CoreTermInterp[JavaLanguage] = new CoreTermInterp[JavaLanguage](
     "dropwizard",
     FrameworkLoader.load[JavaLanguage](_),
     frameworkName => ModuleMapperLoader.load[JavaLanguage](frameworkName),

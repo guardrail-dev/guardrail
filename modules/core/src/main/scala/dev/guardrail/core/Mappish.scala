@@ -21,8 +21,9 @@ trait MappishImplicits {
       def label(i: I): Option[String]                                       = Some(buildLabel(i))
     }
 
-  implicit def stringMIF[F[_]: IndexedFunctor]     = buildMappishIndexedFunctor[F, String](x => s".$x")
-  implicit def httpMethodMIF[F[_]: IndexedFunctor] = buildMappishIndexedFunctor[F, io.swagger.v3.oas.models.PathItem.HttpMethod](x => s".${x.name}")
+  implicit def stringMIF[F[_]: IndexedFunctor]: IndexedFunctor[Lambda[Z => Mappish[F, String, Z]]] = buildMappishIndexedFunctor[F, String](x => s".$x")
+  implicit def httpMethodMIF[F[_]: IndexedFunctor]: IndexedFunctor[Lambda[Z => Mappish[F, io.swagger.v3.oas.models.PathItem.HttpMethod, Z]]] =
+    buildMappishIndexedFunctor[F, io.swagger.v3.oas.models.PathItem.HttpMethod](x => s".${x.name}")
 
   implicit def mappishFunctor[F[_], Z](implicit F: Functor[F]): Functor[Mappish[F, Z, *]] = new Functor[Mappish[F, Z, *]] {
     def map[A, B](fa: Mappish[F, Z, A])(f: A => B): Mappish[F, Z, B] = Mappish(F.map(fa.value) { case (z, a) => (z, f(a)) })

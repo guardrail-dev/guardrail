@@ -3,6 +3,7 @@ package dev.guardrail.generators.scala.akkaHttp
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
+import cats.Monad
 import dev.guardrail.{ RuntimeFailure, Target }
 import dev.guardrail.generators.scala.{ CirceModelGenerator, CirceRefinedModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult, ProtocolGeneratorLoader }
@@ -30,7 +31,7 @@ object AkkaHttpGenerator {
 }
 
 class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType) extends FrameworkTerms[ScalaLanguage, Target] {
-  override implicit def MonadF                  = Target.targetInstances
+  override implicit def MonadF: Monad[Target]   = Target.targetInstances
   override def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
   override def objectType(format: Option[String]) =
     modelGeneratorType match {

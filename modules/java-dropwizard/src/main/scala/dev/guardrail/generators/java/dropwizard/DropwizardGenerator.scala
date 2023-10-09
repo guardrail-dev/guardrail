@@ -1,5 +1,6 @@
 package dev.guardrail.generators.java.dropwizard
 
+import cats.Monad
 import cats.syntax.all._
 import com.github.javaparser.ast.ImportDeclaration
 import com.github.javaparser.ast.body.BodyDeclaration
@@ -33,7 +34,7 @@ object DropwizardGenerator {
 }
 
 class DropwizardGenerator private extends FrameworkTerms[JavaLanguage, Target] {
-  implicit def MonadF = Target.targetInstances
+  implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private lazy val supportDefs: Target[List[SupportDefinition[JavaLanguage]]] = List(
     SerializationHelpers.showerSupportDef

@@ -6,6 +6,7 @@ import dev.guardrail.{ ModuleConflict, Target, UnspecifiedModules, UnusedModules
 import dev.guardrail.generators.Framework
 import dev.guardrail.generators.SwaggerGenerator
 import dev.guardrail.languages.LA
+import dev.guardrail.terms
 import java.util.ServiceLoader
 import scala.jdk.CollectionConverters._
 import scala.reflect.runtime.universe.TypeTag
@@ -24,13 +25,13 @@ trait FrameworkLoader {
       LanguageLoader.load[L](modules)(reified)
     ).mapN((client, server, framework, collections, protocol, language) =>
       new Framework[L, Target] {
-        override implicit def ClientInterp         = client
-        override implicit def FrameworkInterp      = framework
-        override implicit def ProtocolInterp       = protocol
-        override implicit def ServerInterp         = server
-        override implicit def SwaggerInterp        = SwaggerGenerator[L]()
-        override implicit def LanguageInterp       = language
-        override implicit def CollectionsLibInterp = collections
+        override implicit def ClientInterp: terms.client.ClientTerms[L, Target]          = client
+        override implicit def FrameworkInterp: terms.framework.FrameworkTerms[L, Target] = framework
+        override implicit def ProtocolInterp: terms.ProtocolTerms[L, Target]             = protocol
+        override implicit def ServerInterp: terms.server.ServerTerms[L, Target]          = server
+        override implicit def SwaggerInterp: terms.SwaggerTerms[L, Target]               = SwaggerGenerator[L]()
+        override implicit def LanguageInterp: terms.LanguageTerms[L, Target]             = language
+        override implicit def CollectionsLibInterp: terms.CollectionsLibTerms[L, Target] = collections
       }
     )
 }
