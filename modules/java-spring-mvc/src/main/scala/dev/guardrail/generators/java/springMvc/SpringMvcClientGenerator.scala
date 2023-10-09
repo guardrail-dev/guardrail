@@ -21,7 +21,7 @@ object SpringMvcClientGenerator {
 class SpringMvcClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target]) extends ClientTerms[JavaLanguage, Target] {
   override def MonadF = Target.targetInstances
 
-  override def fromSwagger(context: Context, frameworkImports: List[JavaLanguage#Import])(
+  override def fromSpec(context: Context, frameworkImports: List[JavaLanguage#Import])(
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]

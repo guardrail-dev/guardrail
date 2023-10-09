@@ -88,7 +88,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
 
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
-  override def fromSwagger(context: Context, frameworkImports: List[JavaLanguage#Import])(
+  override def fromSpec(context: Context, frameworkImports: List[JavaLanguage#Import])(
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]

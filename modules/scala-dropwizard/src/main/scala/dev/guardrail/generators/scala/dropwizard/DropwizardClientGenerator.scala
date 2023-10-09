@@ -33,7 +33,7 @@ object DropwizardClientGenerator {
 class DropwizardClientGenerator private extends ClientTerms[ScalaLanguage, Target] {
   override def MonadF: Monad[Target] = Target.targetInstances
 
-  override def fromSwagger(context: Context, frameworkImports: List[ScalaLanguage#Import])(
+  override def fromSpec(context: Context, frameworkImports: List[ScalaLanguage#Import])(
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]

@@ -68,7 +68,7 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
       implicit val scalaGenerator                                               = ScalaGenerator()
       implicit val swaggerGenerator                                             = SwaggerGenerator[ScalaLanguage]()
       val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = circeProtocolGenerator
-        .fromSwagger(
+        .fromSpec(
           Tracker(swaggerFromString(swagger)),
           dtoPackage = Nil,
           supportPackage = NonEmptyList.one("foop"),

@@ -17,7 +17,7 @@ abstract class ProtocolTerms[L <: LA, F[_]] { self =>
   def staticProtocolImports(pkgName: List[String]): F[List[L#Import]]
   def generateSupportDefinitions(): F[List[SupportDefinition[L]]]
 
-  def fromSwagger(
+  def fromSpec(
       swagger: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String],

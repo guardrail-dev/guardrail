@@ -137,7 +137,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
 
   import Target.targetInstances // TODO: Remove me. This resolves implicit ambiguity from MonadChain
 
-  override def fromSwagger(
+  override def fromSpec(
       swagger: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String],
@@ -153,7 +153,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
 
     val components  = swagger.downField("components", _.getComponents())
     val definitions = components.flatDownField("schemas", _.getSchemas()).indexedCosequence
-    Sw.log.function("ProtocolGenerator.fromSwagger")(for {
+    Sw.log.function("ProtocolGenerator.fromSpec")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[ScalaLanguage, Target](definitions.value, components)

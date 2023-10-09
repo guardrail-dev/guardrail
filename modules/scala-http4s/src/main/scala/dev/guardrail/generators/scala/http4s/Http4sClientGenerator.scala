@@ -67,7 +67,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
     serverUrls
       .fold(param"host: String")(v => param"host: String = ${Lit.String(v.head.toString())}")
 
-  override def fromSwagger(context: Context, frameworkImports: List[ScalaLanguage#Import])(
+  override def fromSpec(context: Context, frameworkImports: List[ScalaLanguage#Import])(
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]

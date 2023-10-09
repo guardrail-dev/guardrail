@@ -40,7 +40,7 @@ object Common {
     import Sw._
 
     Sw.log.function("prepareDefinitions")(for {
-      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, _) <- P.fromSwagger(
+      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, _) <- P.fromSpec(
         swagger,
         dtoPackage,
         supportPackage,
@@ -92,14 +92,14 @@ object Common {
       codegen <- kind match {
         case CodegenTarget.Client =>
           for {
-            clientMeta <- C.fromSwagger(context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes, components)
+            clientMeta <- C.fromSpec(context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes, components)
             Clients(clients, supportDefinitions) = clientMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions, frameworkImplicits)
 
         case CodegenTarget.Server =>
           for {
-            serverMeta <- Se.fromSwagger(context, supportPackage, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes, components)
+            serverMeta <- Se.fromSpec(context, supportPackage, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes, components)
             Servers(servers, supportDefinitions) = serverMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions, frameworkImplicits)

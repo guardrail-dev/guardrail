@@ -156,7 +156,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       case _ => param.term.default
     }
 
-  override def fromSwagger(
+  override def fromSpec(
       swagger: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String],
@@ -172,7 +172,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
 
     val components  = swagger.downField("components", _.getComponents())
     val definitions = components.flatDownField("schemas", _.getSchemas()).indexedCosequence
-    Sw.log.function("ProtocolGenerator.fromSwagger")(for {
+    Sw.log.function("ProtocolGenerator.fromSpec")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[ScalaLanguage, Target](definitions.value, components)

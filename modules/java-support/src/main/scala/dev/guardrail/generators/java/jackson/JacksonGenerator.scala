@@ -763,7 +763,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     }
   }
 
-  override def fromSwagger(
+  override def fromSpec(
       swagger: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String],
@@ -779,7 +779,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
 
     val components  = swagger.downField("components", _.getComponents())
     val definitions = components.flatDownField("schemas", _.getSchemas()).indexedCosequence
-    Sw.log.function("ProtocolGenerator.fromSwagger")(for {
+    Sw.log.function("ProtocolGenerator.fromSpec")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
       concreteTypes <- SwaggerUtil.extractConcreteTypes[JavaLanguage, Target](definitions.value, components)
