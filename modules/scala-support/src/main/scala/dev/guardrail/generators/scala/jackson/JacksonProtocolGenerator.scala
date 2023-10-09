@@ -157,7 +157,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
     }
 
   override def fromSpec(
-      swagger: Tracker[OpenAPI],
+      spec: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String],
       defaultPropertyRequirement: PropertyRequirement
@@ -170,7 +170,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
   ): Target[ProtocolDefinitions[ScalaLanguage]] = {
     import Sc._
 
-    val components  = swagger.downField("components", _.getComponents())
+    val components  = spec.downField("components", _.getComponents())
     val definitions = components.flatDownField("schemas", _.getSchemas()).indexedCosequence
     Sw.log.function("ProtocolGenerator.fromSpec")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
@@ -1063,8 +1063,8 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
   override def buildAccessor(clsName: String, termName: String) =
     Target.pure(q"${Term.Name(clsName)}.${Term.Name(termName)}")
 
-  private def extractProperties(swagger: Tracker[Schema[_]]) =
-    swagger
+  private def extractProperties(spec: Tracker[Schema[_]]) =
+    spec
       .refine[Target[List[(String, Tracker[Schema[_]])]]] { case o: ObjectSchema => o }(m =>
         Target.pure(m.downField("properties", _.getProperties()).indexedCosequence.value)
       )
@@ -1738,7 +1738,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
   )
 
   private def extractSuperClass(
-      swagger: Tracker[ComposedSchema],
+      spec: Tracker[ComposedSchema],
       definitions: List[(String, Tracker[Schema[_]])]
   ) = {
     def allParents: Tracker[Schema[_]] => Target[List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])]] =
@@ -1757,7 +1757,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
           case _ => Target.pure(List.empty)
         }
       ).getOrElse(Target.pure(List.empty))
-    allParents(swagger)
+    allParents(spec)
   }
 
   private def renderADTStaticDefns(

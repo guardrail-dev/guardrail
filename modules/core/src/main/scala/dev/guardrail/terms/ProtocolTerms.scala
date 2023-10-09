@@ -18,7 +18,7 @@ abstract class ProtocolTerms[L <: LA, F[_]] { self =>
   def generateSupportDefinitions(): F[List[SupportDefinition[L]]]
 
   def fromSpec(
-      swagger: Tracker[OpenAPI],
+      spec: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String],
       defaultPropertyRequirement: PropertyRequirement

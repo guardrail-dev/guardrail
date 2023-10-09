@@ -10,7 +10,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 class CustomHeaderTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
-  val swagger: String = s"""
+  val spec: String = s"""
                            |swagger: "2.0"
                            |info:
                            |  title: Whatever
@@ -42,7 +42,7 @@ class CustomHeaderTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
 
   test("Should produce static parameter constraints") {
     val (_, Clients(client :: Nil, Nil), Servers(Server(_, _, genHandler, genResource :: Nil) :: Nil, Nil)) =
-      runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+      runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     val handler =
       q"""trait Handler { def getFoo(respond: Resource.GetFooResponse.type)(customHeader: Bar): scala.concurrent.Future[Resource.GetFooResponse] }"""

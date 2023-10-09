@@ -32,7 +32,7 @@ abstract class SwaggerTerms[L <: LA, F[_]] {
   def MonadF: Monad[F]
 
   def extractCommonRequestBodies(components: Tracker[Option[Components]]): F[Map[String, RequestBody]]
-  def extractEnum(swagger: Tracker[EnumSchema]): F[Either[String, HeldEnum]]
+  def extractEnum(spec: Tracker[EnumSchema]): F[Either[String, HeldEnum]]
   def extractOperations(
       paths: Tracker[Mappish[List, String, PathItem]],
       commonRequestBodies: Map[String, RequestBody],

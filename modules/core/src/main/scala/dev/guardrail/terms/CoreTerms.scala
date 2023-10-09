@@ -11,13 +11,13 @@ abstract class CoreTerms[L <: LA, F[_]] { self =>
   def getDefaultFramework: F[Option[String]]
   def extractGenerator(context: Context, defaultFramework: Option[String]): F[Framework[L, Target]]
   def validateArgs(parsed: List[Args]): F[NonEmptyList[Args]]
-  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): F[ReadSwagger[Target[List[WriteTree]]]]
+  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): F[ReadSpec[Target[List[WriteTree]]]]
   def copy(
       MonadF: Monad[F] = self.MonadF,
       getDefaultFramework: F[Option[String]] = self.getDefaultFramework,
       extractGenerator: (Context, Option[String]) => F[Framework[L, Target]] = self.extractGenerator _,
       validateArgs: List[Args] => F[NonEmptyList[Args]] = self.validateArgs _,
-      processArgSet: Framework[L, Target] => Args => F[ReadSwagger[Target[List[WriteTree]]]] = self.processArgSet _
+      processArgSet: Framework[L, Target] => Args => F[ReadSpec[Target[List[WriteTree]]]] = self.processArgSet _
   ) = {
     val newMonadF              = MonadF
     val newGetDefaultFramework = getDefaultFramework

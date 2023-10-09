@@ -24,7 +24,7 @@ object Common {
   def prepareDefinitions[L <: LA, F[_]](
       kind: CodegenTarget,
       context: Context,
-      swagger: Tracker[OpenAPI],
+      spec: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String]
   )(implicit
@@ -41,14 +41,14 @@ object Common {
 
     Sw.log.function("prepareDefinitions")(for {
       proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, _) <- P.fromSpec(
-        swagger,
+        spec,
         dtoPackage,
         supportPackage,
         context.propertyRequirement
       )
 
       serverUrls = NonEmptyList.fromList(
-        swagger
+        spec
           .downField("servers", _.getServers)
           .flatExtract(server =>
             server
@@ -66,7 +66,7 @@ object Common {
               .toList
           )
       )
-      basePath = swagger
+      basePath = spec
         .downField("servers", _.getServers)
         .cotraverse(_.downField("url", _.getUrl))
         .headOption
@@ -74,15 +74,15 @@ object Common {
         .flatMap(url => Option(new URI(url).getPath))
         .filter(_ != "/")
 
-      paths = swagger.downField("paths", _.getPaths)
+      paths = spec.downField("paths", _.getPaths)
       globalSecurityRequirements = NonEmptyList
-        .fromList(swagger.downField("security", _.getSecurity).indexedDistribute)
+        .fromList(spec.downField("security", _.getSecurity).indexedDistribute)
         .flatMap(SecurityRequirements(_, SecurityRequirements.Global))
-      components = swagger.downField("components", _.getComponents)
+      components = spec.downField("components", _.getComponents)
       requestBodies    <- extractCommonRequestBodies(components)
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
       prefixes         <- Cl.vendorPrefixes()
-      securitySchemes  <- SwaggerUtil.extractSecuritySchemes(swagger.unwrapTracker, prefixes)
+      securitySchemes  <- SwaggerUtil.extractSecuritySchemes(spec.unwrapTracker, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes, context.tagsBehaviour).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupMap(_._1)(_._2)
@@ -198,7 +198,7 @@ object Common {
 
   def processArgs[L <: LA, F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSpec[Target[List[WriteTree]]]]] = {
     import C._
     args.traverse(arg =>
       for {
@@ -211,7 +211,7 @@ object Common {
 
   def runM[L <: LA, F[_]](
       args: NonEmptyList[Args]
-  )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSwagger[Target[List[WriteTree]]]]] = {
+  )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSpec[Target[List[WriteTree]]]]] = {
     import C._
 
     for {

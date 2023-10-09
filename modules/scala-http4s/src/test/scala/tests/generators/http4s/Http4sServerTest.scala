@@ -12,7 +12,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
 
   import scala.meta._
 
-  val swagger: String =
+  val spec: String =
     s"""
        |swagger: '2.0'
        |host: petstore.swagger.io
@@ -134,7 +134,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       val handler =
         q"""
@@ -220,7 +220,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(tracing = true), version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(tracing = true), version.value)
 
       val handler =
         q"""
@@ -311,7 +311,7 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(customExtraction = true), version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(customExtraction = true), version.value)
       val handler =
         q"""
       trait StoreHandler[F[_], -E] {

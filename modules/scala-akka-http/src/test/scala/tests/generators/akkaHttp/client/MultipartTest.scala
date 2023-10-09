@@ -9,7 +9,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 class MultipartTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
-  val swagger: String = s"""
+  val spec: String = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -52,7 +52,7 @@ class MultipartTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       _,
       Clients(Client(_, className, _, _, cls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

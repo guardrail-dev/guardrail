@@ -16,8 +16,8 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
   describe("Generate hierarchical classes") {
 
-    val swagger: String = """
-      | swagger: '2.0'
+    val spec: String = """
+      | spec: '2.0'
       | info:
       |   title: Parsing Error Sample
       |   version: 1.0.0
@@ -99,7 +99,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val companion    = companionForStaticDefns(staticDefns)
     val companionCat = companionForStaticDefns(staticDefnsCat)
 
@@ -189,8 +189,8 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
   describe("Generate deep hierarchical classes") {
 
-    val swagger: String = """
-     | swagger: '2.0'
+    val spec: String = """
+     | spec: '2.0'
      | info:
      |   title: Parsing Error Sample
      |   version: 1.0.0
@@ -278,7 +278,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
     val companionDog        = companionForStaticDefns(staticDefnsDog)
     val companionPet        = companionForStaticDefns(staticDefnsPet)
@@ -388,7 +388,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
   }
 
   describe("Generate hierarchical classes with empty properties") {
-    val swagger: String = """
+    val spec: String = """
       |swagger: '2.0'
       |info:
       |  title: Parsing Error Sample
@@ -415,7 +415,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(cls, _, _, defCls, _, _) :: ADT(_, _, _, _, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     it("Direct extension should be supported") {
       cls shouldBe "Cat"
@@ -425,8 +425,8 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
   describe("Only first discriminator should be used. Other should be ignored.") {
 
-    val swagger: String = """
-      | swagger: '2.0'
+    val spec: String = """
+      | spec: '2.0'
       | info:
       |   title: Parsing Error Sample
       |   version: 1.0.0
@@ -475,7 +475,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
     val companionCat        = companionForStaticDefns(staticDefnsCat)
 
@@ -524,9 +524,9 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
   describe("Support multiple inheritance.") {
 
-    val swagger: String =
+    val spec: String =
       """
-        | swagger: '2.0'
+        | spec: '2.0'
         | info:
         |   title: Parsing Error Sample
         |   version: 1.0.0
@@ -574,7 +574,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val companionCat    = companionForStaticDefns(staticDefnsCat)
     val companionPet    = companionForStaticDefns(staticDefnsPet)
     val companionMammal = companionForStaticDefns(staticDefnsMammal)

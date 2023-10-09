@@ -11,7 +11,7 @@ import scala.compat.java8.OptionConverters._
 import support.SwaggerSpecRunner
 
 class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
-  private val swagger: String =
+  private val spec: String =
     s"""
        |openapi: 3.0.1
        |paths:
@@ -46,7 +46,7 @@ class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerS
       _,
       _,
       Servers(Server(_, _, _, genResource :: Nil) :: Nil, _)
-    ) = runSwaggerSpec(javaInterpreter)(swagger)(Context.empty, "dropwizard")
+    ) = runSwaggerSpec(javaInterpreter)(spec)(Context.empty, "dropwizard")
 
     genResource
       .asClassOrInterfaceDeclaration()
@@ -72,7 +72,7 @@ class DropwizardContentTypesTest extends AnyFreeSpec with Matchers with SwaggerS
       _,
       _,
       Servers(Server(_, _, _, genResource :: Nil) :: Nil, _)
-    ) = runSwaggerSpec(javaInterpreter)(swagger)(Context.empty, "dropwizard")
+    ) = runSwaggerSpec(javaInterpreter)(spec)(Context.empty, "dropwizard")
 
     val annotationArrayValues = genResource
       .asClassOrInterfaceDeclaration()

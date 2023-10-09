@@ -21,7 +21,7 @@ import support.SwaggerSpecRunner
 
 class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
 
-  val swagger: String =
+  val spec: String =
     s"""
        |swagger: "2.0"
        |info:
@@ -119,7 +119,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
 
       val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = circeProtocolGenerator
         .fromSpec(
-          Tracker(swaggerFromString(swagger)),
+          Tracker(swaggerFromString(spec)),
           dtoPackage = Nil,
           supportPackage = NonEmptyList.one("foop"),
           defaultPropertyRequirement = PropertyRequirement.OptionalLegacy

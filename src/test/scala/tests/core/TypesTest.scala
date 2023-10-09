@@ -15,7 +15,7 @@ import dev.guardrail.terms.protocol.ClassDefinition
 class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Generate no definitions") {
-    val swagger: String = s"""
+    val spec: String = s"""
       |swagger: "2.0"
       |info:
       |  title: Whatever
@@ -95,7 +95,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -151,7 +151,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   }
 
   test("Generates from composed schema") {
-    val swagger: String = s"""
+    val spec: String = s"""
       |swagger: "2.0"
       |info:
       |  title: Whatever
@@ -180,7 +180,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, _, _, _) :: ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""case class Types(composed: Option[Types.Composed] = None)"""
@@ -206,7 +206,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   }
 
   test("Deeply nested structure is generated") {
-    val swagger =
+    val spec =
       s"""
       |swagger: "2.0"
       |info:
@@ -230,7 +230,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""case class First(second: Option[First.Second] = None)"""
@@ -263,7 +263,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   }
 
   test("Inherited nested structure work") {
-    val swagger =
+    val spec =
       s"""
          |swagger: "2.0"
          |info:
@@ -289,7 +289,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, _, _) :: ClassDefinition(_, _, _, _, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     val cmp = companionForStaticDefns(staticDefns)
 
@@ -316,7 +316,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   }
 
   test("Optional fields works") {
-    val swagger =
+    val spec =
       s"""
          |swagger: "2.0"
          |info:
@@ -348,7 +348,7 @@ class TypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "http4s")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "http4s")
 
     val cmp = companionForStaticDefns(staticDefns)
 

@@ -378,13 +378,13 @@ object SwaggerUtil {
     }
 
   def extractSecuritySchemes[L <: LA, F[_]](
-      swagger: OpenAPI,
+      spec: OpenAPI,
       prefixes: List[String]
   )(implicit Sw: SwaggerTerms[L, F], Sc: LanguageTerms[L, F]): F[Map[String, SecurityScheme[L]]] = {
     import Sw._
     import Sc._
 
-    Tracker(swagger)
+    Tracker(spec)
       .downField("components", _.getComponents)
       .flatDownField("securitySchemes", _.getSecuritySchemes)
       .indexedDistribute

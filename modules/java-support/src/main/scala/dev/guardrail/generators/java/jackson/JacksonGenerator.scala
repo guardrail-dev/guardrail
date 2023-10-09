@@ -764,7 +764,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
   }
 
   override def fromSpec(
-      swagger: Tracker[OpenAPI],
+      spec: Tracker[OpenAPI],
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String],
       defaultPropertyRequirement: PropertyRequirement
@@ -777,7 +777,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
   ): Target[ProtocolDefinitions[JavaLanguage]] = {
     import Sc._
 
-    val components  = swagger.downField("components", _.getComponents())
+    val components  = spec.downField("components", _.getComponents())
     val definitions = components.flatDownField("schemas", _.getSchemas()).indexedCosequence
     Sw.log.function("ProtocolGenerator.fromSpec")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
@@ -1636,8 +1636,8 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     } yield dtoClass
   }
 
-  private def extractProperties(swagger: Tracker[Schema[_]]) =
-    swagger
+  private def extractProperties(spec: Tracker[Schema[_]]) =
+    spec
       .refine[Target[List[(String, Tracker[Schema[_]])]]] { case m: ObjectSchema => m }(m =>
         Target.pure(m.downField("properties", _.getProperties()).indexedCosequence.value)
       )
@@ -1925,7 +1925,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
   }
 
   private def extractSuperClass(
-      swagger: Tracker[ComposedSchema],
+      spec: Tracker[ComposedSchema],
       definitions: List[(String, Tracker[Schema[_]])]
   ) = {
     def allParents(model: Tracker[Schema[_]]): List[(String, Tracker[Schema[_]], List[Tracker[Schema[_]]])] =
@@ -1943,7 +1943,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
         )
         .getOrElse(List.empty)
 
-    Target.pure(allParents(swagger))
+    Target.pure(allParents(spec))
   }
 
   private def renderADTStaticDefns(

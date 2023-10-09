@@ -13,7 +13,7 @@ import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.terms.protocol.ClassDefinition
 
 class Issue255 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
-  val swagger: String = s"""
+  val spec: String = s"""
                            |swagger: "2.0"
                            |info:
                            |  title: Whatever
@@ -47,7 +47,7 @@ class Issue255 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ProtocolDefinitions(ClassDefinition(_, _, _, c1, _, _) :: Nil, _, _, _, _),
         _,
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       val expected =
         q"""

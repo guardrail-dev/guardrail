@@ -12,7 +12,7 @@ import org.scalatest.matchers.should.Matchers
 class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   import scala.meta._
 
-  val swagger: String = s"""
+  val spec: String = s"""
     |swagger: '2.0'
     |host: petstore.swagger.io
     |paths:
@@ -129,7 +129,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
         _,
         Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       tags should equal(Seq("store"))
       val cmp = companionForStaticDefns(staticDefns)

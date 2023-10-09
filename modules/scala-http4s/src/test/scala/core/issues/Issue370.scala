@@ -14,7 +14,7 @@ import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.ClassDefinition
 
 class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
-  val swagger: String = s"""
+  val spec: String = s"""
                            |swagger: "2.0"
                            |info:
                            |  title: Whatever
@@ -59,7 +59,7 @@ class Issue370 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ProtocolDefinitions(ClassDefinition(_, _, _, c1, s, _) :: _, _, _, _, _),
         _,
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       val cmp = companionForStaticDefns(s)
 

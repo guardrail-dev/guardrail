@@ -14,7 +14,7 @@ class Issue260 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     describe(version.toString()) {
       describe("LocalDate path param is generated more than once") {
 
-        val swagger: String = """
+        val spec: String = """
       | openapi: "3.0.0"
       | info:
       |   title: Generator Error Sample
@@ -81,7 +81,7 @@ class Issue260 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
             ) :: Nil,
             _ // supportDefinitions
           )
-        ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+        ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
         it("Ensure LocalDateVar is generated only once") {
 

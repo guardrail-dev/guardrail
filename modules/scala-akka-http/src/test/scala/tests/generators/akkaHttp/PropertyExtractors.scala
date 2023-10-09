@@ -13,7 +13,7 @@ import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.ClassDefinition
 
 class PropertyExtractors extends AnyFunSuite with Matchers with SwaggerSpecRunner {
-  val swagger: String = s"""
+  val spec: String = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -72,7 +72,7 @@ class PropertyExtractors extends AnyFunSuite with Matchers with SwaggerSpecRunne
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""

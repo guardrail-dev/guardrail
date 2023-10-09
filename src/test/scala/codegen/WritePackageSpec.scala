@@ -17,7 +17,7 @@ import org.scalatest.matchers.should.Matchers
 import support.SwaggerSpecRunner
 
 class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers {
-  val swagger: OpenAPI = swaggerFromString(
+  val spec: OpenAPI = swaggerFromString(
     s"""
     |swagger: "2.0"
     |info:
@@ -56,7 +56,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
     |""".stripMargin
   )
 
-  def injectSwagger[T](s: OpenAPI, rs: ReadSwagger[T]): T = rs.next(s)
+  def injectSwagger[T](s: OpenAPI, rs: ReadSpec[T]): T = rs.next(s)
 
   def extractPackage(path: Path, results: List[WriteTree]): Term.Ref = {
     val Some(source"""package ${fooPkg}
@@ -83,7 +83,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
           .processArgs[ScalaLanguage, Target](args)(scalaInterpreter)
       )
       .toList
-      .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
+      .flatMap(x => Target.unsafeExtract(injectSwagger(spec, x)))
 
     val paths = result.map(_.path)
 
@@ -137,7 +137,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
           .processArgs[ScalaLanguage, Target](args)(scalaInterpreter)
       )
       .toList
-      .flatMap(x => Target.unsafeExtract(injectSwagger(swagger, x)))
+      .flatMap(x => Target.unsafeExtract(injectSwagger(spec, x)))
 
     val paths = result.map(_.path)
 

@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   import scala.meta._
 
-  val swagger: String = s"""
+  val spec: String = s"""
     |swagger: '2.0'
     |host: petstore.swagger.io
     |paths:
@@ -130,7 +130,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     val handler = q"""
       trait StoreHandler {
@@ -267,7 +267,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(tracing = true), "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(tracing = true), "akka-http")
 
     val handler = q"""
       trait StoreHandler {
@@ -404,7 +404,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(customExtraction = true), "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(customExtraction = true), "akka-http")
 
     val handler = q"""
       trait StoreHandler[-E] {

@@ -14,7 +14,7 @@ import dev.guardrail.MissingArg
 import dev.guardrail.NoArgsSpecified
 import dev.guardrail.NoFramework
 import dev.guardrail.PrintHelp
-import dev.guardrail.ReadSwagger
+import dev.guardrail.ReadSpec
 import dev.guardrail.Target
 import dev.guardrail.UnparseableArgument
 import dev.guardrail.WriteTree
@@ -100,7 +100,7 @@ class CoreTermInterp[L <: LA](
     }
   }
 
-  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSwagger[Target[List[WriteTree]]]] =
+  def processArgSet(targetInterpreter: Framework[L, Target])(args: Args): Target[ReadSpec[Target[List[WriteTree]]]] =
     Target.log.function("processArgSet")(
       for {
         _          <- Target.log.debug("Processing arguments")
@@ -119,9 +119,9 @@ class CoreTermInterp[L <: LA](
             } yield customImport
           )
         _ <- Target.log.debug("Finished processing arguments")
-      } yield ReadSwagger(
+      } yield ReadSpec(
         Paths.get(specPath),
-        swagger =>
+        spec =>
           try {
             import targetInterpreter._
             val Sw = implicitly[SwaggerTerms[L, Target]]
@@ -135,7 +135,7 @@ class CoreTermInterp[L <: LA](
                 .prepareDefinitions[L, Target](
                   kind,
                   context,
-                  Tracker(swagger),
+                  Tracker(spec),
                   definitionsPkgName.toList ++ ("definitions" :: dtoPackage),
                   definitionsPkgName :+ "support"
                 )
