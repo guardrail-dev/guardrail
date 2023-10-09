@@ -2,7 +2,6 @@ package dev.guardrail
 
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media._
-import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.syntax.all._
 import dev.guardrail.core.{ ReifiedRawType, Tracker }
@@ -36,6 +35,14 @@ object SwaggerUtil {
       prefixes <- vendorPrefixes()
     } yield CustomMapTypeName(v, prefixes)
   }
+
+  def isFile(typeName: String, format: Option[String]): Boolean =
+    (typeName, format) match {
+      case ("string", Some("binary")) => true
+      case ("file", _)                => true
+      case ("binary", _)              => true
+      case _                          => false
+    }
 
   def extractConcreteTypes[L <: LA, F[_]](
       definitions: List[(String, Tracker[Schema[_]])],
@@ -78,13 +85,6 @@ object SwaggerUtil {
       PropMeta[L](clsName, tpe) // TODO: We're losing ReifiedRawType here. Perhaps maintain through PropMeta?
     }
   }
-  def isFile(typeName: String, format: Option[String]): Boolean =
-    (typeName, format) match {
-      case ("string", Some("binary")) => true
-      case ("file", _)                => true
-      case ("binary", _)              => true
-      case _                          => false
-    }
 
   def extractSecuritySchemes[L <: LA, F[_]](
       spec: OpenAPI,
@@ -113,28 +113,4 @@ object SwaggerUtil {
       }
       .map(_.toMap)
   }
-
-  def copyOperation(operation: Operation): Operation =
-    new Operation()
-      .tags(operation.getTags)
-      .summary(operation.getSummary)
-      .description(operation.getDescription)
-      .externalDocs(operation.getExternalDocs)
-      .operationId(operation.getOperationId)
-      .parameters(operation.getParameters)
-      .requestBody(operation.getRequestBody)
-      .responses(operation.getResponses)
-      .callbacks(operation.getCallbacks)
-      .deprecated(operation.getDeprecated)
-      .security(operation.getSecurity)
-      .servers(operation.getServers)
-      .extensions(operation.getExtensions)
-
-  def copyRequestBody(requestBody: RequestBody): RequestBody =
-    new RequestBody()
-      .description(requestBody.getDescription)
-      .content(requestBody.getContent)
-      .required(requestBody.getRequired)
-      .$ref(requestBody.get$ref())
-      .extensions(requestBody.getExtensions)
 }
