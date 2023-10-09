@@ -6,8 +6,9 @@ import io.swagger.v3.oas.models.parameters._
 import io.swagger.v3.oas.models.Components
 
 import dev.guardrail._
-import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
 import dev.guardrail.core.{ ReifiedRawType, ResolvedType, Tracker }
+import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
+import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
 import dev.guardrail.shims._
@@ -84,7 +85,7 @@ object LanguageParameter {
           customParamTypeName  <- SwaggerUtil.customTypeName(param)
           customSchemaTypeName <- SwaggerUtil.customTypeName(schema.unwrapTracker)
           customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
-          (declType, rawType) <- SwaggerUtil.determineTypeName[L, F](schema, customTypeName, components)
+          (declType, rawType) <- ModelResolver.determineTypeName[L, F](schema, customTypeName, components)
           defaultValue        <- getDefault(schema)
           res      = core.Resolved[L](declType, None, defaultValue, rawType)
           required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
@@ -111,7 +112,7 @@ object LanguageParameter {
               case SchemaLiteral(schema)               => schema
               case SchemaRef(SchemaLiteral(schema), _) => schema
             })
-            resolved <- SwaggerUtil.modelMetaType[L, F](schema, components)
+            resolved <- ModelResolver.modelMetaType[L, F](schema, components)
             required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
           } yield (resolved, required)
         )

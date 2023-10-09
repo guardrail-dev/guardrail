@@ -11,8 +11,9 @@ import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core
-import dev.guardrail.core.extract.{ DataRedaction, Default, EmptyValueIsNull }
+import dev.guardrail.core.extract.{ CustomMapTypeName, DataRedaction, Default, EmptyValueIsNull }
 import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, Mappish, ReifiedRawType, SupportDefinition, Tracker }
+import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.generators.ProtocolGenerator.{ WrapEnumSchema, wrapNumberEnumSchema, wrapObjectEnumSchema, wrapStringEnumSchema }
 import dev.guardrail.generators.protocol.{ ClassChild, ClassHierarchy, ClassParent }
 import dev.guardrail.generators.scala.{ JacksonModelGenerator, ScalaGenerator, ScalaLanguage }
@@ -237,7 +238,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
                 components
               )
               customTypeName <- SwaggerUtil.customTypeName(x)
-              (declType, _)  <- SwaggerUtil.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              (declType, _)  <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
               alias          <- typeAlias(formattedClsName, declType)
             } yield enum.orElse(model).getOrElse(alias)
           )
@@ -257,7 +258,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
                 components
               )
               customTypeName <- SwaggerUtil.customTypeName(x)
-              (declType, _)  <- SwaggerUtil.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              (declType, _)  <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
               alias          <- typeAlias(formattedClsName, declType)
             } yield enum.orElse(model).getOrElse(alias)
           )
@@ -265,7 +266,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             for {
               formattedClsName <- formatTypeName(clsName)
               customTypeName   <- SwaggerUtil.customTypeName(x)
-              (declType, _)    <- SwaggerUtil.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              (declType, _)    <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
               res              <- typeAlias(formattedClsName, declType)
             } yield res
           )
@@ -369,7 +370,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
     for {
       enum          <- extractEnum(schema.map(wrapEnumSchema))
       customTpeName <- SwaggerUtil.customTypeName(schema)
-      (tpe, _)      <- SwaggerUtil.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
+      (tpe, _)      <- ModelResolver.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
       fullType      <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -432,7 +433,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
           typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
           propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
           customType <- SwaggerUtil.customTypeName(prop)
-          resolvedType <- SwaggerUtil
+          resolvedType <- ModelResolver
             .propMeta[ScalaLanguage, Target](
               prop,
               components
@@ -675,7 +676,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
-            resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema, components)
+            resolvedType          <- ModelResolver.propMetaWithName(tpe, schema, components)
             customType            <- SwaggerUtil.customTypeName(schema)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
@@ -790,7 +791,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       tpe <- model.fold[Target[scala.meta.Type]](objectType(None)) { m =>
         for {
           tpeName       <- SwaggerUtil.customTypeName[ScalaLanguage, Target, Tracker[ObjectSchema]](m)
-          (declType, _) <- SwaggerUtil.determineTypeName[ScalaLanguage, Target](m, Tracker.cloneHistory(m, tpeName), components)
+          (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](m, Tracker.cloneHistory(m, tpeName), components)
         } yield declType
       }
       res <- typeAlias(clsName, tpe)
@@ -819,7 +820,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       Sw: SwaggerTerms[ScalaLanguage, Target]
   ): Target[ProtocolElems[ScalaLanguage]] =
     for {
-      deferredTpe <- SwaggerUtil.modelMetaType(arr, components)
+      deferredTpe <- ModelResolver.modelMetaType(arr, components)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
       ret         <- typeAlias(clsName, tpe)
     } yield ret

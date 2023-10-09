@@ -3,9 +3,10 @@ package dev.guardrail.terms
 import cats.syntax.all._
 import dev.guardrail.core
 import dev.guardrail.core.Tracker
+import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.{ SwaggerUtil, monadForFrameworkTerms }
+import dev.guardrail.monadForFrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.Components
@@ -55,7 +56,7 @@ object Responses {
               schema                    <- content.downField("schema", _.getSchema()).indexedDistribute.toList
             } yield (contentType, schema)).traverse { case (contentType, prop) =>
               for {
-                meta     <- SwaggerUtil.propMeta[L, F](prop, components)
+                meta     <- ModelResolver.propMeta[L, F](prop, components)
                 resolved <- core.ResolvedType.resolve[L, F](meta, protocolElems)
                 core.Resolved(baseType, _, baseDefaultValue, _) = resolved // TODO: ReifiedRawType is just dropped, should it be considered?
               } yield (contentType, baseType, baseDefaultValue)

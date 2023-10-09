@@ -21,6 +21,7 @@ import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.SwaggerUtil
 import dev.guardrail.core
+import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.core.extract.{ DataRedaction, Default, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{
@@ -255,7 +256,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     for {
       enum          <- extractEnum(schema.map(wrapEnumSchema))
       customTpeName <- SwaggerUtil.customTypeName(schema)
-      (tpe, _)      <- SwaggerUtil.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
+      (tpe, _)      <- ModelResolver.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
       fullType      <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
       res           <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -373,7 +374,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
           typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
           propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
           customType <- SwaggerUtil.customTypeName(prop)
-          resolvedType <- SwaggerUtil
+          resolvedType <- ModelResolver
             .propMeta[JavaLanguage, Target](
               prop,
               components
@@ -476,7 +477,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
-            resolvedType          <- SwaggerUtil.propMetaWithName(tpe, schema, components)
+            resolvedType          <- ModelResolver.propMetaWithName(tpe, schema, components)
             customType            <- SwaggerUtil.customTypeName(schema)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
@@ -589,7 +590,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       tpe <- model.fold[Target[Type]](objectType(None)) { m =>
         for {
           tpeName       <- SwaggerUtil.customTypeName[JavaLanguage, Target, Tracker[ObjectSchema]](m)
-          (declType, _) <- SwaggerUtil.determineTypeName[JavaLanguage, Target](m, Tracker.cloneHistory(m, tpeName), components)
+          (declType, _) <- ModelResolver.determineTypeName[JavaLanguage, Target](m, Tracker.cloneHistory(m, tpeName), components)
         } yield declType
       }
       res <- typeAlias(clsName, tpe)
@@ -618,7 +619,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       Sw: SwaggerTerms[JavaLanguage, Target]
   ): Target[ProtocolElems[JavaLanguage]] =
     for {
-      deferredTpe <- SwaggerUtil.modelMetaType(arr, components)
+      deferredTpe <- ModelResolver.modelMetaType(arr, components)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
       ret         <- typeAlias(clsName, tpe)
     } yield ret
@@ -844,7 +845,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
                 components
               )
               customTypeName <- SwaggerUtil.customTypeName(x)
-              (declType, _)  <- SwaggerUtil.determineTypeName[JavaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              (declType, _)  <- ModelResolver.determineTypeName[JavaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
               alias          <- typeAlias(formattedClsName, declType)
             } yield enum.orElse(model).getOrElse(alias)
           )
@@ -864,7 +865,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
                 components
               )
               customTypeName <- SwaggerUtil.customTypeName(x)
-              (declType, _)  <- SwaggerUtil.determineTypeName[JavaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              (declType, _)  <- ModelResolver.determineTypeName[JavaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
               alias          <- typeAlias(formattedClsName, declType)
             } yield enum.orElse(model).getOrElse(alias)
           )
@@ -872,7 +873,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             for {
               formattedClsName <- formatTypeName(clsName)
               customTypeName   <- SwaggerUtil.customTypeName(x)
-              (declType, _)    <- SwaggerUtil.determineTypeName[JavaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              (declType, _)    <- ModelResolver.determineTypeName[JavaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
               res              <- typeAlias(formattedClsName, declType)
             } yield res
           )
