@@ -3,10 +3,9 @@ package dev.guardrail.core.resolvers
 import dev.guardrail.core
 import dev.guardrail.languages.LA
 import dev.guardrail.core.{ ReifiedRawType, Tracker }
-import dev.guardrail.core.extract.{ Default, Extractable }
+import dev.guardrail.core.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, Default, Extractable }
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SchemaLiteral, SchemaProjection, SchemaRef, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
-import dev.guardrail.SwaggerUtil
 
 import cats.syntax.all._
 import io.swagger.v3.oas.models._
@@ -63,9 +62,9 @@ object ModelResolver {
         res <- strategy(property)
           .orRefine { case o: ObjectSchema => o }(o =>
             for {
-              customTpeName <- SwaggerUtil.customTypeName(o)
-              customTpe     <- customTpeName.flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
-              fallback      <- objectType(None)
+              prefixes  <- vendorPrefixes()
+              customTpe <- CustomTypeName(o, prefixes).flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
+              fallback  <- objectType(None)
             } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, ReifiedRawType.unsafeEmpty)
           )
           .orRefine { case arr: ArraySchema => arr }(arr =>
@@ -78,7 +77,8 @@ object ModelResolver {
               meta <- propMetaImpl[L, F](items, components)(strategy)
               itemsRawType   = dereferencedItems.downField("type", _.getType())
               itemsRawFormat = dereferencedItems.downField("format", _.getFormat())
-              arrayType <- SwaggerUtil.customArrayTypeName(arr).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(arr, x))))
+              prefixes  <- vendorPrefixes()
+              arrayType <- CustomArrayTypeName(arr, prefixes).flatTraverse(x => parseType(Tracker.cloneHistory(arr, x)))
               res <- meta match {
                 case core.Resolved(inner, dep, default, _) =>
                   (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm))
@@ -104,7 +104,8 @@ object ModelResolver {
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
                     .map(core.Resolved[L](_, None, None, ReifiedRawType.ofMap(ReifiedRawType.of(rawType.unwrapTracker, rawFormat.unwrapTracker))))
                 }
-              mapType <- SwaggerUtil.customMapTypeName(map).flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(map, x))))
+              prefixes <- vendorPrefixes()
+              mapType  <- CustomMapTypeName(map, prefixes).flatTraverse(x => parseType(Tracker.cloneHistory(map, x)))
               res <- rec match {
                 case core.Resolved(inner, dep, _, rawType) => liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, ReifiedRawType.ofMap(rawType)))
                 case x: core.DeferredMap[L]                => embedMap(x, mapType)
@@ -171,10 +172,9 @@ object ModelResolver {
               .cotraverse(itemsSchema =>
                 for {
                   (found, innerRawType) <- determineTypeName(itemsSchema, Tracker.cloneHistory(schema, None), components)
-                  customArrayType <- SwaggerUtil
-                    .customArrayTypeName(schema)
-                    .flatMap(_.flatTraverse(x => parseType(Tracker.cloneHistory(schema, x))))
-                  lifted <- liftVectorType(found, customArrayType)
+                  prefixes              <- vendorPrefixes()
+                  customArrayType       <- CustomArrayTypeName(schema, prefixes).flatTraverse(x => parseType(Tracker.cloneHistory(schema, x)))
+                  lifted                <- liftVectorType(found, customArrayType)
                 } yield (lifted, ReifiedRawType.ofVector(innerRawType): ReifiedRawType)
               )
               .getOrElse(arrayType(None).map((_, ReifiedRawType.unsafeEmpty)))
@@ -288,12 +288,13 @@ object ModelResolver {
       partial: Either[Tracker[Schema[_]], F[core.ResolvedType[L]]],
       components: Tracker[Option[Components]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] = {
+    import Cl._
     import Sw._
     implicit val M = Sc.MonadF
     def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => F[core.ResolvedType[L]] = { a =>
       for {
-        customTpeName  <- SwaggerUtil.customTypeName(a)
-        (tpe, rawType) <- determineTypeName[L, F](a, Tracker.cloneHistory(a, customTpeName), components)
+        prefixes       <- vendorPrefixes()
+        (tpe, rawType) <- determineTypeName[L, F](a, Tracker.cloneHistory(a, CustomTypeName(a, prefixes)), components)
       } yield core.Resolved[L](tpe, None, None, rawType)
     }
 

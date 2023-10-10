@@ -11,27 +11,6 @@ import dev.guardrail.core.extract.VendorExtension.VendorExtensible._
 import dev.guardrail.languages.LA
 
 object SwaggerUtil {
-  def customTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit Cl: CollectionsLibTerms[L, F]): F[Option[String]] = {
-    import Cl._
-    for {
-      prefixes <- vendorPrefixes()
-    } yield CustomTypeName(v, prefixes)
-  }
-
-  def customArrayTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit Cl: CollectionsLibTerms[L, F]): F[Option[String]] = {
-    import Cl._
-    for {
-      prefixes <- vendorPrefixes()
-    } yield CustomArrayTypeName(v, prefixes)
-  }
-
-  def customMapTypeName[L <: LA, F[_], A: VendorExtension.VendorExtensible](v: A)(implicit Cl: CollectionsLibTerms[L, F]): F[Option[String]] = {
-    import Cl._
-    for {
-      prefixes <- vendorPrefixes()
-    } yield CustomMapTypeName(v, prefixes)
-  }
-
   def isFile(typeName: String, format: Option[String]): Boolean =
     (typeName, format) match {
       case ("string", Some("binary")) => true

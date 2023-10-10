@@ -11,7 +11,7 @@ import scala.meta.{ Defn, _ }
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.core
-import dev.guardrail.core.extract.{ DataRedaction, Default, EmptyValueIsNull }
+import dev.guardrail.core.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, DataRedaction, Default, EmptyValueIsNull }
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull, LiteralRawType, Mappish, ReifiedRawType, SupportDefinition, Tracker }
@@ -80,6 +80,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
       Sw: SwaggerTerms[ScalaLanguage, Target]
   ): Target[ProtocolDefinitions[ScalaLanguage]] = {
+    import Cl._
     import Sc._
 
     val components  = spec.downField("components", _.getComponents())
@@ -89,6 +90,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
       concreteTypes <- PropMeta.extractConcreteTypes[ScalaLanguage, Target](definitions.value, components)
       polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
+      prefixes <- vendorPrefixes()
       elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model
           .refine { case c: ComposedSchema => c }(comp =>
@@ -148,9 +150,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 defaultPropertyRequirement,
                 components
               )
-              customTypeName <- SwaggerUtil.customTypeName(x)
-              (declType, _)  <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
-              alias          <- typeAlias(formattedClsName, declType)
+
+              (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
+              alias         <- typeAlias(formattedClsName, declType)
             } yield enum.orElse(model).getOrElse(alias)
           )
           .orRefine { case x: IntegerSchema => x }(x =>
@@ -168,16 +170,14 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 defaultPropertyRequirement,
                 components
               )
-              customTypeName <- SwaggerUtil.customTypeName(x)
-              (declType, _)  <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
-              alias          <- typeAlias(formattedClsName, declType)
+              (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
+              alias         <- typeAlias(formattedClsName, declType)
             } yield enum.orElse(model).getOrElse(alias)
           )
           .valueOr(x =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              customTypeName   <- SwaggerUtil.customTypeName(x)
-              (declType, _)    <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, customTypeName), components)
+              (declType, _)    <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
               res              <- typeAlias(formattedClsName, declType)
             } yield res
           )
@@ -226,6 +226,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Sw: SwaggerTerms[ScalaLanguage, Target],
       wrapEnumSchema: WrapEnumSchema[A]
   ): Target[Either[String, EnumDefinition[ScalaLanguage]]] = {
+    import Cl._
     import Sc._
     import Sw._
 
@@ -279,11 +280,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       } yield EnumDefinition[ScalaLanguage](clsName, classType, fullType, wrappedValues, defn, staticDefns)
 
     for {
-      enum          <- extractEnum(schema.map(wrapEnumSchema))
-      customTpeName <- SwaggerUtil.customTypeName(schema)
-      (tpe, _)      <- ModelResolver.determineTypeName(schema, Tracker.cloneHistory(schema, customTpeName), components)
-      fullType      <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
-      res           <- enum.traverse(validProg(_, tpe, fullType))
+      enum     <- extractEnum(schema.map(wrapEnumSchema))
+      prefixes <- vendorPrefixes()
+      (tpe, _) <- ModelResolver.determineTypeName(schema, Tracker.cloneHistory(schema, CustomTypeName(schema, prefixes)), components)
+      fullType <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
+      res      <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
   }
 
@@ -320,6 +321,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
       Sw: SwaggerTerms[ScalaLanguage, Target]
   ): Target[ProtocolElems[ScalaLanguage]] = {
+    import Cl._
     import Sc._
 
     def child(hierarchy: ClassHierarchy[ScalaLanguage]): List[String] =
@@ -339,11 +341,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         .getOrElse(List.empty[SuperClass[ScalaLanguage]].pure[Target])
       props <- extractProperties(hierarchy.model)
       requiredFields = hierarchy.required ::: hierarchy.children.flatMap(_.required)
+      prefixes <- vendorPrefixes()
       params <- props.traverse { case (name, prop) =>
         for {
           typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
           propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
-          customType <- SwaggerUtil.customTypeName(prop)
           resolvedType <- ModelResolver
             .propMeta[ScalaLanguage, Target](
               prop,
@@ -357,7 +359,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             prop,
             resolvedType,
             propertyRequirement,
-            customType.isDefined,
+            CustomTypeName(prop, prefixes).isDefined,
             defValue
           )
         } yield res
@@ -536,6 +538,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
       Sw: SwaggerTerms[ScalaLanguage, Target]
   ): Target[(List[ProtocolParameter[ScalaLanguage]], List[NestedProtocolElems[ScalaLanguage]])] = {
+    import Cl._
     import Sc._
     def getClsName(name: String): NonEmptyList[String] = propertyToTypeLookup.get(name).map(NonEmptyList.of(_)).getOrElse(clsName)
 
@@ -582,6 +585,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       } yield defn
 
     for {
+      prefixes <- vendorPrefixes()
       paramsAndNestedDefinitions <- props.traverse[Target, (Tracker[ProtocolParameter[ScalaLanguage]], Option[NestedProtocolElems[ScalaLanguage]])] {
         case (name, schema) =>
           for {
@@ -589,7 +593,6 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
             resolvedType          <- ModelResolver.propMetaWithName(tpe, schema, components)
-            customType            <- SwaggerUtil.customTypeName(schema)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
             fieldName <- formatFieldName(name)
@@ -599,7 +602,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               schema,
               resolvedType,
               propertyRequirement,
-              customType.isDefined,
+              CustomTypeName(schema, prefixes).isDefined,
               defValue
             )
           } yield (Tracker.cloneHistory(schema, parameter), maybeNestedDefinition.flatMap(_.toOption))
@@ -687,6 +690,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
       Sw: SwaggerTerms[ScalaLanguage, Target]
   ): Target[ProtocolElems[ScalaLanguage]] = {
+    import Cl._
     import Fw._
     val model: Option[Tracker[ObjectSchema]] = abstractModel
       .refine[Option[Tracker[ObjectSchema]]] { case m: ObjectSchema => m }(x => Option(x))
@@ -702,8 +706,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     for {
       tpe <- model.fold[Target[scala.meta.Type]](objectType(None)) { m =>
         for {
-          tpeName       <- SwaggerUtil.customTypeName[ScalaLanguage, Target, Tracker[ObjectSchema]](m)
-          (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](m, Tracker.cloneHistory(m, tpeName), components)
+          prefixes      <- vendorPrefixes()
+          (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](m, Tracker.cloneHistory(m, CustomTypeName(m, prefixes)), components)
         } yield declType
       }
       res <- typeAlias(clsName, tpe)
@@ -823,15 +827,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         schema
           .refine { case map: MapSchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => map }(map =>
             for {
-              customTpe <- SwaggerUtil.customMapTypeName(map)
-              result    <- customTpe.fold(emptyMap().map(Option(_)))(_ => empty)
+              prefixes <- vendorPrefixes()
+              result   <- CustomMapTypeName(map, prefixes).fold(emptyMap().map(Option(_)))(_ => empty)
             } yield result
           )
           .orRefine { case arr: ArraySchema if requirement == PropertyRequirement.Required || requirement == PropertyRequirement.RequiredNullable => arr }(
             arr =>
               for {
-                customTpe <- SwaggerUtil.customArrayTypeName(arr)
-                result    <- customTpe.fold(emptyArray().map(Option(_)))(_ => empty)
+                prefixes <- vendorPrefixes()
+                result   <- CustomArrayTypeName(arr, prefixes).fold(emptyArray().map(Option(_)))(_ => empty)
               } yield result
           )
           .orRefine { case p: BooleanSchema => p }(p => Default(p).extract[Boolean].fold(empty)(litBoolean(_).map(Some(_))))

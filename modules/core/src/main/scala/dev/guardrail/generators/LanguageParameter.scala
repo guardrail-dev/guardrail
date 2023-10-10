@@ -7,7 +7,7 @@ import io.swagger.v3.oas.models.Components
 
 import dev.guardrail._
 import dev.guardrail.core.{ ReifiedRawType, ResolvedType, Tracker }
-import dev.guardrail.core.extract.{ Default, FileHashAlgorithm }
+import dev.guardrail.core.extract.{ CustomTypeName, Default, FileHashAlgorithm }
 import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.generators.syntax._
 import dev.guardrail.languages.LA
@@ -82,9 +82,10 @@ object LanguageParameter {
             case SchemaLiteral(schema)               => schema
             case SchemaRef(SchemaLiteral(schema), _) => schema
           })
-          customParamTypeName  <- SwaggerUtil.customTypeName(param)
-          customSchemaTypeName <- SwaggerUtil.customTypeName(schema.unwrapTracker)
-          customTypeName = Tracker.cloneHistory(schema, customSchemaTypeName).fold(Tracker.cloneHistory(param, customParamTypeName))(_.map(Option.apply))
+          prefixes <- vendorPrefixes()
+          customTypeName = Tracker
+            .cloneHistory(schema, CustomTypeName(schema.unwrapTracker, prefixes))
+            .fold(Tracker.cloneHistory(param, CustomTypeName(param, prefixes)))(_.map(Option.apply))
           (declType, rawType) <- ModelResolver.determineTypeName[L, F](schema, customTypeName, components)
           defaultValue        <- getDefault(schema)
           res      = core.Resolved[L](declType, None, defaultValue, rawType)
