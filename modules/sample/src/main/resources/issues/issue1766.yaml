@@ -1,0 +1,27 @@
+openapi: 3.0.2
+info:
+  version: 1.0.0
+components:
+  schemas:
+    TokenIntrospectionRequest:
+      properties:
+        token:
+          description: access token to introspect
+          type: string
+      required:
+        - token
+      type: object
+paths:
+  /api/v1/oauth/token/introspect:
+    post:
+      deprecated: false
+      description: 'Token introspection for Daml Hub access tokens, as per [rfc7662#section-2](https://datatracker.ietf.org/doc/html/rfc7662#section-2)'
+      operationId: introspectAccessToken
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenIntrospectionRequest'
+      responses:
+        200: {}
