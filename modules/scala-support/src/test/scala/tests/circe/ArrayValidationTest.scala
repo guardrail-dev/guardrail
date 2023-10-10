@@ -4,7 +4,6 @@ import cats.data.NonEmptyList
 import dev.guardrail.Target
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.ProtocolGenerator
 import dev.guardrail.generators.SwaggerGenerator
 import dev.guardrail.generators.scala.CirceRefinedModelGenerator
 import dev.guardrail.generators.scala.ScalaCollectionsGenerator
@@ -93,8 +92,8 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
            |        pattern: "pet"
            |""".stripMargin
 
-      val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = ProtocolGenerator
-        .fromSwagger[ScalaLanguage, Target](
+      val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = circeProtocolGenerator
+        .fromSwagger(
           Tracker(swaggerFromString(collectionElementsWithPattern)),
           dtoPackage = Nil,
           supportPackage = NonEmptyList.one("foop"),
@@ -118,8 +117,8 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
 
     "should generate size boundary constrains" in {
 
-      val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = ProtocolGenerator
-        .fromSwagger[ScalaLanguage, Target](
+      val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = circeProtocolGenerator
+        .fromSwagger(
           Tracker(swaggerFromString(swagger)),
           dtoPackage = Nil,
           supportPackage = NonEmptyList.one("foop"),

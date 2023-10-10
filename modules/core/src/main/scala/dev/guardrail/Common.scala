@@ -8,7 +8,8 @@ import java.nio.file.Path
 import java.net.URI
 
 import dev.guardrail.core.{ SupportDefinition, Tracker }
-import dev.guardrail.generators.{ ClientGenerator, Clients, ProtocolDefinitions, ProtocolGenerator, ServerGenerator, Servers }
+import dev.guardrail.generators.{ Clients, Servers }
+import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -35,12 +36,16 @@ object Common {
       Se: ServerTerms[L, F],
       Sw: SwaggerTerms[L, F]
   ): F[(ProtocolDefinitions[L], CodegenDefinitions[L])] = {
-    import Fw._
+    import Fw.{ getFrameworkImports, getFrameworkImplicits }
     import Sw._
 
     Sw.log.function("prepareDefinitions")(for {
-      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, _) <- ProtocolGenerator
-        .fromSwagger[L, F](swagger, dtoPackage, supportPackage, context.propertyRequirement)
+      proto @ ProtocolDefinitions(protocolElems, protocolImports, packageObjectImports, packageObjectContents, _) <- P.fromSwagger(
+        swagger,
+        dtoPackage,
+        supportPackage,
+        context.propertyRequirement
+      )
 
       serverUrls = NonEmptyList.fromList(
         swagger
@@ -87,16 +92,14 @@ object Common {
       codegen <- kind match {
         case CodegenTarget.Client =>
           for {
-            clientMeta <- ClientGenerator
-              .fromSwagger[L, F](context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes, components)
+            clientMeta <- C.fromSwagger(context, frameworkImports)(serverUrls, basePath, groupedRoutes)(protocolElems, securitySchemes, components)
             Clients(clients, supportDefinitions) = clientMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](clients, List.empty, supportDefinitions, frameworkImplicits)
 
         case CodegenTarget.Server =>
           for {
-            serverMeta <- ServerGenerator
-              .fromSwagger[L, F](context, supportPackage, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes, components)
+            serverMeta <- Se.fromSwagger(context, supportPackage, basePath, frameworkImports)(groupedRoutes)(protocolElems, securitySchemes, components)
             Servers(servers, supportDefinitions) = serverMeta
             frameworkImplicits <- getFrameworkImplicits()
           } yield CodegenDefinitions[L](List.empty, servers, supportDefinitions, frameworkImplicits)

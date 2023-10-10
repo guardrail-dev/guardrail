@@ -1,22 +1,32 @@
 package dev.guardrail.generators.java.asyncHttpClient
 
+import _root_.io.swagger.v3.oas.models.Components
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
+import com.github.javaparser.ast.ImportDeclaration
 import com.github.javaparser.ast.Modifier.Keyword._
 import com.github.javaparser.ast.Modifier._
-import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type, UnknownType, VoidType }
+import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.`type`.ClassOrInterfaceType
+import com.github.javaparser.ast.`type`.Type
+import com.github.javaparser.ast.`type`.UnknownType
+import com.github.javaparser.ast.`type`.VoidType
 import com.github.javaparser.ast.body._
-import com.github.javaparser.ast.expr.{ MethodCallExpr, NameExpr, _ }
+import com.github.javaparser.ast.expr.MethodCallExpr
+import com.github.javaparser.ast.expr.NameExpr
+import com.github.javaparser.ast.expr._
 import com.github.javaparser.ast.stmt._
-import com.github.javaparser.ast.{ ImportDeclaration, NodeList }
-import java.net.URI
-import java.util.concurrent.CompletionStage
-import scala.annotation.tailrec
-
+import dev.guardrail.Context
 import dev.guardrail.Target
-import dev.guardrail.core.{ PathExtractor, SupportDefinition }
+import dev.guardrail.core.PathExtractor
+import dev.guardrail.core.SupportDefinition
+import dev.guardrail.core.Tracker
+import dev.guardrail.generators.Client
+import dev.guardrail.generators.Clients
+import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.generators.LanguageParameters
 import dev.guardrail.generators.RenderedClientOperation
 import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaGenerator
@@ -24,28 +34,37 @@ import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.asyncHttpClient.AsyncHttpClientHelpers._
 import dev.guardrail.generators.java.syntax._
-import dev.guardrail.generators.spi.{ ClientGeneratorLoader, CollectionsGeneratorLoader, ModuleLoadResult }
-import dev.guardrail.generators.{ LanguageParameter, LanguageParameters }
+import dev.guardrail.generators.spi.ClientGeneratorLoader
+import dev.guardrail.generators.spi.CollectionsGeneratorLoader
+import dev.guardrail.generators.spi.ModuleLoadResult
 import dev.guardrail.javaext.helpers.ResponseHelpers
-import scala.reflect.runtime.universe.typeTag
 import dev.guardrail.shims._
+import dev.guardrail.terms.AnyContentType
+import dev.guardrail.terms.ApplicationJson
+import dev.guardrail.terms.BinaryContent
+import dev.guardrail.terms.CollectionsLibTerms
+import dev.guardrail.terms.ContentType
+import dev.guardrail.terms.LanguageTerms
+import dev.guardrail.terms.OctetStream
+import dev.guardrail.terms.Response
+import dev.guardrail.terms.Responses
+import dev.guardrail.terms.RouteMeta
+import dev.guardrail.terms.SecurityScheme
+import dev.guardrail.terms.SwaggerTerms
+import dev.guardrail.terms.TextContent
+import dev.guardrail.terms.TextPlain
 import dev.guardrail.terms.client.ClientTerms
-import dev.guardrail.terms.collections.{ CollectionsAbstraction, JavaStdLibCollections, JavaVavrCollections }
-import dev.guardrail.terms.protocol.{ StaticDefns, StrictProtocolElems }
-import dev.guardrail.terms.{
-  AnyContentType,
-  ApplicationJson,
-  BinaryContent,
-  CollectionsLibTerms,
-  ContentType,
-  OctetStream,
-  Response,
-  Responses,
-  RouteMeta,
-  SecurityScheme,
-  TextContent,
-  TextPlain
-}
+import dev.guardrail.terms.collections.CollectionsAbstraction
+import dev.guardrail.terms.collections.JavaStdLibCollections
+import dev.guardrail.terms.collections.JavaVavrCollections
+import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.StaticDefns
+import dev.guardrail.terms.protocol.StrictProtocolElems
+
+import java.net.URI
+import java.util.concurrent.CompletionStage
+import scala.annotation.tailrec
+import scala.reflect.runtime.universe.typeTag
 
 class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
   type L = JavaLanguage
@@ -61,6 +80,76 @@ class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
 object AsyncHttpClientClientGenerator {
   def apply()(implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage]): ClientTerms[JavaLanguage, Target] =
     new AsyncHttpClientClientGenerator
+}
+
+@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
+class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
+    extends ClientTerms[JavaLanguage, Target] {
+
+  override implicit def MonadF: Monad[Target] = Target.targetInstances
+
+  override def fromSwagger(context: Context, frameworkImports: List[JavaLanguage#Import])(
+      serverUrls: Option[NonEmptyList[URI]],
+      basePath: Option[String],
+      groupedRoutes: List[(List[String], List[RouteMeta])]
+  )(
+      protocolElems: List[StrictProtocolElems[JavaLanguage]],
+      securitySchemes: Map[String, SecurityScheme[JavaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Fw: FrameworkTerms[JavaLanguage, Target],
+      Sc: LanguageTerms[JavaLanguage, Target],
+      Cl: CollectionsLibTerms[JavaLanguage, Target],
+      Sw: SwaggerTerms[JavaLanguage, Target]
+  ): Target[Clients[JavaLanguage]] = {
+    import Sc._
+    import Sw._
+    import dev.guardrail._
+
+    for {
+      clientImports      <- getImports(context.tracing)
+      clientExtraImports <- getExtraImports(context.tracing)
+      supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
+      clients <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+        val routes = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
+        for {
+          clientName <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
+          responseClientPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
+            for {
+              operationId         <- getOperationId(operation)
+              responses           <- Responses.getResponses[JavaLanguage, Target](operationId, operation, protocolElems, components)
+              responseClsName     <- formatTypeName(operationId, Some("Response"))
+              responseDefinitions <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              parameters          <- route.getParameters[JavaLanguage, Target](components, protocolElems)
+              methodName          <- formatMethodName(operationId)
+              clientOp <- generateClientOperation(className, responseClsName, context.tracing, securitySchemes, parameters)(route, methodName, responses)
+            } yield (responseDefinitions, clientOp)
+          }
+          (responseDefinitions, clientOperations) = responseClientPair.unzip
+          tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
+          ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
+          staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
+          client <- buildClient(
+            clientName,
+            tracingName,
+            serverUrls,
+            basePath,
+            ctorArgs,
+            clientOperations.map(_.clientOperation),
+            clientOperations.flatMap(_.supportDefinitions),
+            context.tracing
+          )
+        } yield Client[JavaLanguage](
+          className,
+          clientName,
+          clientImports ++ frameworkImports ++ clientExtraImports,
+          staticDefns,
+          client,
+          responseDefinitions.flatten
+        )
+      }
+    } yield Clients[JavaLanguage](clients, supportDefinitions)
+  }
 
   private val URI_TYPE                       = StaticJavaParser.parseClassOrInterfaceType("URI")
   private val OBJECT_MAPPER_TYPE             = StaticJavaParser.parseClassOrInterfaceType("ObjectMapper")
@@ -450,15 +539,6 @@ object AsyncHttpClientClientGenerator {
 
       (imports, cls)
     }
-}
-
-@SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
-class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
-    extends ClientTerms[JavaLanguage, Target] {
-  import AsyncHttpClientClientGenerator._
-  import Ca._
-
-  implicit def MonadF: Monad[Target] = Target.targetInstances
 
   def generateClientOperation(
       className: List[String],
@@ -471,6 +551,8 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       methodName: String,
       responses: Responses[JavaLanguage]
   ): Target[RenderedClientOperation[JavaLanguage]] = {
+    import Ca._
+
     val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
 
     for {
@@ -1064,6 +1146,8 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
     com.github.javaparser.ast.body.ClassOrInterfaceDeclaration,
     com.github.javaparser.ast.body.TypeDeclaration[_ <: com.github.javaparser.ast.body.TypeDeclaration[_]]
   ]]] = {
+    import Ca._
+
     def createSetter(tpe: Type, name: String, initializer: String => Target[Expression]): Target[MethodDeclaration] =
       for {
         initializerExpr <- initializer(name)

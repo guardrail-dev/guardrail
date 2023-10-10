@@ -16,7 +16,7 @@ jobs:
         run: |
           module="$(echo "$GITHUB_REF" | sed 's~^refs/tags/\(.*\)-v[0-9.]\+$~\1~')"
           echo "extract project: ${GITHUB_REF}, ${module}"
-          echo "::set-output name=module::$module"
+          echo "module=$module" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0

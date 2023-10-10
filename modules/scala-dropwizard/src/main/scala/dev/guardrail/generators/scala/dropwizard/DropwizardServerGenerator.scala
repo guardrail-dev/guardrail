@@ -1,36 +1,46 @@
 package dev.guardrail.generators.scala.dropwizard
 
+import _root_.io.swagger.v3.oas.models.Components
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
+import dev.guardrail._
+import dev.guardrail.core.SupportDefinition
+import dev.guardrail.core.Tracker
+import dev.guardrail.generators.CustomExtractionField
+import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.generators.RawParameterName
+import dev.guardrail.generators.RenderedRoutes
+import dev.guardrail.generators.Server
+import dev.guardrail.generators.Servers
+import dev.guardrail.generators.TracingField
+import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.spi.ModuleLoadResult
+import dev.guardrail.generators.spi.ServerGeneratorLoader
+import dev.guardrail.scalaext.helpers.ResponseHelpers
+import dev.guardrail.shims._
+import dev.guardrail.terms.AnyContentType
+import dev.guardrail.terms.ApplicationJson
+import dev.guardrail.terms.BinaryContent
+import dev.guardrail.terms.CollectionsLibTerms
+import dev.guardrail.terms.ContentType
+import dev.guardrail.terms.LanguageTerms
+import dev.guardrail.terms.MultipartFormData
+import dev.guardrail.terms.OctetStream
+import dev.guardrail.terms.Responses
+import dev.guardrail.terms.RouteMeta
+import dev.guardrail.terms.SecurityScheme
+import dev.guardrail.terms.SwaggerTerms
+import dev.guardrail.terms.TextContent
+import dev.guardrail.terms.TextPlain
+import dev.guardrail.terms.UrlencodedFormData
+import dev.guardrail.terms.framework.FrameworkTerms
+import dev.guardrail.terms.protocol.StrictProtocolElems
+import dev.guardrail.terms.server._
 import io.swagger.v3.oas.models.Operation
+
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
-
-import dev.guardrail.AuthImplementation
-import dev.guardrail.Target
-import dev.guardrail.core.{ SupportDefinition, Tracker }
-import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
-import dev.guardrail.generators.scala.ScalaLanguage
-import dev.guardrail.generators.spi.{ ModuleLoadResult, ServerGeneratorLoader }
-import dev.guardrail.scalaext.helpers.ResponseHelpers
-import dev.guardrail.shims.OperationExt
-import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.terms.server.{ GenerateRouteMeta, SecurityExposure, ServerTerms }
-import dev.guardrail.terms.{
-  AnyContentType,
-  ApplicationJson,
-  BinaryContent,
-  ContentType,
-  MultipartFormData,
-  OctetStream,
-  Responses,
-  RouteMeta,
-  SecurityScheme,
-  TextContent,
-  TextPlain,
-  UrlencodedFormData
-}
 
 class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
@@ -45,6 +55,100 @@ object DropwizardServerGenerator {
 
 class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Target] {
   override def MonadF: Monad[Target] = Target.targetInstances
+
+  override def fromSwagger(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[ScalaLanguage#Import])(
+      groupedRoutes: List[(List[String], List[RouteMeta])]
+  )(
+      protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Fw: FrameworkTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[Servers[ScalaLanguage]] = {
+    import Sw._
+    import Sc._
+
+    for {
+      extraImports       <- getExtraImports(context.tracing, supportPackage)
+      supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
+      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+        val routes = unsortedRoutes
+          .groupBy(_.path.unwrapTracker.indexOf('{'))
+          .view
+          .mapValues(_.sortBy(r => (r.path.unwrapTracker, r.method)))
+          .toList
+          .sortBy(_._1)
+          .flatMap(_._2)
+        for {
+          resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
+          handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
+
+          responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
+            for {
+              operationId           <- getOperationId(operation)
+              responses             <- Responses.getResponses(operationId, operation, protocolElems, components)
+              responseClsName       <- formatTypeName(operationId, Some("Response"))
+              responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              methodName            <- formatMethodName(operationId)
+              parameters            <- route.getParameters[ScalaLanguage, Target](components, protocolElems)
+              customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
+              tracingField          <- buildTracingFields(operation, className, context.tracing)
+            } yield (
+              responseDefinitions,
+              GenerateRouteMeta(operationId, methodName, responseClsName, customExtractionField, tracingField, route, parameters, responses)
+            )
+          }
+          (responseDefinitions, serverOperations) = responseServerPair.unzip
+          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+            case Nil => SecurityExposure.Undefined
+            case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
+          }
+          renderedRoutes <- generateRoutes(
+            context.tracing,
+            resourceName,
+            handlerName,
+            basePath,
+            serverOperations,
+            protocolElems,
+            securitySchemes,
+            securityExposure,
+            context.authImplementation
+          )
+          handlerSrc <- renderHandler(
+            handlerName,
+            renderedRoutes.methodSigs,
+            renderedRoutes.handlerDefinitions,
+            responseDefinitions.flatten,
+            context.customExtraction,
+            context.authImplementation,
+            securityExposure
+          )
+          extraRouteParams <- getExtraRouteParams(
+            resourceName,
+            context.customExtraction,
+            context.tracing,
+            context.authImplementation,
+            securityExposure
+          )
+          classSrc <- renderClass(
+            resourceName,
+            handlerName,
+            renderedRoutes.classAnnotations,
+            renderedRoutes.routes,
+            extraRouteParams,
+            responseDefinitions.flatten,
+            renderedRoutes.supportDefinitions,
+            renderedRoutes.securitySchemesDefinitions,
+            context.customExtraction,
+            context.authImplementation
+          )
+        } yield Server[ScalaLanguage](className, frameworkImports ++ extraImports, handlerSrc, classSrc)
+      }
+    } yield Servers[ScalaLanguage](servers, supportDefinitions)
+  }
 
   private val buildTermSelect: NonEmptyList[String] => Term.Ref = { case NonEmptyList(head, tail) =>
     tail.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(head))(Term.Select.apply _)
@@ -161,7 +265,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
       buildTransformers(param, httpParameterAnnotation).foldLeft(param.param)((accum, next) => next(accum))
   }
 
-  override def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): Target[List[Import]] =
+  private def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]): Target[List[Import]] =
     Target.pure(
       List(
         q"import io.dropwizard.jersey.PATCH",
@@ -180,7 +284,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
       )
     )
 
-  override def generateSupportDefinitions(
+  private def generateSupportDefinitions(
       tracing: Boolean,
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
   ): Target[List[SupportDefinition[ScalaLanguage]]] =
@@ -253,7 +357,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
       )
     )
 
-  override def buildCustomExtractionFields(
+  private def buildCustomExtractionFields(
       operation: Tracker[Operation],
       resourceName: List[String],
       customExtraction: Boolean
@@ -264,10 +368,10 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
       Target.pure(Option.empty)
     }
 
-  override def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[ScalaLanguage]]] =
+  private def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean): Target[Option[TracingField[ScalaLanguage]]] =
     Target.pure(None)
 
-  override def generateResponseDefinitions(
+  private def generateResponseDefinitions(
       responseClsName: String,
       responses: Responses[ScalaLanguage],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]]
@@ -301,7 +405,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
     )
   }
 
-  override def generateRoutes(
+  private def generateRoutes(
       tracing: Boolean,
       resourceName: String,
       handlerName: String,
@@ -437,7 +541,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
     )
   }
 
-  override def getExtraRouteParams(
+  private def getExtraRouteParams(
       resourceName: String,
       customExtraction: Boolean,
       tracing: Boolean,
@@ -456,7 +560,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
         } else Target.pure(List.empty)
     } yield customExtraction ::: tracing
 
-  override def renderClass(
+  private def renderClass(
       resourceName: String,
       handlerName: String,
       annotations: List[Mod.Annot],
@@ -487,7 +591,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
     )
   }
 
-  override def renderHandler(
+  private def renderHandler(
       handlerName: String,
       methodSigs: List[Decl.Def],
       handlerDefinitions: List[Stat],

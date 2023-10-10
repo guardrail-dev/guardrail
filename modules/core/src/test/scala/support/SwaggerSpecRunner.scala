@@ -88,7 +88,9 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues
       .foldLeft[(ProtocolDefinitions[L], Clients[L], Servers[L])]((ProtocolDefinitions(Nil, Nil, Nil, Nil, None), Clients(Nil, Nil), Servers(Nil, Nil))) {
         case ((proto, clients, servers), (generatedProto, generatedDefs)) =>
           val newProto =
-            if ((proto.elems ++ proto.packageObjectContents ++ proto.packageObjectImports ++ proto.protocolImports ++ proto.implicitsObject.toList).nonEmpty) {
+            if (
+              proto.elems.nonEmpty && proto.packageObjectContents.nonEmpty && proto.packageObjectImports.nonEmpty && proto.protocolImports.nonEmpty && proto.implicitsObject.nonEmpty
+            ) {
               proto
             } else {
               generatedProto

@@ -1,27 +1,59 @@
 package dev.guardrail.generators.scala.akkaHttp
 
+import _root_.io.swagger.v3.oas.models.Components
 import _root_.io.swagger.v3.oas.models.Operation
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
-import scala.meta._
-import scala.reflect.runtime.universe.typeTag
-import dev.guardrail.AuthImplementation
-import dev.guardrail.core.extract.{ ServerRawResponse, TracingLabel }
-import dev.guardrail.core.{ LiteralRawType, MapRawType, ReifiedRawType, Tracker, VectorRawType }
+import dev.guardrail._
+import dev.guardrail.core.LiteralRawType
+import dev.guardrail.core.MapRawType
+import dev.guardrail.core.ReifiedRawType
+import dev.guardrail.core.Tracker
+import dev.guardrail.core.VectorRawType
+import dev.guardrail.core.extract.ServerRawResponse
+import dev.guardrail.core.extract.TracingLabel
+import dev.guardrail.generators.CustomExtractionField
+import dev.guardrail.generators.LanguageParameter
+import dev.guardrail.generators.RawParameterName
+import dev.guardrail.generators.RenderedRoutes
+import dev.guardrail.generators.Server
+import dev.guardrail.generators.Servers
+import dev.guardrail.generators.TracingField
 import dev.guardrail.generators.operations.TracingLabelFormatter
-import dev.guardrail.generators.scala.{ CirceModelGenerator, CirceRefinedModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
+import dev.guardrail.generators.scala.CirceModelGenerator
+import dev.guardrail.generators.scala.CirceRefinedModelGenerator
+import dev.guardrail.generators.scala.JacksonModelGenerator
+import dev.guardrail.generators.scala.ModelGeneratorType
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
-import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader, ServerGeneratorLoader }
+import dev.guardrail.generators.spi.ModuleLoadResult
+import dev.guardrail.generators.spi.ProtocolGeneratorLoader
+import dev.guardrail.generators.spi.ServerGeneratorLoader
 import dev.guardrail.generators.syntax._
-import dev.guardrail.generators.{ CustomExtractionField, LanguageParameter, RawParameterName, RenderedRoutes, TracingField }
 import dev.guardrail.shims._
+import dev.guardrail.terms.ApplicationJson
+import dev.guardrail.terms.BinaryContent
+import dev.guardrail.terms.CollectionsLibTerms
+import dev.guardrail.terms.ContentType
+import dev.guardrail.terms.Header
+import dev.guardrail.terms.LanguageTerms
+import dev.guardrail.terms.MultipartFormData
+import dev.guardrail.terms.Response
+import dev.guardrail.terms.Responses
+import dev.guardrail.terms.RouteMeta
+import dev.guardrail.terms.SecurityScheme
+import dev.guardrail.terms.SwaggerTerms
+import dev.guardrail.terms.TextContent
+import dev.guardrail.terms.TextPlain
+import dev.guardrail.terms.UrlencodedFormData
+import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.server._
-import dev.guardrail.terms.{ ApplicationJson, BinaryContent, ContentType, Header, MultipartFormData, Response }
-import dev.guardrail.terms.{ Responses, RouteMeta, SecurityScheme, TextContent, TextPlain, UrlencodedFormData }
-import dev.guardrail.{ Target, UserError }
+
+import scala.meta._
+import scala.reflect.runtime.universe.typeTag
 
 class AkkaHttpServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
@@ -84,13 +116,108 @@ object AkkaHttpServerGenerator {
 class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType) extends ServerTerms[ScalaLanguage, Target] {
   val customExtractionTypeName: Type.Name = Type.Name("E")
 
-  def splitOperationParts(operationId: String): (List[String], String) = {
+  implicit def MonadF: Monad[Target] = Target.targetInstances
+
+  override def fromSwagger(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[ScalaLanguage#Import])(
+      groupedRoutes: List[(List[String], List[RouteMeta])]
+  )(
+      protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+      securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Fw: FrameworkTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Sw: SwaggerTerms[ScalaLanguage, Target]
+  ): Target[Servers[ScalaLanguage]] = {
+    import Sw._
+    import Sc._
+
+    for {
+      extraImports       <- getExtraImports(context.tracing, supportPackage)
+      supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
+      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+        val routes = unsortedRoutes
+          .groupBy(_.path.unwrapTracker.indexOf('{'))
+          .view
+          .mapValues(_.sortBy(r => (r.path.unwrapTracker, r.method)))
+          .toList
+          .sortBy(_._1)
+          .flatMap(_._2)
+        for {
+          resourceName <- formatTypeName(className.lastOption.getOrElse(""), Some("Resource"))
+          handlerName  <- formatTypeName(className.lastOption.getOrElse(""), Some("Handler"))
+
+          responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
+            for {
+              operationId           <- getOperationId(operation)
+              responses             <- Responses.getResponses(operationId, operation, protocolElems, components)
+              responseClsName       <- formatTypeName(operationId, Some("Response"))
+              responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              methodName            <- formatMethodName(operationId)
+              parameters            <- route.getParameters[ScalaLanguage, Target](components, protocolElems)
+              customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
+              tracingField          <- buildTracingFields(operation, className, context.tracing)
+            } yield (
+              responseDefinitions,
+              GenerateRouteMeta(operationId, methodName, responseClsName, customExtractionField, tracingField, route, parameters, responses)
+            )
+          }
+          (responseDefinitions, serverOperations) = responseServerPair.unzip
+          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+            case Nil => SecurityExposure.Undefined
+            case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
+          }
+          renderedRoutes <- generateRoutes(
+            context.tracing,
+            resourceName,
+            handlerName,
+            basePath,
+            serverOperations,
+            protocolElems,
+            securitySchemes,
+            securityExposure,
+            context.authImplementation
+          )
+          handlerSrc <- renderHandler(
+            handlerName,
+            renderedRoutes.methodSigs,
+            renderedRoutes.handlerDefinitions,
+            responseDefinitions.flatten,
+            context.customExtraction,
+            context.authImplementation,
+            securityExposure
+          )
+          extraRouteParams <- getExtraRouteParams(
+            resourceName,
+            context.customExtraction,
+            context.tracing,
+            context.authImplementation,
+            securityExposure
+          )
+          classSrc <- renderClass(
+            resourceName,
+            handlerName,
+            renderedRoutes.classAnnotations,
+            renderedRoutes.routes,
+            extraRouteParams,
+            responseDefinitions.flatten,
+            renderedRoutes.supportDefinitions,
+            renderedRoutes.securitySchemesDefinitions,
+            context.customExtraction,
+            context.authImplementation
+          )
+        } yield Server[ScalaLanguage](className, frameworkImports ++ extraImports, handlerSrc, classSrc)
+      }
+    } yield Servers[ScalaLanguage](servers, supportDefinitions)
+  }
+
+  private def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)
   }
-  implicit def MonadF: Monad[Target] = Target.targetInstances
 
-  def generateResponseDefinitions(
+  private def generateResponseDefinitions(
       responseClsName: String,
       responses: Responses[ScalaLanguage],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]]
@@ -192,7 +319,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       companion
     )
 
-  def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
+  private def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
     for {
       _ <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
       res <-
@@ -212,7 +339,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         } else Target.pure(None)
     } yield res
 
-  def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
+  private def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
     for {
       _ <- Target.log.debug(s"buildTracingFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${tracing})")
       res <-
@@ -231,7 +358,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           } yield Some(TracingField[ScalaLanguage](LanguageParameter.fromParam(param"traceBuilder: TraceBuilder"), q"""trace(${label})"""))
         } else Target.pure(None)
     } yield res
-  def generateRoutes(
+  private def generateRoutes(
       tracing: Boolean,
       resourceName: String,
       handlerName: String,
@@ -255,7 +382,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       renderedRoutes.flatMap(_.handlerDefinitions),
       List.empty
     )
-  def renderHandler(
+  private def renderHandler(
       handlerName: String,
       methodSigs: List[scala.meta.Decl.Def],
       handlerDefinitions: List[scala.meta.Stat],
@@ -274,7 +401,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       """
     }
-  def getExtraRouteParams(
+  private def getExtraRouteParams(
       resourceName: String,
       customExtraction: Boolean,
       tracing: Boolean,
@@ -292,7 +419,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           Target.pure(List(param"""trace: String => Directive1[TraceBuilder]"""))
         } else Target.pure(List.empty)
     } yield extractParam ::: traceParam
-  def renderClass(
+  private def renderClass(
       resourceName: String,
       handlerName: String,
       annotations: List[scala.meta.Mod.Annot],
@@ -330,7 +457,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       """)
     }
-  def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
+  private def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
     for {
       _ <- Target.log.debug(s"getExtraImports(${tracing})")
     } yield List(
@@ -338,13 +465,13 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       Option(q"import scala.language.higherKinds")
     ).flatten
 
-  def generateSupportDefinitions(
+  private def generateSupportDefinitions(
       tracing: Boolean,
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]]
   ) =
     Target.pure(List.empty)
 
-  def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {
+  private def httpMethodToAkka(method: HttpMethod): Target[Term] = method match {
     case HttpMethod.DELETE  => Target.pure(q"delete")
     case HttpMethod.GET     => Target.pure(q"get")
     case HttpMethod.PATCH   => Target.pure(q"patch")
@@ -355,7 +482,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     case other              => Target.raiseUserError(s"Unknown method: ${other}")
   }
 
-  def pathStrToAkka(
+  private def pathStrToAkka(
       basePath: Option[String],
       path: Tracker[String],
       pathArgs: List[LanguageParameter[ScalaLanguage]]
@@ -373,13 +500,13 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     }
   }
 
-  def findInnerTpe(rawType: ReifiedRawType): LiteralRawType = rawType match {
+  private def findInnerTpe(rawType: ReifiedRawType): LiteralRawType = rawType match {
     case x: LiteralRawType    => x
     case VectorRawType(inner) => findInnerTpe(inner)
     case MapRawType(inner)    => findInnerTpe(inner)
   }
 
-  def directivesFromParams(
+  private def directivesFromParams(
       required: Term => Type => Option[Term] => Target[Term],
       multi: Term => Type => Option[Term] => (Term => Term) => Target[Term],
       multiOpt: Term => Type => Option[Term] => (Term => Term) => Target[Term],
@@ -429,14 +556,14 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         Some((xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" }, params.map(_.paramName)))
     }
 
-  def bodyToAkka(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term]] =
+  private def bodyToAkka(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term]] =
     Target.pure(
       body.map { case LanguageParameter(_, _, _, _, argType) =>
         q"entity(as[${argType}](${Term.Name(s"${methodName}Decoder")}))"
       }
     )
 
-  def headersToAkka: List[LanguageParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] =
+  private def headersToAkka: List[LanguageParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] =
     directivesFromParams(
       arg => {
         case t"String" =>
@@ -481,7 +608,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       }
     ) _
 
-  def qsToAkka: List[LanguageParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] = {
+  private def qsToAkka: List[LanguageParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] = {
     type Unmarshaller = Term
     type Arg          = Term
     val nameReceptacle: Arg => Type => Term = arg => tpe => q"Symbol(${arg}).as[${tpe}]"
@@ -504,7 +631,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     override def toString(): String = s"Binding($value)"
   }
 
-  def formToAkka(consumes: Tracker[NonEmptyList[ContentType]], methodName: String)(
+  private def formToAkka(consumes: Tracker[NonEmptyList[ContentType]], methodName: String)(
       params: List[LanguageParameter[ScalaLanguage]]
   ): Target[(Option[Term], List[Stat])] = Target.log.function("formToAkka") {
     for {
@@ -862,7 +989,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     } yield result.getOrElse((Option.empty[Term], List.empty[Stat]))
   }
 
-  case class RenderedRoute(route: Term, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
+  private case class RenderedRoute(route: Term, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
 
   private def generateRoute(
       resourceName: String,
@@ -977,7 +1104,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       )
   }
 
-  def generateHeaderParams(headers: List[Header[ScalaLanguage]], prefix: Term.Name): Term = {
+  private def generateHeaderParams(headers: List[Header[ScalaLanguage]], prefix: Term.Name): Term = {
     def liftOptionTerm(tParamName: Term.Name, tName: RawParameterName) =
       q"$prefix.$tParamName.map(v => RawHeader(${tName.toLit}, Formatter.show(v)))"
 
@@ -993,13 +1120,13 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     q"scala.collection.immutable.Seq[Option[HttpHeader]](..$args).flatten"
   }
 
-  def combineRouteTerms(terms: List[Term]): Target[Term] =
+  private def combineRouteTerms(terms: List[Term]): Target[Term] =
     Target.log.function(s"combineRouteTerms(<${terms.length} routes>)")(for {
       routes <- Target.fromOption(NonEmptyList.fromList(terms), UserError("Generated no routes, no source to generate"))
       _      <- routes.traverse(route => Target.log.debug(route.toString))
     } yield routes.tail.foldLeft(routes.head) { case (a, n) => q"${a} ~ ${n}" })
 
-  def generateCodecs(
+  private def generateCodecs(
       methodName: String,
       bodyArgs: Option[LanguageParameter[ScalaLanguage]],
       responses: Responses[ScalaLanguage],
@@ -1007,7 +1134,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
   ): Target[List[Defn.Def]] =
     generateDecoders(methodName, bodyArgs, consumes)
 
-  def generateDecoders(
+  private def generateDecoders(
       methodName: String,
       bodyArgs: Option[LanguageParameter[ScalaLanguage]],
       consumes: Tracker[NonEmptyList[ContentType]]

@@ -11,7 +11,6 @@ import support.SwaggerSpecRunner
 import dev.guardrail.Target
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.ProtocolGenerator
 import dev.guardrail.generators.SwaggerGenerator
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.ScalaCollectionsGenerator
@@ -148,8 +147,8 @@ class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     implicit val circeProtocolGenerator = CirceProtocolGenerator(CirceModelGenerator.V012)
     implicit val scalaGenerator         = ScalaGenerator()
     implicit val swaggerGenerator       = SwaggerGenerator[ScalaLanguage]()
-    val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = ProtocolGenerator
-      .fromSwagger[ScalaLanguage, Target](
+    val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = circeProtocolGenerator
+      .fromSwagger(
         Tracker(swaggerFromString(swagger)),
         dtoPackage = Nil,
         supportPackage = NonEmptyList.one("foop"),
