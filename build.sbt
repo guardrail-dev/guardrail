@@ -69,9 +69,6 @@ addCommandAlias("runtimeAkkaHttpSuite", "; resetSample ; runExample scala akka-h
 
 addCommandAlias("resetSample", "; " ++ (scalaFrameworks ++ javaFrameworks).map(x => s"sample-${x.projectName}/clean").mkString(" ; "))
 
-// Deprecated command
-addCommandAlias("example", "runtimeSuite")
-
 addCommandAlias("cli", "runMain dev.guardrail.cli.CLI")
 addCommandAlias("runtimeScalaSuite", "; resetSample ; runScalaExample ; " + scalaFrameworks.map(x => s"sample-${x.projectName}/test").mkString("; "))
 addCommandAlias("runtimeJavaSuite", "; resetSample ; runJavaExample ; " + javaFrameworks.map(x => s"sample-${x.projectName}/test").mkString("; "))

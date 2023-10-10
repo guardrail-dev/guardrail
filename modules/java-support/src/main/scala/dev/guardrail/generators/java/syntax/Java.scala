@@ -51,9 +51,6 @@ package object syntax {
       tpe.isPrimitiveType || tpe.isNamed("BigInteger") || tpe.isNamed("BigDecimal") || tpe.isNamed("String") || tpe.isNamed("OffsetDateTime") || tpe.isNamed(
         "LocalDate"
       )
-
-    @deprecated("Just use Type#asString", "0.0.0")
-    def name: Option[String] = Option(tpe.asString)
   }
 
   implicit class RichNode(private val n: Node) extends AnyVal {
