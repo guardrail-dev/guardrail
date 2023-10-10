@@ -82,7 +82,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       .withHeaders(RawHeader("x-header", "false"))
       .withEntity(ContentTypes.`application/json`, "{}") ~> route ~> check {
       rejection match {
-        case ex: MalformedRequestContentRejection => ex.message shouldBe "Missing required field: DownField(type)"
+        case ex: MalformedRequestContentRejection => ex.message shouldBe "DecodingFailure at .type: Missing required field"
       }
     }
 
@@ -95,7 +95,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       .withHeaders(RawHeader("x-header", "false"))
       .withEntity(ContentTypes.`application/json`, """{"type": "blep"}""") ~> route ~> check {
       rejection match {
-        case ex: MalformedRequestContentRejection => ex.message shouldBe "Unknown value blep (valid: Bar): DownField(type)"
+        case ex: MalformedRequestContentRejection => ex.message shouldBe "DecodingFailure at .type: Unknown value blep (valid: Bar)"
       }
     }
 
@@ -109,7 +109,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
       .withHeaders(RawHeader("x-header", "false"))
       .withEntity(ContentTypes.`application/json`, """{"type": "Bar"}""") ~> route ~> check {
       rejection match {
-        case ex: MalformedRequestContentRejection => ex.message shouldBe "Missing required field: DownField(name)"
+        case ex: MalformedRequestContentRejection => ex.message shouldBe "DecodingFailure at .name: Missing required field"
       }
     }
 

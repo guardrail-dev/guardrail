@@ -23,8 +23,7 @@ class ValidationTest extends AnyFreeSpec with Matchers with EitherValues {
         )
         .left
         .value
-        .toString
-        .contains("""DecodingFailure(Predicate failed: "does not match"""") shouldBe true
+        .toString should include("""Predicate failed: "does not match"""")
     }
 
     "should fail if collection elements rejected by the predicate (number)" in {
