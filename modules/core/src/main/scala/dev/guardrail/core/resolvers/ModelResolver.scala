@@ -142,18 +142,6 @@ object ModelResolver {
             Sw.dereferenceSchema(ref, components).map(_.map(schema => SchemaRef(SchemaLiteral(schema), ref.unwrapTracker)))
           }
         customTpe <- customType.indexedDistribute.flatTraverse(x => liftCustomType[L, F](x))
-        log = { (fmt: Option[String], t: L#Type) =>
-          fmt.foreach { fmt =>
-            if (customTpe.isEmpty) {
-              println(
-                s"Warning: Deprecated behavior: Unsupported format '$fmt' for type '${rawSchema.unwrapTracker
-                    .getType()}', falling back to $t. Please switch definitions to x-scala-type for custom types. (${rawSchema.showHistory})"
-              )
-            }
-          }
-
-          t: L#Type
-        }
 
         (renderType, reifiedRawType) <- {
           def extractFormat(func: Option[String] => F[L#Type]): Tracker[Schema[_]] => F[(L#Type, ReifiedRawType)] = { schema =>
@@ -196,7 +184,7 @@ object ModelResolver {
             )
             // Explicitly return `string` if ObjectSchema has enum values. Should this go?
             .orRefine { case SchemaLiteral(x: ObjectSchema) if Option(x.getEnum).map(_.asScala).exists(_.nonEmpty) => x }(
-              extractFormat(fmt => stringType(None).map(log(fmt, _)))
+              extractFormat(fmt => stringType(None))
             )
             // First, match SchemaLiteral's that have conditionals on either the type or format
             .orRefine { case SchemaLiteral(x: IntegerSchema) if x.getFormat() == "int32" => x }(const(intType()))
@@ -218,12 +206,12 @@ object ModelResolver {
             .orRefine { case SchemaLiteral(x: EmailSchema) => x }(const(stringType(None)))
             .orRefine { case SchemaLiteral(x: FileSchema) => x }(const(fileType(None)))
             .orRefine { case SchemaLiteral(x: IntegerSchema) => x }(extractFormat(fmt => integerType(fmt)))
-            .orRefine { case SchemaLiteral(x: JsonSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: MapSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: NumberSchema) => x }(extractFormat(fmt => numberType(fmt).map(log(fmt, _))))
-            .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: JsonSchema) => x }(extractFormat(fmt => objectType(fmt)))
+            .orRefine { case SchemaLiteral(x: MapSchema) => x }(extractFormat(fmt => objectType(fmt)))
+            .orRefine { case SchemaLiteral(x: NumberSchema) => x }(extractFormat(fmt => numberType(fmt)))
+            .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt)))
             .orRefine { case SchemaLiteral(x: PasswordSchema) => x }(const(stringType(None)))
-            .orRefine { case SchemaLiteral(x: StringSchema) => x }(extractFormat(fmt => stringType(None).map(log(fmt, _))))
+            .orRefine { case SchemaLiteral(x: StringSchema) => x }(extractFormat(fmt => stringType(None)))
             .orRefine { case SchemaLiteral(x: UUIDSchema) => x }(const(uuidType()))
             // Finally, attempt to recover if we've gotten all the way down here without knowing what we're dealing with
             .orRefineFallback { schemaProjection =>
