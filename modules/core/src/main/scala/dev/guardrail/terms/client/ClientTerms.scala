@@ -16,7 +16,7 @@ import java.net.URI
 abstract class ClientTerms[L <: LA, F[_]] { self =>
   def MonadF: Monad[F]
 
-  def fromSwagger(context: Context, frameworkImports: List[L#Import])(
+  def fromSpec(context: Context, frameworkImports: List[L#Import])(
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
       groupedRoutes: List[(List[String], List[RouteMeta])]

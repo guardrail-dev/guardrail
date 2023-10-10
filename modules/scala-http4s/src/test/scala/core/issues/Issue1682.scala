@@ -11,7 +11,7 @@ import dev.guardrail.generators.scala.http4s.Http4sVersion
 
 class Issue1682 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
-  val swagger: String = s"""
+  val spec: String = s"""
                            |swagger: '2.0'
                            |host: petstore.swagger.io
                            |paths:
@@ -35,7 +35,7 @@ class Issue1682 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Test HTTP HEAD support") {
-      runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
     }
 
   testVersion(Http4sVersion.V0_22)

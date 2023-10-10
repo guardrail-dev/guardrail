@@ -12,7 +12,7 @@ import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.terms.protocol.RandomType
 
 class Issue61 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
-  val swagger: String = s"""
+  val spec: String = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -35,7 +35,7 @@ class Issue61 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(RandomType(_, tpe) :: _ :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     tpe.structure shouldBe t"Vector[String]".structure
   }
@@ -45,7 +45,7 @@ class Issue61 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ProtocolDefinitions(_ :: RandomType(_, tpe) :: Nil, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     tpe.structure shouldBe t"Long".structure
   }

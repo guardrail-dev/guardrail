@@ -12,7 +12,7 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   import scala.meta._
 
-  val swagger: String =
+  val spec: String =
     s"""
        |swagger: '2.0'
        |host: petstore.swagger.io
@@ -42,7 +42,7 @@ class Issue165 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   def testVersion(version: Http4sVersion): Unit =
     test(s"$version - Ensure routes are generated") {
-      val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      val (_, _, Servers(Server(_, _, genHandler, genResource :: _) :: Nil, Nil)) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       val handler = q"""
       trait StoreHandler[F[_]] {

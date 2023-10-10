@@ -24,7 +24,7 @@ import dev.guardrail.terms.protocol.PropertyRequirement
 
 class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
-  val swagger: String = s"""
+  val spec: String = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -148,8 +148,8 @@ class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     implicit val scalaGenerator         = ScalaGenerator()
     implicit val swaggerGenerator       = SwaggerGenerator[ScalaLanguage]()
     val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = circeProtocolGenerator
-      .fromSwagger(
-        Tracker(swaggerFromString(swagger)),
+      .fromSpec(
+        Tracker(swaggerFromString(spec)),
         dtoPackage = Nil,
         supportPackage = NonEmptyList.one("foop"),
         defaultPropertyRequirement = PropertyRequirement.OptionalLegacy

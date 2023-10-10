@@ -18,7 +18,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   def testVersion(version: Http4sVersion): Unit = {
     test(s"$version - Test double inheritance - both optional") {
-      val swagger: String = """
+      val spec: String = """
                             |swagger: '2.0'
                             |definitions:
                             |  Bar:
@@ -49,14 +49,14 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       val companion = companionForStaticDefns(foo.staticDefns)
       cmp(foo.cls, q"case class Foo(id: Option[String] = None)")
     }
 
     test(s"$version - Test double inheritance - one required") {
-      val swagger: String = """
+      val spec: String = """
                             |swagger: '2.0'
                             |definitions:
                             |  Bar:
@@ -88,13 +88,13 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       cmp(foo.cls, q"case class Foo(id: String)")
     }
 
     test(s"$version - Test double inheritance - data redaction") {
-      val swagger: String = """
+      val spec: String = """
                             |swagger: '2.0'
                             |definitions:
                             |  Bar:
@@ -127,13 +127,13 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       cmp(foo.cls, q"""case class Foo(id: String) { override def toString: String = "Foo(" + "[redacted]" + ")" }""")
     }
 
     test(s"$version - Test double inheritance - empty to null") {
-      val swagger: String = """
+      val spec: String = """
                             |swagger: '2.0'
                             |definitions:
                             |  Bar:
@@ -166,7 +166,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ),
         _,
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       val companion = companionForStaticDefns(foo.staticDefns)
       val expected =

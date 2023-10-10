@@ -34,7 +34,7 @@ object SecurityExposure {
 abstract class ServerTerms[L <: LA, F[_]] { self =>
   def MonadF: Monad[F]
 
-  def fromSwagger(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[L#Import])(
+  def fromSpec(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[L#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
       protocolElems: List[StrictProtocolElems[L]],

@@ -53,7 +53,7 @@ class VendorExtensionTest extends AnyFunSuite with Matchers {
     val parseOpts = new ParseOptions
     parseOpts.setResolve(true)
     val swagger = new OpenAPIParser().readContents(spec, new util.LinkedList(), parseOpts).getOpenAPI
-    // VendorExtension(swagger).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.Swagger"))
+    // VendorExtension(spec).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.Swagger"))
     for {
       (k, v) <- swagger.getPaths.asScala
       _ = VendorExtension(v).extract[String]("x-scala-garbage") should equal(Some("io.swagger.models.Path"))

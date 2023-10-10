@@ -15,7 +15,7 @@ import dev.guardrail.terms.protocol.ClassDefinition
 
 class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
 
-  val swagger =
+  val spec =
     """
       |swagger: "2.0"
       |definitions:
@@ -47,7 +47,7 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
         ProtocolDefinitions(List(clz @ ClassDefinition(_, _, fullType, _, _, _)), _, _, _, _),
         Clients(List(Client(_, _, _, _, client, List(respTrait, respObject))), _),
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger, List("_root_", "com", "test"))(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec, List("_root_", "com", "test"))(Context.empty, version.value)
 
       clz.fullType shouldEqual t"_root_.com.test.User"
       client.head.toOption.get shouldEqual q"""

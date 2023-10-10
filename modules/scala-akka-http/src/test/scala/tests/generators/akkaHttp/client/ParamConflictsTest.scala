@@ -15,7 +15,7 @@ import dev.guardrail.terms.protocol.ClassDefinition
 
 class ParamConflictsTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
-  val swagger = s"""
+  val spec = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -54,7 +54,7 @@ class ParamConflictsTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       Clients(Client(tags, className, _, _, cls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     val client = q"""
       class Client(host: String = "http://localhost:1234")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
@@ -90,7 +90,7 @@ class ParamConflictsTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""

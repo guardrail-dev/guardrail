@@ -8,7 +8,7 @@ import org.scalatest.matchers.should.Matchers
 
 class Issue1682 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
-  val swagger: String = s"""
+  val spec: String = s"""
                            |swagger: '2.0'
                            |host: petstore.swagger.io
                            |paths:
@@ -31,6 +31,6 @@ class Issue1682 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
                            |""".stripMargin
 
   test("Support for HTTP HEAD method") {
-    runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
   }
 }

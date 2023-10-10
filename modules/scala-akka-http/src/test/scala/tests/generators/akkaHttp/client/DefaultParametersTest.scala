@@ -11,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   import scala.meta._
 
-  val swagger = s"""
+  val spec = s"""
     |swagger: '2.0'
     |host: petstore.swagger.io
     |paths:
@@ -127,7 +127,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
       _,
       Clients(Client(tags, className, _, staticDefns, cls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))

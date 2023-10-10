@@ -11,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
   import scala.meta._
 
-  val swagger: String = s"""
+  val spec: String = s"""
     |swagger: '2.0'
     |host: petstore.swagger.io
     |paths:
@@ -116,7 +116,7 @@ class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with Swagger
       _,
       Clients(Client(tags, className, _, staticDefns, cls, _) :: Nil, Nil),
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))
@@ -186,7 +186,7 @@ class AkkaHttpClientGeneratorTest extends AnyFunSuite with Matchers with Swagger
       _,
       Clients(List(Client(tags, className, _, staticDefns, cls, _)), Nil),
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty.copy(framework = Some("akka-http"), tracing = true), "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(framework = Some("akka-http"), tracing = true), "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     tags should equal(Seq("store"))

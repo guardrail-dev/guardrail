@@ -37,6 +37,30 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
     (parts.drop(1).toList, parts.last)
   }
 
+  private def copyOperation(operation: Operation): Operation =
+    new Operation()
+      .tags(operation.getTags)
+      .summary(operation.getSummary)
+      .description(operation.getDescription)
+      .externalDocs(operation.getExternalDocs)
+      .operationId(operation.getOperationId)
+      .parameters(operation.getParameters)
+      .requestBody(operation.getRequestBody)
+      .responses(operation.getResponses)
+      .callbacks(operation.getCallbacks)
+      .deprecated(operation.getDeprecated)
+      .security(operation.getSecurity)
+      .servers(operation.getServers)
+      .extensions(operation.getExtensions)
+
+  def copyRequestBody(requestBody: RequestBody): RequestBody =
+    new RequestBody()
+      .description(requestBody.getDescription)
+      .content(requestBody.getContent)
+      .required(requestBody.getRequired)
+      .$ref(requestBody.get$ref())
+      .extensions(requestBody.getExtensions)
+
   override def extractCommonRequestBodies(components: Tracker[Option[Components]]): Target[Map[String, RequestBody]] =
     Target.pure(components.flatDownField("requestBodies", _.getRequestBodies).unwrapTracker.value.toMap)
 
@@ -108,9 +132,8 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
                       ) { commonRequestBody =>
                         Target.pure(
                           operation.map(op =>
-                            SwaggerUtil
-                              .copyOperation(op)
-                              .requestBody(SwaggerUtil.copyRequestBody(commonRequestBody))
+                            copyOperation(op)
+                              .requestBody(copyRequestBody(commonRequestBody))
                           )
                         )
                       }

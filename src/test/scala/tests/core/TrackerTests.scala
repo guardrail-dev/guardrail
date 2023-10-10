@@ -131,7 +131,7 @@ Tracker should:
 
   "swagger" - {
     "operationId" in {
-      val swagger = s"""
+      val spec = s"""
         |swagger: "2.0"
         |host: localhost:1234
         |paths:
@@ -142,11 +142,11 @@ Tracker should:
         |          description: Success
         |""".stripMargin
       val (_, UserError("Missing operationId (.paths./foo.operations.GET.operationId)")) =
-        runInvalidSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, CodegenTarget.Server, Http4sVersion.V0_23.value)
+        runInvalidSwaggerSpec(scalaInterpreter)(spec)(Context.empty, CodegenTarget.Server, Http4sVersion.V0_23.value)
     }
 
     "responses" in {
-      val swagger = s"""
+      val spec = s"""
         |swagger: "2.0"
         |host: localhost:1234
         |paths:
@@ -155,7 +155,7 @@ Tracker should:
         |      operationId: foo
         |""".stripMargin
       val (_, UserError("No responses defined for foo (.paths./foo.operations.GET.responses)")) =
-        runInvalidSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, CodegenTarget.Server, Http4sVersion.V0_23.value)
+        runInvalidSwaggerSpec(scalaInterpreter)(spec)(Context.empty, CodegenTarget.Server, Http4sVersion.V0_23.value)
     }
   }
 }

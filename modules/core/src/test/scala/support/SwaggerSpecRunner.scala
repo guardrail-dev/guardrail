@@ -66,7 +66,7 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues
   }
 
   private def runSwagger[L <: LA](
-      swagger: OpenAPI,
+      spec: OpenAPI,
       dtoPackage: List[String],
       supportPackage: NonEmptyList[String]
   )(context: Context, framework: Framework[L, Target], targets: NonEmptyList[CodegenTarget]): (ProtocolDefinitions[L], Clients[L], Servers[L]) = {
@@ -77,7 +77,7 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues
           .prepareDefinitions[L, Target](
             target,
             context,
-            Tracker(swagger),
+            Tracker(spec),
             dtoPackage,
             supportPackage
           )
@@ -118,14 +118,14 @@ trait SwaggerSpecRunner extends EitherValues with OptionValues with TargetValues
   }
 
   private def runInvalidSwagger[L <: LA](
-      swagger: OpenAPI
+      spec: OpenAPI
   )(context: Context, kind: CodegenTarget, framework: Framework[L, Target]): (StructuredLogger, Error) = {
     import framework._
     Common
       .prepareDefinitions[L, Target](
         kind,
         context,
-        Tracker(swagger),
+        Tracker(spec),
         List.empty,
         NonEmptyList.one("support")
       ) match {

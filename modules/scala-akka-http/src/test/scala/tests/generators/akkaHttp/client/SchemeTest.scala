@@ -11,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 
 class SchemeTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
-  val swagger: String = s"""
+  val spec: String = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -38,7 +38,7 @@ class SchemeTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   test("Use first scheme") {
     val (_, Clients(Client(_, clientName, _, staticDefns, cls, _) :: _, Nil), _) =
-      runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+      runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val companion = q"""

@@ -15,7 +15,7 @@ import dev.guardrail.terms.protocol.ClassDefinition
 
 class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
-  val swagger = s"""
+  val spec = s"""
     |swagger: "2.0"
     |info:
     |  title: Whatever
@@ -142,7 +142,7 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
       ProtocolDefinitions(_ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       Clients(Client(_, clientName, _, clientStaticDefns, clientCls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp       = companionForStaticDefns(staticDefns)
     val clientCmp = companionForStaticDefns(clientStaticDefns)
 

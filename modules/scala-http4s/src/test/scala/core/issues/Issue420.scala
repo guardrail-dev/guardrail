@@ -16,7 +16,7 @@ class Issue420 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
   import scala.meta._
 
-  val swagger: String = """
+  val spec: String = """
                           |swagger: '2.0'
                           |definitions:
                           |  Bar:
@@ -38,7 +38,7 @@ class Issue420 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         ProtocolDefinitions(List(bar: ClassDefinition[ScalaLanguage], foo: ClassDefinition[ScalaLanguage]), _, _, _, _),
         _,
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, version.value)
+      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       cmp(bar.cls, q"case class Bar(id: Option[String] = None)")
       cmp(foo.cls, q"case class Foo(id: Option[String] = None, otherId: Option[String] = None)")

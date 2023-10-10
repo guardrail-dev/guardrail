@@ -5,7 +5,7 @@ import cats.data.NonEmptyList
 import cats.syntax.all._
 import scala.io.AnsiColor
 
-import dev.guardrail.{ Args, MissingDependency, ReadSwagger, Target, WriteTree }
+import dev.guardrail.{ Args, MissingDependency, ReadSpec, Target, WriteTree }
 import dev.guardrail.core.StructuredLogger
 import dev.guardrail.generators.spi.CoreTermsLoader
 
@@ -14,7 +14,7 @@ trait GuardrailRunner {
     runLanguages(tasks)
       .flatMap(
         _.flatTraverse(rs =>
-          ReadSwagger
+          ReadSpec
             .readSwagger(rs)
             .flatMap(_.traverse(WriteTree.writeTree))
             .leftFlatMap(value =>
@@ -26,7 +26,7 @@ trait GuardrailRunner {
       .map(_.distinct)
   }
 
-  def runLanguages(tasks: Map[String, NonEmptyList[Args]]): Target[List[ReadSwagger[Target[List[WriteTree]]]]] =
+  def runLanguages(tasks: Map[String, NonEmptyList[Args]]): Target[List[ReadSpec[Target[List[WriteTree]]]]] =
     tasks.toList.flatTraverse { case (language, args) =>
       CoreTermsLoader
         .load(language, args, MissingDependency(s"${language}-support"))

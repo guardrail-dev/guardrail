@@ -21,7 +21,7 @@ import support.SwaggerSpecRunner
 
 class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
 
-  val swagger: String =
+  val spec: String =
     s"""
      |swagger: "2.0"
      |info:
@@ -68,8 +68,8 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
       implicit val scalaGenerator                                               = ScalaGenerator()
       implicit val swaggerGenerator                                             = SwaggerGenerator[ScalaLanguage]()
       val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = circeProtocolGenerator
-        .fromSwagger(
-          Tracker(swaggerFromString(swagger)),
+        .fromSpec(
+          Tracker(swaggerFromString(spec)),
           dtoPackage = Nil,
           supportPackage = NonEmptyList.one("foop"),
           defaultPropertyRequirement = PropertyRequirement.OptionalLegacy

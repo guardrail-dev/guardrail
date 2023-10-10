@@ -19,7 +19,7 @@ import dev.guardrail.terms.protocol.ClassDefinition
 
 class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
 
-  val swagger = s"""
+  val spec = s"""
                    |swagger: "2.0"
                    |info:
                    |  title: Whatever
@@ -58,7 +58,7 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
           .prepareDefinitions[ScalaLanguage, Target](
             CodegenTarget.Models,
             Context.empty,
-            Tracker(new OpenAPIParser().readContents(swagger, new java.util.LinkedList(), opts).getOpenAPI),
+            Tracker(new OpenAPIParser().readContents(spec, new java.util.LinkedList(), opts).getOpenAPI),
             List.empty,
             NonEmptyList.one("support")
           )

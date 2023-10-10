@@ -16,8 +16,8 @@ class Issue145 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
 
   describe("Generate hierarchical classes") {
 
-    val swagger: String = """
-      | swagger: '2.0'
+    val spec: String = """
+      | spec: '2.0'
       | info:
       |   title: Parsing Error Sample
       |   version: 1.0.0
@@ -49,7 +49,7 @@ class Issue145 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(swagger)(Context.empty, "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
 
     it("should generate right companion object") {
       val cmp = companionForStaticDefns(staticDefnsPet)

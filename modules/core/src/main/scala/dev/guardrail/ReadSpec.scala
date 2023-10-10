@@ -9,9 +9,9 @@ import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.parser.core.models.ParseOptions
 
-case class ReadSwagger[T](path: Path, next: OpenAPI => T)
-object ReadSwagger {
-  def readSwagger[T](rs: ReadSwagger[Target[T]]): Target[T] =
+case class ReadSpec[T](path: Path, next: OpenAPI => T)
+object ReadSpec {
+  def readSwagger[T](rs: ReadSpec[Target[T]]): Target[T] =
     if (rs.path.toFile.exists()) {
       val opts = new ParseOptions()
       opts.setResolve(true)

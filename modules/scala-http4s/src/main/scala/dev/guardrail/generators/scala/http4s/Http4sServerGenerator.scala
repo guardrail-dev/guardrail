@@ -85,7 +85,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
   val authSchemesTypeName: Type.Name      = Type.Name("AuthSchemes")
   val authRequirementTypeName: Type.Name  = Type.Name("AuthRequirement")
 
-  override def fromSwagger(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[ScalaLanguage#Import])(
+  override def fromSpec(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[ScalaLanguage#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],

@@ -19,7 +19,6 @@ object VendorExtension {
   }
 
   object VendorExtensible {
-
     def build[F](f: F => String => Option[Any]): VendorExtensible[F] =
       new VendorExtensible[F] {
         def extract[T](from: F, key: String)(implicit T: Extractable[T]): Option[T] =
