@@ -39,18 +39,11 @@ class Http4sClientGeneratorLoader extends ClientGeneratorLoader {
 }
 
 object Http4sClientGenerator {
-  @deprecated("Please specify which http4s version to use", "0.72.0")
-  def apply(): ClientTerms[ScalaLanguage, Target] =
-    new Http4sClientGenerator(Http4sVersion.V0_23)
-
   def apply(version: Http4sVersion): ClientTerms[ScalaLanguage, Target] =
     new Http4sClientGenerator(version)
 }
 
 class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLanguage, Target] {
-  @deprecated("Please specify which http4s version to use", "0.72.0")
-  def this() = this(Http4sVersion.V0_23)
-
   override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   def splitOperationParts(operationId: String): (List[String], String) = {
