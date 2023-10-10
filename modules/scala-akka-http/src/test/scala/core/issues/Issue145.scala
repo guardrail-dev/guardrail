@@ -27,15 +27,15 @@ class Issue145 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       |     properties:
       |       name:
       |         type: string
-      |         x-scala-empty-is-null: true
+      |         x-empty-is-null: true
       |         x-scala-type: CustomThing
       |       underscore_name:
       |         type: string
-      |         x-scala-empty-is-null: true
+      |         x-empty-is-null: true
       |         x-scala-type: CustomThing
       |       dash-name:
       |         type: string
-      |         x-scala-empty-is-null: true
+      |         x-empty-is-null: true
       |         x-scala-type: CustomThing
       |""".stripMargin
 
