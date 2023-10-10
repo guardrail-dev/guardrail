@@ -783,7 +783,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     Sw.log.function("ProtocolGenerator.fromSpec")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
-      concreteTypes <- SwaggerUtil.extractConcreteTypes[JavaLanguage, Target](definitions.value, components)
+      concreteTypes <- PropMeta.extractConcreteTypes[JavaLanguage, Target](definitions.value, components)
       polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
       elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model

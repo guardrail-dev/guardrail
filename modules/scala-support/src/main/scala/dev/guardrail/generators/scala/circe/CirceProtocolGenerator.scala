@@ -87,7 +87,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     Sw.log.function("ProtocolGenerator.fromSpec")(for {
       (hierarchies, definitionsWithoutPoly) <- groupHierarchies(definitions)
 
-      concreteTypes <- SwaggerUtil.extractConcreteTypes[ScalaLanguage, Target](definitions.value, components)
+      concreteTypes <- PropMeta.extractConcreteTypes[ScalaLanguage, Target](definitions.value, components)
       polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
       elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model
