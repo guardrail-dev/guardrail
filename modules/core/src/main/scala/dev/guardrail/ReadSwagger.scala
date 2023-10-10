@@ -15,6 +15,7 @@ object ReadSwagger {
     if (rs.path.toFile.exists()) {
       val opts = new ParseOptions()
       opts.setResolve(true)
+      opts.setResolveFully(true)
       val result = new OpenAPIParser().readLocation(rs.path.toAbsolutePath.toString, new util.LinkedList(), opts)
       Option(result.getMessages()).foreach(_.asScala.foreach(println))
       Target
