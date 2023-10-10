@@ -1,6 +1,7 @@
 package dev.guardrail
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import cats.Id
@@ -8,6 +9,7 @@ import java.nio.file.Path
 import java.net.URI
 
 import dev.guardrail.core.{ SupportDefinition, Tracker }
+import dev.guardrail.core.extract.CustomTypeName
 import dev.guardrail.generators.{ Clients, Servers }
 import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.languages.LA
@@ -15,11 +17,39 @@ import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.RandomType
 import dev.guardrail.terms.server.ServerTerms
-import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, ProtocolTerms, SecurityRequirements, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, ProtocolTerms, SecurityRequirements, SecurityScheme, SwaggerTerms }
 
 object Common {
   val resolveFile: Path => List[String] => Path            = root => _.foldLeft(root)(_.resolve(_))
   val resolveFileNel: Path => NonEmptyList[String] => Path = root => _.foldLeft(root)(_.resolve(_))
+
+  private[this] def extractSecuritySchemes[L <: LA, F[_]](
+      spec: OpenAPI,
+      prefixes: List[String]
+  )(implicit Sw: SwaggerTerms[L, F], Sc: LanguageTerms[L, F]): F[Map[String, SecurityScheme[L]]] = {
+    import Sw._
+    import Sc._
+
+    Tracker(spec)
+      .downField("components", _.getComponents)
+      .flatDownField("securitySchemes", _.getSecuritySchemes)
+      .indexedDistribute
+      .value
+      .flatTraverse { case (schemeName, scheme) =>
+        val typeName = CustomTypeName(scheme, prefixes)
+        for {
+          tpe <- typeName.fold(Option.empty[L#Type].pure[F])(x => parseType(Tracker.cloneHistory(scheme, x)))
+          parsedScheme <- scheme.downField("type", _.getType).unwrapTracker.traverse {
+            case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.OPENIDCONNECT => extractOpenIdConnectSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.OAUTH2        => extractOAuth2SecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+            case SwSecurityScheme.Type.MUTUALTLS     => extractMutualTLSSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
+          }
+        } yield parsedScheme.toList.map(scheme => schemeName -> scheme)
+      }
+      .map(_.toMap)
+  }
 
   def prepareDefinitions[L <: LA, F[_]](
       kind: CodegenTarget,
@@ -82,7 +112,7 @@ object Common {
       requestBodies    <- extractCommonRequestBodies(components)
       routes           <- extractOperations(paths, requestBodies, globalSecurityRequirements)
       prefixes         <- Cl.vendorPrefixes()
-      securitySchemes  <- SwaggerUtil.extractSecuritySchemes(spec.unwrapTracker, prefixes)
+      securitySchemes  <- extractSecuritySchemes(spec.unwrapTracker, prefixes)
       classNamedRoutes <- routes.traverse(route => getClassName(route.operation, prefixes, context.tagsBehaviour).map(_ -> route))
       groupedRoutes = classNamedRoutes
         .groupMap(_._1)(_._2)
