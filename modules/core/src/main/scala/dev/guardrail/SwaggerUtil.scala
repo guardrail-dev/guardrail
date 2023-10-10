@@ -5,20 +5,12 @@ import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
 import cats.syntax.all._
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.implicits._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SecurityScheme, SwaggerTerms }
-import dev.guardrail.core.extract.{ CustomArrayTypeName, CustomMapTypeName, CustomTypeName, VendorExtension }
+import dev.guardrail.terms.{ LanguageTerms, SecurityScheme, SwaggerTerms }
+import dev.guardrail.core.extract.CustomTypeName
 import dev.guardrail.core.extract.VendorExtension.VendorExtensible._
 import dev.guardrail.languages.LA
 
 object SwaggerUtil {
-  def isFile(typeName: String, format: Option[String]): Boolean =
-    (typeName, format) match {
-      case ("string", Some("binary")) => true
-      case ("file", _)                => true
-      case ("binary", _)              => true
-      case _                          => false
-    }
-
   def extractSecuritySchemes[L <: LA, F[_]](
       spec: OpenAPI,
       prefixes: List[String]

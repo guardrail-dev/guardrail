@@ -37,7 +37,7 @@ import dev.guardrail.terms.{
   StringHeldEnum,
   SwaggerTerms
 }
-import dev.guardrail.{ RuntimeFailure, SwaggerUtil, Target, UserError }
+import dev.guardrail.{ RuntimeFailure, Target, UserError }
 
 class JacksonProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
@@ -281,6 +281,14 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       strictElems  <- ProtocolElems.resolve[ScalaLanguage, Target](elems)
     } yield ProtocolDefinitions[ScalaLanguage](strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents, implicitsObject))
   }
+
+  private[this] def isFile(typeName: String, format: Option[String]): Boolean =
+    (typeName, format) match {
+      case ("string", Some("binary")) => true
+      case ("file", _)                => true
+      case ("binary", _)              => true
+      case _                          => false
+    }
 
   private[this] def getRequiredFieldsRec(root: Tracker[Schema[_]]): List[String] = {
     @scala.annotation.tailrec
@@ -1118,8 +1126,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
         dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
         (tpe, classDep, rawType) <- meta match { // TODO: Target is not used
-          case core.Resolved(declType, classDep, _, rawType @ LiteralRawType(Some(rawTypeStr), rawFormat))
-              if SwaggerUtil.isFile(rawTypeStr, rawFormat) && !isCustomType =>
+          case core.Resolved(declType, classDep, _, rawType @ LiteralRawType(Some(rawTypeStr), rawFormat)) if isFile(rawTypeStr, rawFormat) && !isCustomType =>
             // assume that binary data are represented as a string. allow users to override.
             Target.pure((t"String", classDep, rawType))
           case core.Resolved(declType, classDep, _, rawType) =>
