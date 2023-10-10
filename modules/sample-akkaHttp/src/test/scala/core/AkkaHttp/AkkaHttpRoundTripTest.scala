@@ -27,7 +27,7 @@ import scala.concurrent.Future
 import examples.support.PositiveLong
 
 class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   // Placeholder until property testing
   val id: Option[Long]             = None

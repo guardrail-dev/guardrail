@@ -19,7 +19,7 @@ import scala.concurrent.Future
   *   - Polymorphic discriminator error messages
   */
 class Issue184Suite extends AnyFunSuite with TestImplicits with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("akka-http server request body validation") {
     import issues.issue184.server.akkaHttpJackson.Handler

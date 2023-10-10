@@ -24,7 +24,7 @@ import org.typelevel.jawn.IncompleteParseException
   *   - Polymorphic discriminator error messages
   */
 class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("akka-http server request body validation") {
     import issues.issue148.server.akkaHttp.{ Handler, Resource }

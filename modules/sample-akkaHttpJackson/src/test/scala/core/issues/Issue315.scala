@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class Issue315Suite extends AnyFunSuite with TestImplicits with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(1000.millis, 1000.millis)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(1000.millis, 1000.millis)
 
   def expectSuccess[A, B](value: Either[Either[Throwable, A], B])(implicit pos: source.Position): Unit = {
     val _ = value.value

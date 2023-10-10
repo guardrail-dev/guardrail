@@ -18,7 +18,7 @@ import org.scalatest.time.SpanSugar._
 import scala.concurrent.Future
 
 class AkkaHttpJacksonRoundTripTest extends AnyFunSuite with TestImplicits with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   // Placeholder until property testing
   val id: Option[Long]             = Some(128L)

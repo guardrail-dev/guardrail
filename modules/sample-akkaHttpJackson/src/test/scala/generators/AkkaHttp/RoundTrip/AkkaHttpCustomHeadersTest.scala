@@ -20,7 +20,7 @@ import scala.concurrent.Future
 
 class AkkaHttpCustomHeadersTest extends AnyFlatSpec with TestImplicits with Matchers with ScalaFutures with EitherValues {
 
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   it should "encode custom headers" in {
     Formatter.show(sdefs.Bar.V1) shouldBe "v1"
