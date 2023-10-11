@@ -12,6 +12,7 @@ Table of Contents
    1. [Fewer binary dependencies](what-is-guardrail#fewer-binary-dependencies)
 1. [Installation](installation)
 1. [Sample API specification](sample-api-specification)
+1. [Generating Domain Objects](dtos)
 1. [Generating a Server](generating-a-server)
    1. [Separation of business logic](generating-a-server#separation-of-business-logic)
    1. [API structure slip is impossible](generating-a-server#api-structure-slip-is-impossible)
