@@ -284,7 +284,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
 
     val errorTermName = Term.Name(authErrorTypeName.value)
     val (simpleAuthErrors, simpleAuthenticator) = if (authImplementation == AuthImplementation.Simple) {
-      val errorInit = Init(authErrorTypeName, Name(""), List.empty)
+      val errorInit = Init(authErrorTypeName, Name(""), List.empty[Term.ArgClause])
       val authErrors = List(
         q"""sealed trait $authErrorTypeName""",
         q"""
@@ -330,7 +330,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
           else Target.log.warning(s"Security requirement '${reqName.unwrapTracker}' is missing in security schemes (${reqName.showHistory})")
 
         existanceCheck *> Target.pure(q"""
-          case object ${securitySchemeNameToClassName(reqName.unwrapTracker)} extends ${Init(authSchemesTypeName, Name(""), List.empty)} {
+          case object ${securitySchemeNameToClassName(reqName.unwrapTracker)} extends ${Init(authSchemesTypeName, Name(""), List.empty[Term.ArgClause])} {
             override val name: String = ${Lit.String(reqName.unwrapTracker)}
           }
         """)
@@ -346,8 +346,8 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
 
               sealed trait $authRequirementTypeName
               object ${Term.Name(authRequirementTypeName.value)} {
-                case object Required extends ${Init(authRequirementTypeName, Name(""), List.empty)}
-                case object Optional extends ${Init(authRequirementTypeName, Name(""), List.empty)}
+                case object Required extends ${Init(authRequirementTypeName, Name(""), List.empty[Term.ArgClause])}
+                case object Optional extends ${Init(authRequirementTypeName, Name(""), List.empty[Term.ArgClause])}
               }
 
               ..$list
@@ -984,7 +984,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
             val marshallers = responses.value.map { case Response(statusCodeName, valueType, headers) =>
               val responseTerm  = Term.Name(s"${statusCodeName.value}")
               val baseRespType  = Type.Select(responseCompanionTerm, Type.Name(statusCodeName.value))
-              val respType      = if (isGeneric) Type.Apply(baseRespType, List(t"F")) else baseRespType
+              val respType      = if (isGeneric) Type.Apply(baseRespType, Type.ArgClause(List(t"F"))) else baseRespType
               val generatorName = Term.Name(s"$methodName${statusCodeName}EntityResponseGenerator")
               val encoderName   = Term.Name(s"$methodName${statusCodeName}Encoder")
               (valueType, headers.value) match {
@@ -1016,7 +1016,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         val matchers = (http4sForm ++ http4sHeaders).flatMap(_.matcher)
         val responseInMatch = NonEmptyList.fromList(matchers).fold(responseExpr) {
           case NonEmptyList((expr, pat), Nil) =>
-            Term.Match(expr, List(Case(pat, None, responseExpr), Case(p"_", None, q"""BadRequest("Invalid data")""")))
+            Term.Match(expr, List(Case(pat, None, responseExpr), Case(p"_", None, q"""BadRequest("Invalid data")""")), Nil)
           case matchers @ NonEmptyList(_, _) =>
             val NonEmptyList(head, xs) = matchers.reverse
             val (base, rest)           = xs.splitAt(21).bimap(left => NonEmptyList(head, left).reverse, _.grouped(21).map(_.reverse.unzip).toList)
@@ -1037,7 +1037,8 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
               List(
                 Case(fullPat, None, responseExpr),
                 Case(Pat.Wildcard(), None, q"""BadRequest("Invalid data")""")
-              )
+              ),
+              Nil
             )
         }
         val responseInMatchInFor = (http4sForm ++ http4sHeaders).flatMap(_.generator) match {

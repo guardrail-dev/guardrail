@@ -86,7 +86,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       case _                              => List.empty
     }
     val presenceHandling = param.term.decltpe match {
-      case Some(t"Presence[_]") | Some(Type.Apply(Type.Select(_, Type.Name("Presence")), _)) =>
+      case Some(t"Presence[_]") | Some(Type.Apply.After_4_6_0(Type.Select(_, Type.Name("Presence")), _)) =>
         List(
           mod"@com.fasterxml.jackson.annotation.JsonInclude(value = com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)",
           mod"@com.fasterxml.jackson.databind.annotation.JsonSerialize(using = classOf[$presenceSerType])",
@@ -1282,8 +1282,13 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
         parentOpt
           .fold(base)(parent =>
             base.copy(
-              templ =
-                Template(Nil, (parent.clsName +: parent.interfaces).map(n => Init(Type.Name(n), Name(""), Nil)), Self(Name(""), None), base.templ.stats, Nil)
+              templ = Template(
+                Nil,
+                (parent.clsName +: parent.interfaces).map(n => Init(Type.Name(n), Name(""), List.empty[Term.ArgClause])),
+                Self(Name(""), None),
+                base.templ.stats,
+                Nil
+              )
             )
           )
       }

@@ -98,7 +98,7 @@ object DocsHelpers {
           q"""
           def routes(...${parms}): ${rtpe} = ${Term.Apply(
               fun = q"HttpRoutes.of",
-              args = List(Term.Block(stats = List(Term.PartialFunction(cases = cases.take(2)))))
+              argClause = Term.ArgClause(List(Term.Block(stats = List(Term.PartialFunction(cases = cases.take(2))))))
             )}
         """
         }.toList

@@ -399,7 +399,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
             HttpProtocols.`HTTP/1.1`
           ).flatMap(req =>
             EitherT(${httpClientName}(req).flatMap(resp =>
-              ${Term.Match(q"resp.status", cases)}
+              ${Term.Match(q"resp.status", cases, Nil)}
             ).recover({
               case e: Throwable =>
                 Left(Left(e))
@@ -557,17 +557,17 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
       )
     }
 
-    def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
-      params.map {
-        _.map(_.name.value)
-          .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
-          .toList
+    def paramsToArgs(params: List[List[Term.Param]]): List[Term.ArgClause] =
+      params.map { params =>
+        Term.ArgClause(
+          params
+            .map(_.name.value)
+            .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
+            .toList
+        )
       }.toList
 
-    val ctorCall: Term.New =
-      q"""
-          new ${Type.Name(clientName)}(...${paramsToArgs(ctorArgs)})
-        """
+    val ctorCall: Term.New = Term.New(Init(Type.Name(clientName), Name.Anonymous(), paramsToArgs(ctorArgs)))
 
     for {
       extraDecls <- extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
