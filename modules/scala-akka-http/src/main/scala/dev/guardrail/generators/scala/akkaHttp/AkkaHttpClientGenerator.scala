@@ -496,19 +496,22 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
       tracingName: Option[String],
       serverUrls: Option[NonEmptyList[URI]],
       tracing: Boolean
-  ): Target[List[List[scala.meta.Term.Param]]] = {
+  ): Target[List[Term.ParamClause]] = {
     val implicits = List(
-      param"implicit httpClient: HttpRequest => Future[HttpResponse]",
-      param"implicit ec: ExecutionContext",
-      param"implicit mat: Materializer"
+      param"httpClient: HttpRequest => Future[HttpResponse]",
+      param"ec: ExecutionContext",
+      param"mat: Materializer"
     )
     for {
       protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
     } yield List(
-      List(formatHost(serverUrls)) ++ (if (tracing)
-                                         Some(formatClientName(tracingName))
-                                       else None),
-      implicits ++ protocolImplicits
+      Term.ParamClause(
+        List(formatHost(serverUrls)) ++ (if (tracing)
+                                           Some(formatClientName(tracingName))
+                                         else None),
+        None
+      ),
+      Term.ParamClause(implicits ++ protocolImplicits, Some(Mod.Implicit()))
     )
   }
   private def generateResponseDefinitions(
@@ -526,7 +529,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
       clientName: String,
       tracingName: Option[String],
       serverUrls: Option[NonEmptyList[URI]],
-      ctorArgs: List[List[scala.meta.Term.Param]],
+      ctorArgs: List[Term.ParamClause],
       tracing: Boolean
   ): Target[StaticDefns[ScalaLanguage]] = {
     def extraConstructors(
@@ -537,8 +540,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
         tracing: Boolean
     ): Target[List[Defn]] = {
       val implicits = List(
-        param"implicit ec: ExecutionContext",
-        param"implicit mat: Materializer"
+        param"ec: ExecutionContext",
+        param"mat: Materializer"
       )
       val tracingParams: List[Term.Param] = if (tracing) {
         List(formatClientName(tracingName))
@@ -548,16 +551,19 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
 
       for {
         protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+        args = List(
+          Term.ParamClause(
+            List(param"httpClient: HttpRequest => Future[HttpResponse]", formatHost(serverUrls)) ++ tracingParams,
+            None
+          ),
+          Term.ParamClause(implicits ++ protocolImplicits, Some(Mod.Implicit()))
+        )
       } yield List(
-        q"""
-              def httpClient(httpClient: HttpRequest => Future[HttpResponse], ${formatHost(
-            serverUrls
-          )}, ..$tracingParams)(..${implicits ++ protocolImplicits}): $tpe = $ctorCall
-            """
+        q"""def httpClient(...${args}): $tpe = $ctorCall"""
       )
     }
 
-    def paramsToArgs(params: List[List[Term.Param]]): List[Term.ArgClause] =
+    def paramsToArgs(params: List[Term.ParamClause]): List[Term.ArgClause] =
       params.map { params =>
         Term.ArgClause(
           params
@@ -583,7 +589,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
       tracingName: Option[String],
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
-      ctorArgs: List[List[scala.meta.Term.Param]],
+      ctorArgs: List[Term.ParamClause],
       clientCalls: List[scala.meta.Defn],
       supportDefinitions: List[scala.meta.Defn],
       tracing: Boolean
