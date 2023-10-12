@@ -4,16 +4,16 @@ import scala.meta._
 import org.scalatest.matchers._
 
 trait ScalaMetaMatchers {
-  class StructureMatcher(right: Term) extends Matcher[Term] {
-    def apply(left: Term): MatchResult =
+  class StructureMatcher(right: Tree) extends Matcher[Tree] {
+    def apply(left: Tree): MatchResult =
       MatchResult(
-        left.structure == right.structure,
-        s"""$left did not match structure $right""",
-        s"""$left matched structure $right"""
+        left.syntax == right.syntax,
+        s"""$left did not match $right""",
+        s"""$left matched $right"""
       )
   }
 
-  def matchStructure(right: Term): StructureMatcher =
+  def matchStructure(right: Tree): StructureMatcher =
     new StructureMatcher(right)
 }
 
