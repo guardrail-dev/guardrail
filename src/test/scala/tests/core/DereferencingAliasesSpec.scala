@@ -4,7 +4,7 @@ import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
@@ -13,7 +13,7 @@ import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.generators.{ Client, Clients }
 import dev.guardrail.terms.protocol.ClassDefinition
 
-class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
 
   val spec = s"""
     |swagger: "2.0"
@@ -197,10 +197,10 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
       }
     """
 
-    cls.structure should equal(definition.structure)
-    cmp.structure should equal(companion.structure)
-    clientCmp.structure should equal(clientCompanion.structure)
-    clientCls.head.value.structure should equal(client.structure)
+    cls should matchStructure (definition)
+    cmp should matchStructure (companion)
+    clientCmp should matchStructure (clientCompanion)
+    clientCls.head.value should matchStructure (client)
   }
 
   test("All types should be dereferenced (OpenAPI)") {
@@ -263,9 +263,9 @@ class DereferencingAliasesSpec extends AnyFunSuite with Matchers with SwaggerSpe
       }
     """
 
-    cls.structure should equal(definition.structure)
-    cmp.structure should equal(companion.structure)
-    clientCmp.structure should equal(clientCompanion.structure)
-    clientCls.head.value.structure should equal(client.structure)
+    cls should matchStructure (definition)
+    cmp should matchStructure (companion)
+    clientCmp should matchStructure (clientCompanion)
+    clientCls.head.value should matchStructure (client)
   }
 }

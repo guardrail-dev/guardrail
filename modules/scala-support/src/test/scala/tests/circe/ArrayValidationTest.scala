@@ -17,9 +17,9 @@ import dev.guardrail.terms.protocol.PropertyRequirement
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import scala.meta._
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
-class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
+class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
 
   val spec: String =
     s"""
@@ -111,7 +111,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
               _root_.eu.timepit.refined.collection.Size[_root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`10`.T]]] = None,
             shouldNotCollide: Option[String Refined _root_.eu.timepit.refined.string.MatchesRegex[ValidatedCollections.`".*pet.*"`.T]] = None)"""
 
-      cls.structure should equal(expected.structure)
+      cls should matchStructure(expected)
 
     }
 
@@ -130,7 +130,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
         q"""case class ValidatedCollections(boundedSizeArray: Option[Vector[Int Refined _root_.eu.timepit.refined.numeric.GreaterEqual[_root_.shapeless.Witness.`1`.T]] Refined
            _root_.eu.timepit.refined.collection.Size[_root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`10`.T]]] = None)"""
 
-      cls.structure should equal(expected.structure)
+      cls should matchStructure(expected)
     }
 
   }

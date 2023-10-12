@@ -3,14 +3,14 @@ package tests.core.issues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import scala.meta._
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
 import dev.guardrail.Context
 import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.generators.{ Client, Clients }
 
-class Issue122 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class Issue122 extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   val spec: String = s"""
     |swagger: "2.0"
     |info:
@@ -94,7 +94,7 @@ class Issue122 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.head.value.structure shouldBe client.structure
-    cmp.structure shouldBe companion.structure
+    cls.head.value should matchStructure(client)
+    cmp should matchStructure(companion)
   }
 }

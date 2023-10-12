@@ -4,12 +4,12 @@ import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class SchemeTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class SchemeTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
 
   val spec: String = s"""
     |swagger: "2.0"
@@ -77,7 +77,7 @@ class SchemeTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cmp.structure should equal(companion.structure)
-    cls.head.value.structure should equal(client.structure)
+    cmp should matchStructure(companion)
+    cls.head.value should matchStructure(client)
   }
 }

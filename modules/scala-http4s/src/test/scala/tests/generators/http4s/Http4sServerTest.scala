@@ -4,11 +4,11 @@ import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
 
   import scala.meta._
 
@@ -211,8 +211,8 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
       }
     """
 
-      genHandler.structure shouldEqual handler.structure
-      genResource.structure should equal(resource.structure)
+      genHandler should matchStructure(handler)
+      genResource should matchStructure(resource)
     }
 
     test(s"$version - Ensure routes are generated with tracing") {
@@ -302,8 +302,8 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
       }
     """
 
-      genHandler.structure should equal(handler.structure)
-      genResource.structure should equal(resource.structure)
+      genHandler should matchStructure(handler)
+      genResource should matchStructure(resource)
     }
 
     test(s"$version - Ensure routes are generated with custom extraction") {
@@ -392,8 +392,8 @@ class Http4sServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunner 
       }
       """
 
-      genHandler.structure should equal(handler.structure)
-      genResource.structure should equal(resource.structure)
+      genHandler should matchStructure(handler)
+      genResource should matchStructure(resource)
     }
   }
 

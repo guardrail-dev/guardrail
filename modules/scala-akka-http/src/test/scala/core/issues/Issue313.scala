@@ -7,11 +7,11 @@ import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
 import scala.meta._
 
-class Issue313 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class Issue313 extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   val spec: String = s"""
     |openapi: 3.0.2
     |info:
@@ -88,7 +88,7 @@ class Issue313 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.structure shouldBe client.structure
-    cmp.structure shouldBe companion.structure
+    cls should matchStructure(client)
+    cmp should matchStructure(companion)
   }
 }

@@ -3,12 +3,12 @@ package tests.generators.akkaHttp.client
 import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class FormFieldsTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class FormFieldsTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   val spec: String = s"""
     |swagger: "2.0"
     |info:
@@ -77,6 +77,6 @@ class FormFieldsTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.head.value.structure should equal(client.structure)
+    cls.head.value should matchStructure(client)
   }
 }

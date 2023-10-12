@@ -17,9 +17,9 @@ import dev.guardrail.terms.protocol.PropertyRequirement
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import scala.meta._
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
-class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
+class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
 
   val spec: String =
     s"""
@@ -82,7 +82,7 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner {
         q"""case class ValidatedObject(v1: Option[Int Refined _root_.eu.timepit.refined.numeric.Interval.Closed[_root_.shapeless.Witness.`1`.T, _root_.shapeless.Witness.`100`.T]] = Option(10),
            v2: Option[String Refined _root_.eu.timepit.refined.string.MatchesRegex[ValidatedObject.`".*[0-9]+.*"`.T]] = None)"""
 
-      cls.structure should equal(expected.structure)
+      cls should matchStructure(expected)
     }
 
   }
