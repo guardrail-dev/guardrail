@@ -3,11 +3,11 @@ package tests.core.issues
 import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class Issue126 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class Issue126 extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   import scala.meta._
 
   val spec: String = s"""
@@ -60,7 +60,7 @@ class Issue126 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    genHandler.structure shouldEqual handler.structure
-    genResource.structure shouldEqual resource.structure
+    genHandler should matchStructure(handler)
+    genResource should matchStructure(resource)
   }
 }

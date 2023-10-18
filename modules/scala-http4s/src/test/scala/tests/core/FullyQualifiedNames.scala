@@ -50,7 +50,7 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
       ) = runSwaggerSpec(scalaInterpreter)(spec, List("_root_", "com", "test"))(Context.empty, version.value)
 
       clz.fullType shouldEqual t"_root_.com.test.User"
-      client.head.toOption.get shouldEqual q"""
+      client.head.toOption.get should matchStructure(q"""
         class Client[F[_]](host: String)(implicit F: Async[F], httpClient: Http4sClient[F]) {
           val basePath: String = ""
           private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] = F.pure(response.headers.get(CIString(header)).map(_.head.value))
@@ -67,7 +67,7 @@ class FullyQualifiedNames extends AnyFunSuite with Matchers with SwaggerSpecRunn
             })
           }
         }
-      """
+      """)
 
       respTrait shouldEqual
         q"""

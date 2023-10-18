@@ -58,36 +58,41 @@ class DropwizardScalaJsr310Test extends AnyFreeSpec with Matchers with OptionVal
     ) = runSwaggerSpec(scalaInterpreter)(openapi)(Context.empty, "dropwizard", targets = NonEmptyList.of(CodegenTarget.Server))
 
     handler match {
-      case Defn.Trait(
+      case Defn.Trait.After_4_6_0(
             _,
             Type.Name("Handler"),
             _,
             _,
-            Template(_, _, _, List(defn: Decl.Def))
+            Template.After_4_4_0(_, _, _, List(defn: Decl.Def), _)
           ) =>
         val List(
-          List(_),
-          List(
-            Term.Param(_, Name("when"), Some(t"java.time.OffsetDateTime"), _),
-            Term.Param(_, Name("dateTime"), Some(t"Option[java.time.OffsetDateTime]"), _),
-            Term.Param(_, Name("date"), Some(t"java.time.LocalDate"), _)
-          )
-        ) = defn.paramss
+          Term.ParamClause(List(_), None),
+          Term.ParamClause(List(
+            Term.Param(_, Term.Name("when"), Some(t"java.time.OffsetDateTime"), None),
+            Term.Param(_, Term.Name("dateTime"), Some(t"Option[java.time.OffsetDateTime]"), None),
+            Term.Param(_, Term.Name("date"), Some(t"java.time.LocalDate"), None)
+          ), None)
+        ) = defn.paramClauses
     }
 
-    val resourceDefns = server.collectFirst { case Defn.Class(_, t"Resource", _, _, Template(_, _, _, defns)) =>
+    val resourceDefns = server.collectFirst { case Defn.Class.After_4_6_0(_, t"Resource", _, _, Template.After_4_4_0(_, _, _, defns, _)) =>
       defns
     }.value
-    val doFooParamss = resourceDefns.collectFirst { case Defn.Def(_, Term.Name("doFoo"), _, paramss, _, _) =>
-      paramss
+    val doFooParamss: List[Member.ParamClauseGroup] = resourceDefns.collectFirst { case Defn.Def.After_4_7_3(_, Term.Name("doFoo"), paramClauseGroups, _, _) =>
+      paramClauseGroups
     }.value
 
     val List(
-      List(
-        Term.Param(_, Name("when"), Some(t"GuardrailJerseySupport.Jsr310.OffsetDateTimeParam"), _),
-        Term.Param(_, Name("dateTime"), Some(t"Option[GuardrailJerseySupport.Jsr310.OffsetDateTimeParam]"), _),
-        Term.Param(_, Name("date"), Some(t"GuardrailJerseySupport.Jsr310.LocalDateParam"), _),
-        Term.Param(_, Name("asyncResponse"), Some(t"AsyncResponse"), _)
+      Member.ParamClauseGroup(
+        _,
+        List(
+          Term.ParamClause(List(
+            Term.Param(_, Term.Name("when"), Some(t"GuardrailJerseySupport.Jsr310.OffsetDateTimeParam"), _),
+            Term.Param(_, Term.Name("dateTime"), Some(t"Option[GuardrailJerseySupport.Jsr310.OffsetDateTimeParam]"), _),
+            Term.Param(_, Term.Name("date"), Some(t"GuardrailJerseySupport.Jsr310.LocalDateParam"), _),
+            Term.Param(_, Term.Name("asyncResponse"), Some(t"AsyncResponse"), _)
+          ), None)
+        )
       )
     ) = doFooParamss
   }

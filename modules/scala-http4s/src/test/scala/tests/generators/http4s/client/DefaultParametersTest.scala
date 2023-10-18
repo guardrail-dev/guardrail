@@ -5,11 +5,11 @@ import dev.guardrail.generators.scala.http4s.Http4sVersion
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   import scala.meta._
 
   val spec: String = s"""
@@ -206,10 +206,10 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
     }"""
       )
 
-      cls.head.value.structure should equal(clientClass.structure)
-      cmp.structure should equal(clientCompanion.structure)
+      cls.head.value should matchStructure(clientClass)
+      cmp should matchStructure(clientCompanion)
 
-      statements.zip(expected).foreach { case (a, b) => a.structure should equal(b.structure) }
+      statements.zip(expected).foreach { case (a, b) => a should matchStructure(b) }
     }
 
   testVersion(Http4sVersion.V0_22)

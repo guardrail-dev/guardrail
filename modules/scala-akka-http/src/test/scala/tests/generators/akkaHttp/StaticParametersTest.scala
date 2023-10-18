@@ -3,12 +3,12 @@ package tests.generators.akkaHttp
 import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Server, Servers }
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   val spec: String = s"""
     |swagger: "2.0"
     |info:
@@ -85,7 +85,7 @@ class StaticParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRun
       }
     """
 
-    genHandler.structure should equal(handler.structure)
-    genResource.structure should equal(resource.structure)
+    genHandler should matchStructure(handler)
+    genResource should matchStructure(resource)
   }
 }

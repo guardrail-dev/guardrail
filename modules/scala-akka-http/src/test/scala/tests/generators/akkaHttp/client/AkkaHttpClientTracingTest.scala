@@ -3,12 +3,12 @@ package tests.generators.akkaHttp.client
 import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
 
   test("Manage child tracing span") {
     val spec = s"""
@@ -64,7 +64,7 @@ class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSp
       }
     """
 
-    cls.head.value.structure should equal(client.structure)
+    cls.head.value should matchStructure(client)
   }
 
   test("Manage child span with tags") {
@@ -120,6 +120,6 @@ class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSp
       }
     """
 
-    cls.head.value.structure should equal(client.structure)
+    cls.head.value should matchStructure(client)
   }
 }

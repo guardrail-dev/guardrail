@@ -172,7 +172,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
   }
 
   private def unwrapContainer(tpe: Type): (Type, Type => Type) = {
-    def rewrap(wrapper: Type)(tpe: Type): Type = Type.Apply(wrapper, List(tpe))
+    def rewrap(wrapper: Type)(tpe: Type): Type = Type.Apply(wrapper, Type.ArgClause(List(tpe)))
     tpe match {
       case t"Option[$inner]"       => (inner, rewrap(t"Option"))
       case t"Vector[$inner]"       => (inner, rewrap(t"Vector"))
@@ -180,14 +180,16 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
       case t"Seq[$inner]"          => (inner, rewrap(t"Seq"))
       case t"IndexedSeq[$inner]"   => (inner, rewrap(t"IndexedSeq"))
       case t"Iterable[$inner]"     => (inner, rewrap(t"Iterable"))
-      case t"Map[$keyTpe, $inner]" => (inner, x => Type.Apply(t"Map", List(keyTpe, x)))
+      case t"Map[$keyTpe, $inner]" => (inner, x => Type.Apply(t"Map", Type.ArgClause(List(keyTpe, x))))
       case other                   => (other, identity)
     }
   }
 
   private object paramTransformers {
     private def annotateHttpParameter(parameterName: RawParameterName, annotationName: Option[String])(param: Term.Param): Term.Param = param.copy(
-      mods = annotationName.map(an => Mod.Annot(Init(Type.Name(an), Name.Anonymous(), List(List(Lit.String(parameterName.value)))))).toList ++ param.mods
+      mods = annotationName
+        .map(an => Mod.Annot(Init(Type.Name(an), Name.Anonymous(), List(Term.ArgClause(List(Lit.String(parameterName.value)), None)))))
+        .toList ++ param.mods
     )
 
     private def handleDefaultValue(defaultValue: Option[Term])(param: Term.Param): Term.Param = param.copy(
@@ -204,7 +206,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
           case Lit.Double(d)     => Some(Lit.String(d))
           case _                 => None
         }
-        defaultStr.map(s => Mod.Annot(Init(Type.Name("DefaultValue"), Name.Anonymous(), List(List(s)))))
+        defaultStr.map(s => Mod.Annot(Init(Type.Name("DefaultValue"), Name.Anonymous(), List(Term.ArgClause(List(s))))))
       }.toList ++ param.mods,
       default = None
     )
@@ -231,7 +233,8 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
 
     def stripOptionFromCollections(param: Term.Param): Term.Param = param.copy(
       decltpe = param.decltpe.map {
-        case Type.Apply(t"Option", List(Type.Apply(containerType, innerTypes))) if CONTAINER_TYPES.contains(containerType.toString) =>
+        case Type.Apply.After_4_6_0(t"Option", Type.ArgClause(List(Type.Apply.After_4_6_0(containerType, innerTypes))))
+            if CONTAINER_TYPES.contains(containerType.toString) =>
           t"$containerType[..$innerTypes]"
         case other => other
       }
@@ -436,7 +439,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
         val pathSuffix     = ResponseHelpers.splitPathComponents(path.unwrapTracker).drop(commonPathPrefix.length).mkString("/", "/", "")
         val pathAnnotation = Option(pathSuffix).filter(_.nonEmpty).filterNot(_ == "/").map(p => mod"@Path(${Lit.String(p)})")
 
-        val httpMethodAnnotation = Mod.Annot(Init(Type.Name(method.name()), Name.Anonymous(), List.empty))
+        val httpMethodAnnotation = Mod.Annot(Init(Type.Name(method.name()), Name.Anonymous(), List.empty[Term.ArgClause]))
 
         val allConsumes        = operation.downField("consumes", _.consumes).map(_.flatMap(ContentType.unapply)).unwrapTracker
         val consumes           = ResponseHelpers.getBestConsumes(operation, allConsumes, parameters)
@@ -481,10 +484,10 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
         val handlerArgs = handlerParams.map { param =>
           val nameTerm = Term.Name(param.name.value)
           param.decltpe.fold[Term](nameTerm) {
-            case Type.Select(Term.Select(q"java", q"time"), _)                              => q"$nameTerm.get"
-            case Type.Apply(_, List(Type.Select(Term.Select(q"java", q"time"), _)))         => q"$nameTerm.map(_.get)"
-            case Type.Apply(t"Map", List(_, Type.Select(Term.Select(q"java", q"time"), _))) => q"$nameTerm.mapValues(_.get)"
-            case _                                                                          => nameTerm
+            case Type.Select(Term.Select(q"java", q"time"), _)                                                          => q"$nameTerm.get"
+            case Type.Apply.After_4_6_0(_, Type.ArgClause(List(Type.Select(Term.Select(q"java", q"time"), _))))         => q"$nameTerm.map(_.get)"
+            case Type.Apply.After_4_6_0(t"Map", Type.ArgClause(List(_, Type.Select(Term.Select(q"java", q"time"), _)))) => q"$nameTerm.mapValues(_.get)"
+            case _                                                                                                      => nameTerm
           }
         }
 
@@ -494,7 +497,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
           response.value.fold(
             p"case $resourceNameTerm.$responseClsSubTerm => responseBuilder.build()"
           ) { _ =>
-            p"case ${Pat.Extract(Term.Select(resourceNameTerm, responseClsSubTerm), List(p"value"))} => responseBuilder.entity(value).build()"
+            p"case ${Pat.Extract(Term.Select(resourceNameTerm, responseClsSubTerm), Pat.ArgClause(List(p"value")))} => responseBuilder.entity(value).build()"
           }
         }
 
@@ -509,7 +512,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
              this.handler.$methodNameTerm($responseClsTerm)(..$handlerArgs).onComplete({
                case scala.util.Success(result) =>
                  val responseBuilder = Response.status(result.statusCode)
-                 val response = ${Term.Match(Term.Name("result"), responseCases)}
+                 val response = ${Term.Match(Term.Name("result"), responseCases, Nil)}
                  asyncResponse.resume(response)
                case scala.util.Failure(err) =>
                  logger.error("{} threw an exception ({}): {}", ${Lit.String(s"$resourceName.$methodName")}, err.getClass.getName, err.getMessage, err)

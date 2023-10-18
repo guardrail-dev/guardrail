@@ -4,7 +4,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import scala.meta._
 
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
@@ -12,7 +12,7 @@ import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.terms.protocol.ClassDefinition
 
-class PropertyExtractors extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class PropertyExtractors extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   val spec: String = s"""
     |swagger: "2.0"
     |info:
@@ -98,7 +98,7 @@ class PropertyExtractors extends AnyFunSuite with Matchers with SwaggerSpecRunne
       }
     """
 
-    cls.structure should equal(definition.structure)
-    cmp.structure should equal(companion.structure)
+    cls should matchStructure(definition)
+    cmp should matchStructure(companion)
   }
 }

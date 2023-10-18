@@ -4,7 +4,7 @@ import scala.meta._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
 import dev.guardrail.Context
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
@@ -12,7 +12,7 @@ import dev.guardrail.generators.{ Client, Clients, ProtocolDefinitions }
 import dev.guardrail.terms.protocol.{ ClassDefinition, EnumDefinition }
 import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 
-class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
 
   val spec = s"""
     |swagger: "2.0"
@@ -123,7 +123,7 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.head.value.structure should equal(client.structure)
+    cls.head.value should matchStructure (client)
     cls.head.value.toString should include("class DashyPackageClient")
     cls.head.value.toString should include("def dashyOpId")
     cls.head.value.toString should include("dashyParameter: String")
@@ -161,12 +161,12 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-    cls.structure should equal(definition.structure)
+    cls should matchStructure (definition)
     cls.toString should include("case class DashyClass")
     cls.toString should include("dashyParam")
     cls.toString shouldNot include("``")
 
-    cmp.structure should equal(companion.structure)
+    cmp should matchStructure (companion)
     cmp.toString should include("encodeDashyClass")
     cmp.toString should include("decodeDashyClass")
     cmp.toString should include("DashyClass(v0)")
@@ -208,11 +208,11 @@ class BacktickTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
     }
     """
 
-    cls.structure should equal(definition.structure)
+    cls should matchStructure (definition)
     cls.toString should include("sealed abstract class DashyEnum")
     cls.toString shouldNot include("``")
 
-    cmp.structure should equal(companion.structure)
+    cmp should matchStructure (companion)
     cmp.toString should include("val DashyValueA")
     cmp.toString should include("case object DashyValueB")
     cmp.toString should include("encodeDashyEnum")

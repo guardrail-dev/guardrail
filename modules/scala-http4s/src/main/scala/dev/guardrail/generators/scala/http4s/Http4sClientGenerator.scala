@@ -488,15 +488,18 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
   }
   def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List(q"import org.http4s.circe._"))
   def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
-  def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[List[scala.meta.Term.Param]]] = {
-    val ihc = param"implicit httpClient: Http4sClient[F]"
-    val ief = param"implicit F: Async[F]"
+  def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[Term.ParamClause]] = {
+    val ihc = param"httpClient: Http4sClient[F]"
+    val ief = param"F: Async[F]"
     Target.pure(
       List(
-        List(formatHost(serverUrls)) ++ (if (tracing)
-                                           Some(formatClientName(tracingName))
-                                         else None),
-        List(ief, ihc)
+        Term.ParamClause(
+          List(formatHost(serverUrls)) ++ (if (tracing)
+                                             Some(formatClientName(tracingName))
+                                           else None),
+          None
+        ),
+        Term.ParamClause(List(ief, ihc), Some(Mod.Implicit()))
       )
     )
   }
@@ -516,7 +519,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       clientName: String,
       tracingName: Option[String],
       serverUrls: Option[NonEmptyList[URI]],
-      ctorArgs: List[List[scala.meta.Term.Param]],
+      ctorArgs: List[Term.ParamClause],
       tracing: Boolean
   ): Target[StaticDefns[ScalaLanguage]] = {
     def extraConstructors(
@@ -539,21 +542,20 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       )
     }
 
-    def paramsToArgs(params: List[List[Term.Param]]): List[List[Term]] =
-      params.map {
-        _.map(_.name.value)
-          .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
-          .toList
+    def paramsToArgs(params: List[Term.ParamClause]): List[Term.ArgClause] =
+      params.map { params =>
+        Term.ArgClause(
+          params
+            .map(_.name.value)
+            .map(v => Term.Assign(Term.Name(v), Term.Name(v)))
+            .toList
+        )
       }.toList
 
-    val ctorCall: Term.New =
-      q"""
-          new ${Type
-          .Apply(Type.Name(clientName), List(Type.Name("F")))}(...${paramsToArgs(ctorArgs)})
-        """
+    val ctorCall: Term.New = Term.New(Init(Type.Apply(Type.Name(clientName), Type.ArgClause(List(Type.Name("F")))), Name.Anonymous(), paramsToArgs(ctorArgs)))
 
     val decls: List[Defn] =
-      q"""def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), List(Type.Name("F")))} = ${ctorCall}""" +:
+      q"""def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), Type.ArgClause(List(Type.Name("F"))))} = ${ctorCall}""" +:
         extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
     Target.pure(
       StaticDefns[ScalaLanguage](
@@ -568,7 +570,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       tracingName: Option[String],
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],
-      ctorArgs: List[List[scala.meta.Term.Param]],
+      ctorArgs: List[Term.ParamClause],
       clientCalls: List[scala.meta.Defn],
       supportDefinitions: List[scala.meta.Defn],
       tracing: Boolean

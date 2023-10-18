@@ -17,7 +17,7 @@ object ResponseADTHelper {
 
     val responseSuperType     = Type.Name(responseClsName)
     val responseSuperTerm     = Term.Name(responseClsName)
-    val responseSuperTemplate = Init(if (isGeneric) Type.Apply(responseSuperType, extraTypes) else responseSuperType, Name(""), List.empty)
+    val responseSuperTemplate = Init(if (isGeneric) Type.Apply(responseSuperType, Type.ArgClause(extraTypes)) else responseSuperType, Name(""), Seq.empty)
 
     val (terms, foldPair) = responses.value.map { case Response(statusCodeName, valueType, headers) =>
       val responseTerm = Term.Name(s"${statusCodeName.value}")
@@ -52,7 +52,7 @@ object ResponseADTHelper {
 
     val cls = q"""
         sealed abstract class ${responseSuperType}[..$extraTypeParams] {
-          def fold[A](..${foldParams}): A = ${Term.Match(Term.This(Name("")), foldCases)}
+          def fold[A](..${foldParams}): A = ${Term.Match(Term.This(Name("")), foldCases, Nil)}
         }
       """
     List[Defn](cls, companion)

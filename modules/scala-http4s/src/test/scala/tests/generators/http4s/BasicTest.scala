@@ -4,7 +4,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import scala.meta._
 
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 
 import dev.guardrail.Context
 import dev.guardrail.generators.ProtocolDefinitions
@@ -14,7 +14,7 @@ import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.generators.{ Client, Clients }
 import dev.guardrail.terms.protocol.{ ClassDefinition, RandomType }
 
-class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   val spec = s"""
     |swagger: "2.0"
     |info:
@@ -83,7 +83,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         _
       ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
-      tpe.structure should equal(t"io.circe.Json".structure)
+      tpe should matchStructure(t"io.circe.Json")
     }
 
     test(s"$version - Handle json subvalues") {
@@ -107,8 +107,8 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       }
     """
 
-      cls.structure should equal(definition.structure)
-      cmp.structure should equal(companion.structure)
+      cls should matchStructure(definition)
+      cmp should matchStructure(companion)
     }
 
     test(s"$version - Properly handle all methods") {
@@ -261,9 +261,9 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
         q"""object DeleteFooResponse { case object Ok extends DeleteFooResponse }"""
       )
 
-      expected.zip(statements).foreach { case (a, b) => a.structure should equal(b.structure) }
-      cmp.structure should equal(companion.structure)
-      cls.head.value.structure should equal(client.structure)
+      expected.zip(statements).foreach { case (a, b) => a should matchStructure(b) }
+      cmp should matchStructure(companion)
+      cls.head.value should matchStructure(client)
     }
   }
 

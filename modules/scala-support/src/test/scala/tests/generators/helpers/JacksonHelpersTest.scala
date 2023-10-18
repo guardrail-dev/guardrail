@@ -52,7 +52,8 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
     }
 
     "from a bigint" in {
-      val Term.Apply(Term.Name("BigInt"), List(Lit.String(bigintStr))) = discriminatorExpression("12345678901234567890", "integer").value
+      val Term.Apply.After_4_6_0(Term.Name("BigInt"), Term.ArgClause(List(Lit.String(bigintStr)), None)) =
+        discriminatorExpression("12345678901234567890", "integer").value
       bigintStr mustBe "12345678901234567890"
     }
 
@@ -67,7 +68,8 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
     }
 
     "from a bigdecimal" in {
-      val Term.Apply(Term.Name("BigDecimal"), List(Lit.String(bigdecStr))) = discriminatorExpression("12345678901234567890.0987654321", "number").value
+      val Term.Apply.After_4_6_0(Term.Name("BigDecimal"), Term.ArgClause(List(Lit.String(bigdecStr)), None)) =
+        discriminatorExpression("12345678901234567890.0987654321", "number").value
       bigdecStr mustBe "12345678901234567890.0987654321"
     }
   }

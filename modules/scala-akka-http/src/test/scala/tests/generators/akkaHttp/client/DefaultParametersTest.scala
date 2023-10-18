@@ -4,11 +4,11 @@ import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
 import dev.guardrail.Context
 import dev.guardrail.generators.{ Client, Clients }
-import support.SwaggerSpecRunner
+import support.{ ScalaMetaMatchers, SwaggerSpecRunner }
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner {
+class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with ScalaMetaMatchers {
   import scala.meta._
 
   val spec = s"""
@@ -188,7 +188,7 @@ class DefaultParametersTest extends AnyFunSuite with Matchers with SwaggerSpecRu
       }
     """
 
-    cmp.structure should equal(companion.structure)
-    cls.head.value.structure should equal(client.structure)
+    cmp should matchStructure(companion)
+    cls.head.value should matchStructure(client)
   }
 }

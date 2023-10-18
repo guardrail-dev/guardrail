@@ -289,22 +289,29 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           q"implicit def ${Term.Name(s"${name.value}Ev")}(value: ${tpe}): ${responseSuperType} = ${name}(value)"
         }
       protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
-      toResponseImplicits = List(param"implicit ec: scala.concurrent.ExecutionContext") ++ protocolImplicits
+      toResponseImplicits = List(param"ec: scala.concurrent.ExecutionContext") ++ protocolImplicits
       companion = q"""
           object ${responseSuperTerm} {
           ${Defn.Def(
           List(mod"implicit"),
           Term.Name(s"${responseClsName.uncapitalized}TRM"),
-          tparams = List.empty,
-          NonEmptyList.fromList(protocolImplicits).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
+          List(
+            Member.ParamClauseGroup(
+              Type.ParamClause(Nil),
+              NonEmptyList.fromList(protocolImplicits).fold(List.empty[Term.ParamClause])(nel => List(Term.ParamClause(nel.toList, Some(Mod.Implicit()))))
+            )
+          ),
           Some(t"ToResponseMarshaller[${responseSuperType}]"),
           q"""Marshaller { implicit ec => resp => ${Term.Name(s"${responseClsName.uncapitalized}TR")}(resp) }"""
         )};
             implicit def ${Term
           .Name(
             s"${responseClsName.uncapitalized}TR"
-          )}(value: ${responseSuperType})(..$toResponseImplicits): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
-              ${Term.Match(Term.Name("value"), marshallers)}
+          )}(value: ${responseSuperType})(..${Term.ParamClause(
+          toResponseImplicits,
+          Some(Mod.Implicit())
+        )}): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
+              ${Term.Match(Term.Name("value"), marshallers, Nil)}
 
             def apply[T](value: T)(implicit ev: T => ${responseSuperType}): ${responseSuperType} = ev(value)
 
@@ -443,13 +450,18 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           baseHandlerType
         }
       }
-      val typeParams     = if (customExtraction) List(tparam"$customExtractionTypeName") else List()
-      val routesParams   = List(param"handler: $handlerType") ++ extraRouteParams
-      val routeImplicits = List(param"implicit mat: akka.stream.Materializer") ++ protocolImplicits
+      val typeParams = if (customExtraction) List(tparam"$customExtractionTypeName") else List()
+      val params = List(
+        Term.ParamClause(
+          List(param"handler: $handlerType") ++ extraRouteParams,
+          None
+        ),
+        Term.ParamClause(List(param"mat: akka.stream.Materializer") ++ protocolImplicits, Some(Mod.Implicit()))
+      )
       List(q"""
         object ${Term.Name(resourceName)} {
           ..${supportDefinitions};
-          def routes[..${typeParams}](..${routesParams})(..$routeImplicits): Route = {
+          def routes[..${typeParams}](...${params}): Route = {
             ..${combinedRouteTerms}
           }
 
@@ -681,7 +693,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                         val ${collected.toVar} = successes.collectFirst(${Term.PartialFunction(
                         List(
                           Case(
-                            Pat.Extract(Term.Select(partsTerm, containerName.toTerm), List(pats)),
+                            Pat.Extract(Term.Select(partsTerm, containerName.toTerm), Pat.ArgClause(List(pats))),
                             None,
                             terms
                           )
@@ -878,7 +890,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                             Nil
                           }
                         }).mapAsync(1)(${Term.Block(
-                      List(Term.Function(List(Term.Param(List.empty, q"part", None, None)), Term.Match(q"part.name", allCases)))
+                      List(Term.Function(Term.ParamClause(List(Term.Param(List.empty, q"part", None, None))), Term.Match(q"part.name", allCases, Nil)))
                     )})
                           .toMat(Sink.seq[Either[Throwable, ${Type.Select(partsTerm, Type.Name("Part"))}]])(Keep.right).run()
                       } yield {
@@ -1056,11 +1068,14 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               .fold[Term => Term](identity)(_.foldLeft[Term => Term](identity) { case (acc, (directive, params)) =>
                 params match {
                   case List() =>
-                    next => acc(Term.Apply(directive, List(next)))
+                    next => acc(Term.Apply(directive, Term.ArgClause(List(next))))
                   case xs =>
                     next =>
                       acc(
-                        Term.Apply(Term.Select(directive, Term.Name("apply")), List(Term.Function(xs.map(x => Term.Param(List.empty, x, None, None)), next)))
+                        Term.Apply(
+                          Term.Select(directive, Term.Name("apply")),
+                          Term.ArgClause(List(Term.Function(Term.ParamClause(xs.map(x => Term.Param(List.empty, x, None, None))), next)))
+                        )
                       )
                 }
               })
@@ -1146,8 +1161,12 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       } yield Defn.Def(
         mods = List.empty,
         Term.Name(s"${methodName}Decoder"),
-        tparams = List.empty,
-        NonEmptyList.fromList(decoderImplicits).fold(List.empty[List[Term.Param]])(nel => List(nel.toList)),
+        List(
+          Member.ParamClauseGroup(
+            Type.ParamClause(Nil),
+            List(decoderImplicits).filter(_.nonEmpty)
+          )
+        ),
         Some(t"FromRequestUnmarshaller[$baseType]"),
         q"""
               val extractEntity = implicitly[Unmarshaller[HttpMessage, HttpEntity]]
