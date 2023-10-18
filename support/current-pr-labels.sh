@@ -2,6 +2,17 @@
 
 set -e
 
+fetch_pr() {
+  pr_number="$1"
+  cache="$2"
+  echo "Fetching labels for current PR (${pr_number})" >&2
+  curl \
+    -H "Accept: application/vnd.github.v3+json" \
+    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+    -o "$cache" \
+    "https://api.github.com/repos/guardrail-dev/guardrail/pulls/${pr_number}"
+}
+
 cachedir=target/github
 if [ -n "$GITHUB_EVENT_PATH" ]; then
   mkdir -p "$cachedir"
@@ -11,12 +22,7 @@ if [ -n "$GITHUB_EVENT_PATH" ]; then
   if [ -f "$cache" ]; then
     echo "Using PR labels from $cache" >&2
   elif [ "$pr_number" != "null" ]; then
-    echo "Fetching labels for current PR (${pr_number})" >&2
-    curl \
-      -H "Accept: application/vnd.github.v3+json" \
-      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-      -o "$cache" \
-      "https://api.github.com/repos/guardrail-dev/guardrail/pulls/${pr_number}"
+    fetch_pr "$pr_number" "$cache"
   else
     # If $pr_number is null, we're either building a branch or master,
     # so either way just skip labels.
