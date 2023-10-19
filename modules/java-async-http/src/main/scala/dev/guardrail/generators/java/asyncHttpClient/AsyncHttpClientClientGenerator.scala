@@ -1,7 +1,6 @@
 package dev.guardrail.generators.java.asyncHttpClient
 
 import _root_.io.swagger.v3.oas.models.Components
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
@@ -85,8 +84,6 @@ object AsyncHttpClientClientGenerator {
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ClientTerms[JavaLanguage, Target] {
-
-  override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   override def fromSpec(context: Context, frameworkImports: List[JavaLanguage#Import])(
       serverUrls: Option[NonEmptyList[URI]],

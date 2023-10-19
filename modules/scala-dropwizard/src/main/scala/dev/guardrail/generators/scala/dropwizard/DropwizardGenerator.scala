@@ -1,6 +1,5 @@
 package dev.guardrail.generators.scala.dropwizard
 
-import cats.Monad
 import dev.guardrail.{ Target, UserError }
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -22,8 +21,6 @@ object DropwizardGenerator {
 }
 
 class DropwizardGenerator private extends FrameworkTerms[ScalaLanguage, Target] {
-  override def MonadF: Monad[Target] = Target.targetInstances
-
   override def objectType(format: Option[String]): Target[Type] = Target.pure(t"com.fasterxml.jackson.databind.JsonNode")
   override def fileType(format: Option[String]): Target[Type]   = Target.pure(format.fold[Type](t"java.io.InputStream")(Type.Name.apply))
 

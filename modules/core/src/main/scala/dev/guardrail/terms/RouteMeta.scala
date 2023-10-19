@@ -9,7 +9,6 @@ import io.swagger.v3.oas.models.media._
 import io.swagger.v3.oas.models.parameters.Parameter
 import scala.jdk.CollectionConverters._
 
-import dev.guardrail._
 import dev.guardrail.core.implicits._
 import dev.guardrail.core.{ Mappish, Tracker }
 import dev.guardrail.generators.syntax._

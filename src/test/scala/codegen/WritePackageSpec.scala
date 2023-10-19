@@ -80,7 +80,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
     val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
-          .processArgs[ScalaLanguage, Target](args)(scalaInterpreter)
+          .processArgs[ScalaLanguage, Target](args)
       )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(spec, x)))
@@ -134,7 +134,7 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
     val result: List[WriteTree] = Target
       .unsafeExtract(
         Common
-          .processArgs[ScalaLanguage, Target](args)(scalaInterpreter)
+          .processArgs[ScalaLanguage, Target](args)
       )
       .toList
       .flatMap(x => Target.unsafeExtract(injectSwagger(spec, x)))

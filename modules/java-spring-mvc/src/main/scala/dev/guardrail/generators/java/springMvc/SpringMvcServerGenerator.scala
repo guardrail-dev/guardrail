@@ -1,6 +1,5 @@
 package dev.guardrail.generators.java.springMvc
 
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
@@ -87,8 +86,6 @@ object SpringMvcServerGenerator {
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ServerTerms[JavaLanguage, Target] {
-
-  override implicit def MonadF: Monad[Target] = Target.targetInstances
 
   override def fromSpec(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[JavaLanguage#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]

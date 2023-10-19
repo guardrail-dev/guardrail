@@ -3,7 +3,6 @@ package dev.guardrail.generators.scala.http4s
 import _root_.io.swagger.v3.oas.models.Components
 import _root_.io.swagger.v3.oas.models.Operation
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
-import cats.Monad
 import cats.Traverse
 import cats.data.NonEmptyList
 import cats.implicits._
@@ -188,8 +187,6 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)
   }
-
-  implicit def MonadF: Monad[Target] = Target.targetInstances
 
   private def generateResponseDefinitions(
       responseClsName: String,

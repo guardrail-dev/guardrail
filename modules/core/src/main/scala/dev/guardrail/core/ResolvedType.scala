@@ -3,7 +3,6 @@ package dev.guardrail.core
 import cats.{ FlatMap, Foldable, Monad }
 import cats.syntax.all._
 
-import dev.guardrail._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }

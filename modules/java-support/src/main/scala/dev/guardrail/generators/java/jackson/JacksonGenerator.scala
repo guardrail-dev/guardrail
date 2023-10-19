@@ -6,7 +6,7 @@ import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import cats.Foldable
 import cats.data.NonEmptyList
 import cats.syntax.all._
-import cats.{ FlatMap, Monad }
+import cats.FlatMap
 
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Modifier.Keyword.{ FINAL, PRIVATE, PROTECTED, PUBLIC }
@@ -87,10 +87,6 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     extends ProtocolTerms[JavaLanguage, Target] {
   import Ca._
 
-  override implicit def MonadF: Monad[Target] = Target.targetInstances
-
-  import Target.targetInstances // TODO: Remove me. This resolves implicit ambiguity from MonadChain
-
   private val BUILDER_TYPE        = StaticJavaParser.parseClassOrInterfaceType("Builder")
   private val BIG_INTEGER_FQ_TYPE = StaticJavaParser.parseClassOrInterfaceType("java.math.BigInteger")
   private val BIG_DECIMAL_FQ_TYPE = StaticJavaParser.parseClassOrInterfaceType("java.math.BigDecimal")
@@ -151,7 +147,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             .fold(Option.empty[Discriminator[JavaLanguage]].pure[Target])(Discriminator.fromSchema[JavaLanguage, Target])
             .map(_.map((_, getRequiredFieldsRec(c))))
         )
-        .orRefine { case x: Schema[_] => x }(m => Discriminator.fromSchema(m).map(_.map((_, getRequiredFieldsRec(m)))))
+        .orRefine { case x: Schema[_] => x }(m => Discriminator.fromSchema[JavaLanguage, Target](m).map(_.map((_, getRequiredFieldsRec(m)))))
         .getOrElse(Option.empty[(Discriminator[JavaLanguage], List[String])].pure[Target])
         .map(_.map { case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) })
 
@@ -256,7 +252,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     for {
       enum     <- extractEnum(schema.map(wrapEnumSchema))
       prefixes <- vendorPrefixes()
-      (tpe, _) <- ModelResolver.determineTypeName(schema, Tracker.cloneHistory(schema, CustomTypeName(schema, prefixes)), components)
+      (tpe, _) <- ModelResolver.determineTypeName[JavaLanguage, Target](schema, Tracker.cloneHistory(schema, CustomTypeName(schema, prefixes)), components)
       fullType <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
       res      <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -479,7 +475,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
-            resolvedType          <- ModelResolver.propMetaWithName(tpe, schema, components)
+            resolvedType          <- ModelResolver.propMetaWithName[JavaLanguage, Target](tpe, schema, components)
             prefixes              <- vendorPrefixes()
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
@@ -622,7 +618,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       Sw: SwaggerTerms[JavaLanguage, Target]
   ): Target[ProtocolElems[JavaLanguage]] =
     for {
-      deferredTpe <- ModelResolver.modelMetaType(arr, components)
+      deferredTpe <- ModelResolver.modelMetaType[JavaLanguage, Target](arr, components)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
       ret         <- typeAlias(clsName, tpe)
     } yield ret
@@ -685,7 +681,9 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
           tpe <- parseTypeName(clsName)
 
           discriminators <- (_extends :: concreteInterfaces).flatTraverse(
-            _.refine[Target[List[Discriminator[JavaLanguage]]]] { case m: ObjectSchema => m }(m => Discriminator.fromSchema(m).map(_.toList))
+            _.refine[Target[List[Discriminator[JavaLanguage]]]] { case m: ObjectSchema => m }(m =>
+              Discriminator.fromSchema[JavaLanguage, Target](m).map(_.toList)
+            )
               .getOrElse(List.empty[Discriminator[JavaLanguage]].pure[Target])
           )
         } yield tpe

@@ -1,6 +1,5 @@
 package dev.guardrail.generators
 
-import cats.Monad
 import cats.syntax.all._
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.Operation
@@ -30,8 +29,6 @@ object SwaggerGenerator {
 }
 
 class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
-  override def MonadF: Monad[Target] = Target.targetInstances
-
   private def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)

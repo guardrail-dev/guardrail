@@ -1,12 +1,9 @@
 package dev.guardrail.terms
 
-import cats.Monad
 import dev.guardrail.core.LazyResolvedType
 import dev.guardrail.languages.LA
 
 abstract class CollectionsLibTerms[L <: LA, F[_]] { self =>
-  def MonadF: Monad[F]
-
   def vendorPrefixes(): F[List[String]]
 
   def liftOptionalType(value: L#Type): F[L#Type]
@@ -25,7 +22,6 @@ abstract class CollectionsLibTerms[L <: LA, F[_]] { self =>
   def embedMap(tpe: LazyResolvedType[L], customTpe: Option[L#Type]): F[LazyResolvedType[L]]
 
   def copy(
-      MonadF: Monad[F] = self.MonadF,
       vendorPrefixes: () => F[List[String]] = self.vendorPrefixes _,
       liftOptionalType: L#Type => F[L#Type] = self.liftOptionalType,
       liftOptionalTerm: L#Term => F[L#Term] = self.liftOptionalTerm,
@@ -40,8 +36,6 @@ abstract class CollectionsLibTerms[L <: LA, F[_]] { self =>
       emptyMap: () => F[L#Term] = self.emptyMap _,
       embedMap: (LazyResolvedType[L], Option[L#Type]) => F[LazyResolvedType[L]] = self.embedMap
   ): CollectionsLibTerms[L, F] = {
-
-    val newMonadF            = MonadF
     val newVendorPrefixes    = vendorPrefixes
     val newLiftOptionalType  = liftOptionalType
     val newLiftOptionalTerm  = liftOptionalTerm
@@ -57,7 +51,6 @@ abstract class CollectionsLibTerms[L <: LA, F[_]] { self =>
     val newEmbedMap          = embedMap
 
     new CollectionsLibTerms[L, F] {
-      def MonadF: Monad[F]                                                = newMonadF
       def vendorPrefixes()                                                = newVendorPrefixes()
       def liftOptionalType(value: L#Type)                                 = newLiftOptionalType(value)
       def liftOptionalTerm(value: L#Term)                                 = newLiftOptionalTerm(value)

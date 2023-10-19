@@ -1,6 +1,5 @@
 package dev.guardrail.generators.java
 
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.ast.Modifier._
@@ -49,8 +48,6 @@ object JavaGenerator {
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
-  override implicit def MonadF: Monad[Target] = Target.targetInstances
-
   private def buildPkgDecl(parts: NonEmptyList[String]): Target[PackageDeclaration] =
     safeParseName(parts.toList.mkString(".")).map(new PackageDeclaration(_))
 

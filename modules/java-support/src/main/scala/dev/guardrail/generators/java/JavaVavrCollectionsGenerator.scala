@@ -1,6 +1,5 @@
 package dev.guardrail.generators.java
 
-import cats.Monad
 import com.github.javaparser.ast.{ Node, NodeList }
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import scala.reflect.runtime.universe.typeTag
@@ -27,8 +26,6 @@ object JavaVavrCollectionsGenerator {
 
 class JavaVavrCollectionsGenerator private extends CollectionsLibTerms[JavaLanguage, Target] {
   private val baseInterp = JavaCollectionsGenerator()
-
-  override def MonadF: Monad[Target] = Target.targetInstances
 
   override def vendorPrefixes(): Target[List[String]] = baseInterp.vendorPrefixes().map("x-java-vavr" +: _)
 

@@ -1,6 +1,5 @@
 package dev.guardrail.generators.scala
 
-import cats.Monad
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
@@ -25,8 +24,6 @@ object ScalaCollectionsGenerator {
 }
 
 class ScalaCollectionsGenerator private extends CollectionsLibTerms[ScalaLanguage, Target] {
-  implicit def MonadF: Monad[Target] = Target.targetInstances
-
   def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-scala", "x-jvm"))
 
   def liftOptionalType(value: Type): Target[Type] = Target.pure(t"Option[$value]")

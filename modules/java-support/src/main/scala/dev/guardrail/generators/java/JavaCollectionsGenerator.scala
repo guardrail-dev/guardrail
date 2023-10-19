@@ -1,6 +1,5 @@
 package dev.guardrail.generators.java
 
-import cats.Monad
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.`type`.{ ClassOrInterfaceType, Type }
 import com.github.javaparser.ast.{ Node, NodeList }
@@ -29,8 +28,6 @@ object JavaCollectionsGenerator {
 
 @SuppressWarnings(Array("org.wartremover.warts.Null"))
 class JavaCollectionsGenerator private extends CollectionsLibTerms[JavaLanguage, Target] {
-  implicit def MonadF: Monad[Target] = Target.targetInstances
-
   def vendorPrefixes(): Target[List[String]] = Target.pure(List("x-java", "x-jvm"))
 
   def liftOptionalType(value: Type): Target[Type] =

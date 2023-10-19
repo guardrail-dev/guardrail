@@ -7,27 +7,26 @@ import dev.guardrail.core.extract.{ CustomArrayTypeName, CustomMapTypeName, Cust
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SchemaLiteral, SchemaProjection, SchemaRef, SwaggerTerms }
 import dev.guardrail.terms.framework.FrameworkTerms
 
+import cats.Monad
 import cats.syntax.all._
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media._
 import scala.jdk.CollectionConverters._
 
 object ModelResolver {
-  def propMeta[L <: LA, F[_]](property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
+  def propMeta[L <: LA, F[_]: Monad](property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): F[core.ResolvedType[L]] = propMetaImpl(property, components)(Left(_))
+  ): F[core.ResolvedType[L]] = propMetaImpl[L, F](property, components)(Left(_))
 
-  def propMetaWithName[L <: LA, F[_]](tpe: L#Type, property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
+  def propMetaWithName[L <: LA, F[_]: Monad](tpe: L#Type, property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): F[core.ResolvedType[L]] = {
-    implicit val M = Sc.MonadF
-
+  ): F[core.ResolvedType[L]] =
     propMetaImpl(property, components)(
       _.refine[core.ResolvedType[L]] { case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
         core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty)
@@ -37,15 +36,14 @@ object ModelResolver {
         )
         .map(_.pure[F])
     )
-  }
 
-  def modelMetaType[L <: LA, F[_]](
+  def modelMetaType[L <: LA, F[_]: Monad](
       model: Tracker[Schema[_]],
       components: Tracker[Option[Components]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
     propMetaImpl[L, F](model, components)(Left(_))
 
-  private def propMetaImpl[L <: LA, F[_]](property: Tracker[Schema[_]], components: Tracker[Option[Components]])(
+  private def propMetaImpl[L <: LA, F[_]: Monad](property: Tracker[Schema[_]], components: Tracker[Option[Components]])(
       strategy: Tracker[Schema[_]] => Either[Tracker[Schema[_]], F[core.ResolvedType[L]]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
     Sw.log.function("propMeta") {
@@ -53,8 +51,6 @@ object ModelResolver {
       import Sc._
       import Cl._
       import Sw._
-
-      implicit val M = Sc.MonadF
 
       for {
         _ <- log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})")
@@ -122,7 +118,7 @@ object ModelResolver {
     }
 
   // Standard type conversions, as documented in http://swagger.io/specification/#data-types-12
-  def determineTypeName[L <: LA, F[_]](
+  def determineTypeName[L <: LA, F[_]: Monad](
       rawSchema: Tracker[Schema[_]],
       customType: Tracker[Option[String]],
       components: Tracker[Option[Components]]
@@ -131,8 +127,6 @@ object ModelResolver {
       import Sc._
       import Cl._
       import Fw._
-
-      implicit val M = Sc.MonadF
 
       for {
         schemaProjection <- rawSchema
@@ -240,14 +234,13 @@ object ModelResolver {
       } yield (result, reifiedRawType)
     }
 
-  private def enrichWithDefault[L <: LA, F[_]](schema: Tracker[Schema[_]])(implicit
+  private def enrichWithDefault[L <: LA, F[_]: Monad](schema: Tracker[Schema[_]])(implicit
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: SwaggerTerms[L, F],
       Fw: FrameworkTerms[L, F]
   ): core.ResolvedType[L] => F[core.ResolvedType[L]] = { resolved =>
     import Sc._
-    implicit val M = Sc.MonadF
     def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => F[L#Term]): Tracker[A] => F[core.ResolvedType[L]] = { a =>
       for {
         default <- Default(a).extract[B].traverse(transformLit(_))
@@ -263,22 +256,20 @@ object ModelResolver {
       .orRefineFallback(_ => resolved.pure[F])
   }
 
-  private[this] def liftCustomType[L <: LA, F[_]](s: Tracker[String])(implicit Sc: LanguageTerms[L, F]): F[Option[L#Type]] = {
+  private[this] def liftCustomType[L <: LA, F[_]: Monad](s: Tracker[String])(implicit Sc: LanguageTerms[L, F]): F[Option[L#Type]] = {
     import Sc._
-    implicit val M = Sc.MonadF
-    val tpe        = s.map(_.trim)
+    val tpe = s.map(_.trim)
     if (tpe.unwrapTracker.nonEmpty) {
       parseType(tpe)
     } else Option.empty[L#Type].pure[F]
   }
 
-  private def resolveScalarTypes[L <: LA, F[_]](
+  private def resolveScalarTypes[L <: LA, F[_]: Monad](
       partial: Either[Tracker[Schema[_]], F[core.ResolvedType[L]]],
       components: Tracker[Option[Components]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] = {
     import Cl._
     import Sw._
-    implicit val M = Sc.MonadF
     def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => F[core.ResolvedType[L]] = { a =>
       for {
         prefixes       <- vendorPrefixes()

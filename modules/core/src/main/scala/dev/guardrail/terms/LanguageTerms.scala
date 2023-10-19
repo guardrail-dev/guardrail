@@ -1,6 +1,5 @@
 package dev.guardrail.terms
 
-import cats.Monad
 import cats.data.NonEmptyList
 import java.nio.file.Path
 
@@ -11,8 +10,6 @@ import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol.StrictProtocolElems
 
 abstract class LanguageTerms[L <: LA, F[_]] { self =>
-  def MonadF: Monad[F]
-
   def litString(value: String): F[L#Term]
   def litFloat(value: Float): F[L#Term]
   def litDouble(value: Double): F[L#Term]
@@ -131,7 +128,6 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
   def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]): F[Option[L#ObjectDefinition]]
 
   def copy(
-      MonadF: Monad[F] = self.MonadF,
       litString: String => F[L#Term] = self.litString _,
       litFloat: Float => F[L#Term] = self.litFloat _,
       litDouble: Double => F[L#Term] = self.litDouble _,
@@ -215,7 +211,6 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
         self.writeServer _,
       wrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[Option[L#ObjectDefinition]] = self.wrapToObject _
   ) = {
-    val newMonadF                     = MonadF
     val newLitString                  = litString
     val newLitFloat                   = litFloat
     val newLitDouble                  = litDouble
@@ -272,7 +267,6 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
     val newWrapToObject               = wrapToObject
 
     new LanguageTerms[L, F] {
-      def MonadF                                                    = newMonadF
       def litString(value: String)                                  = newLitString(value)
       def litFloat(value: Float)                                    = newLitFloat(value)
       def litDouble(value: Double)                                  = newLitDouble(value)
