@@ -17,7 +17,7 @@ jobs:
       matrix:
         java: [ '1.14' ]
         scala: [
-            { version: '2.12.16', bincompat: '2.12' }
+            { version: '2.12.18', bincompat: '2.12' }
           ]
     outputs:
       scala_versions: ${{ steps.set-scala-versions.outputs.scala_versions }}
