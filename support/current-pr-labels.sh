@@ -25,10 +25,14 @@ labels_since_last_release() {
   cache="$1"; shift || die 'Missing cache target'
 
   latest_tag="$(git tag | grep "^$module_name-v[0-9]" | tail -n 1)"
-  module_released_on="$(git show "${latest_tag}" --format=%cI)"
-  gh_api "search/issues?q=repo:guardrail-dev/guardrail+type:pr+is:merged+closed:>${module_released_on}" \
-    | jq -cM '{labels: (.items | map(.labels) | flatten | map(.name) | unique | map({ name: . })) }' \
-    > "$cache"
+  if [ -z "$latest_tag" ]; then
+    echo '{"labels":[]}' > "$cache"
+  else
+    module_released_on="$(git show "${latest_tag}" --format=%cI)"
+    gh_api "search/issues?q=repo:guardrail-dev/guardrail+type:pr+is:merged+closed:>${module_released_on}" \
+      | jq -cM '{labels: (.items | map(.labels) | flatten | map(.name) | unique | map({ name: . })) }' \
+      > "$cache"
+  fi
 }
 
 cachedir=target/github
