@@ -23,7 +23,7 @@ import org.scalactic.Equality
 import org.http4s.dsl.impl.{ OptionalMultiQueryParamDecoderMatcher, QueryParamDecoderMatcher }
 
 class Issue1218Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   // Hackily provide Aggregating instance for Option
   implicit def aggregatingOption[A](implicit ev: Equality[A]): Aggregating[Option[A]] = new Aggregating[Option[A]] {

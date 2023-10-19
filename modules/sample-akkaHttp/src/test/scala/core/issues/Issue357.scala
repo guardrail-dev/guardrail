@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.{ Duration, SECONDS }
 
 class Issue357Suite extends AnyFunSpec with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   describe("akka-http server should") {
     import issues.issue357.server.akkaHttp.{ Handler, Resource }

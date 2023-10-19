@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class Issue143 extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with Eventually with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(10.seconds, 1.second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10.seconds, 1.second)
 
   override def testConfigSource =
     s"""

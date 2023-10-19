@@ -50,7 +50,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       client
         .run(
           Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
-            .withBodyStream(fs2.Stream.apply("\"-97-\"".getBytes(): _*))
+            .withBodyStream(fs2.Stream.apply("\"-97-\"".getBytes().toIndexedSeq: _*))
             .withContentType(`Content-Type`(MediaType.application.json))
         )
         .use(_.bodyText.compile.string)
@@ -82,7 +82,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       client
         .run(
           Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
-            .withBodyStream(fs2.Stream.apply("\"\"".getBytes(): _*))
+            .withBodyStream(fs2.Stream.apply("\"\"".getBytes().toIndexedSeq: _*))
             .withContentType(`Content-Type`(MediaType.application.json))
         )
         .use(_.bodyText.compile.string)
@@ -135,7 +135,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       client
         .run(
           Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
-            .withBodyStream(fs2.Stream.apply("\"\"".getBytes(): _*))
+            .withBodyStream(fs2.Stream.apply("\"\"".getBytes().toIndexedSeq: _*))
             .withContentType(`Content-Type`(MediaType.application.json))
         )
         .use(_.bodyText.compile.string)
@@ -172,7 +172,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
       client
         .run(
           Request[IO](method = Method.POST, uri = Uri.unsafeFromString(path))
-            .withBodyStream(fs2.Stream.apply("\"\"".getBytes(): _*))
+            .withBodyStream(fs2.Stream.apply("\"\"".getBytes().toIndexedSeq: _*))
             .withContentType(`Content-Type`(MediaType.application.json))
         )
         .use(_.bodyText.compile.string)

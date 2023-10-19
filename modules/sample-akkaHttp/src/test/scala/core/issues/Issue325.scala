@@ -18,7 +18,7 @@ import cats.implicits._
 import cats.data.OptionT
 
 class Issue325Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   def multipartChunk(key: String, value: String, contentType: ContentType): Multipart.FormData.BodyPart.Strict =
     Multipart.FormData.BodyPart.Strict(key, HttpEntity.Strict(contentType, ByteString.fromArray(value.getBytes)))

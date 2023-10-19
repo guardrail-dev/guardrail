@@ -19,7 +19,7 @@ import org.scalatest.matchers.should.Matchers
 import io.circe._
 
 class Issue121Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("http4s server can respond with 204") {
     import issues.issue121.server.http4s.{ Handler, Resource }

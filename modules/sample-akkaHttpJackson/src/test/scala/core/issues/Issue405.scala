@@ -18,7 +18,7 @@ import scala.concurrent.Future
   *   - Option String for param should accept emtpy string
   */
 class Issue405 extends AnyFunSuite with TestImplicits with Matchers with EitherValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   implicit val rejectionHandler: RejectionHandler = RejectionHandler
     .newBuilder()

@@ -48,13 +48,6 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
     rest.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(start))(Term.Select.apply _)
   }
 
-  // TODO: Very interesting bug. 2.11.12 barfs if these two definitions are
-  // defined inside `apply`. Once 2.11 is dropped, these can be moved back.
-  private val matchImplicit: PartialFunction[Stat, Defn.Val] = {
-    case x: Defn.Val if (x match { case q"implicit val $_: $_ = $_" => true; case _ => false }) => x
-  }
-  private val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse { case _ => false }
-
   implicit def MonadF: Monad[Target] = Target.targetInstances
 
   override def litString(value: String): Target[scala.meta.Term]   = Target.pure(Lit.String(value))
@@ -352,6 +345,13 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       extraTypes: List[scala.meta.Stat]
   ): Target[Option[WriteTree]] = {
     val pkgImplicitsImport = q"import ${buildTermSelect("_root_" :: pkgComponents)}.Implicits._"
+
+    val matchImplicit: PartialFunction[Stat, Defn.Val] = {
+      case x: Defn.Val if (x match { case q"implicit val $_: $_ = $_" => true; case _ => false }) => x
+    }
+
+    val partitionImplicits: PartialFunction[Stat, Boolean] = matchImplicit.andThen(_ => true).orElse { case _ => false }
+
     dtoComponents.traverse { case dtoComponents @ NonEmptyList(dtoHead, dtoRest) =>
       for {
         dtoRestNel <- Target.fromOption(NonEmptyList.fromList(dtoRest), UserError("DTO Components not quite long enough"))

@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 import _root_.tests.scalatest.EitherTValues
 
 class AkkaHttpTextPlainTest extends AnyFunSuite with Matchers with EitherValues with EitherTValues with ScalaFutures with ScalatestRouteTest {
-  override implicit val patienceConfig = PatienceConfig(1000.millis, 1000.millis)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(1000.millis, 1000.millis)
   test("Plain text should be emitted for required parameters (raw)") {
     val route: Route = (path("foo") & extractRequestEntity & entity(as[String])) { (entity, value) =>
       complete {

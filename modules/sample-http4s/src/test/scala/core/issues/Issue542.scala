@@ -1,5 +1,7 @@
 package core.issues
 
+import scala.language.reflectiveCalls
+
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.data.Kleisli
@@ -17,10 +19,8 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import tests.scalatest.EitherTValues
 
-import scala.language.reflectiveCalls // TODO: Was a change in http4s introduced such that we're using it incorrectly now? Why is this necessary?
-
 class Issue542Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures with EitherTValues with OptionValues {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("base64 bytes can be sent") {
     import base64.server.http4s.{ Handler, Resource }

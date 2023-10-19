@@ -60,7 +60,7 @@ class Http4sNativeAuthenticationTest extends AnyFunSuite with Matchers with Eith
       .run(
         transformRequest(
           Request[IO](method = Method.POST, uri = Uri.unsafeFromString("/foo"))
-            .withBodyStream(fs2.Stream.apply("\"\"".getBytes(): _*))
+            .withBodyStream(fs2.Stream.apply("\"\"".getBytes().toIndexedSeq: _*))
             .withContentType(`Content-Type`(MediaType.application.json))
         )
       )

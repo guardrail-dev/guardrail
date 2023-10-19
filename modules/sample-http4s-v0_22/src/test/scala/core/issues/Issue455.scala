@@ -15,7 +15,7 @@ import cats.effect.IO
 import org.http4s.client.{ Client => Http4sClient }
 
 class Issue455Suite extends AnyFunSuite with Matchers with EitherValues with ScalaFutures {
-  override implicit val patienceConfig = PatienceConfig(10 seconds, 1 second)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(10 seconds, 1 second)
 
   test("Circe NPE: https://github.com/circe/circe/issues/561") {
     val route = {
