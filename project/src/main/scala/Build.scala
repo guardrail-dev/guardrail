@@ -28,7 +28,7 @@ object Build {
     if (isCi || isRelease) {
       val ignoreBincompat = {
         import scala.sys.process._
-        "support/current-pr-labels.sh"
+        Seq("support/current-pr-labels.sh", moduleName)
           .lineStream_!
           .exists(Set("major", "minor").contains)
       }
