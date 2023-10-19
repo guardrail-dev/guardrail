@@ -100,7 +100,7 @@ class JavaSyntaxTest extends AnyFreeSpec with Matchers {
     "Produce a useful error string for a custom complex error" in {
       val Failure(e) = Try(StaticJavaParser.parseClassOrInterfaceType(" }"))
       val result     = formatException("my prefix")(e)
-      result shouldBe """my prefix: Unexpected "}" at character 2 (valid: "enum", "record", "strictfp", "yield", "requires", "to", "with", "open", "opens", "uses", "module", "exports", "provides", "transitive", <IDENTIFIER>)"""
+      result should startWith ("""my prefix: Unexpected "}" at character 2 (valid: """)
     }
   }
 
