@@ -3,9 +3,9 @@ package dev.guardrail.sbt
 import sbt._
 import sbt.Keys._
 import scoverage.ScoverageKeys
-import com.typesafe.sbt.SbtGit.GitKeys.gitReader
 import complete.DefaultParsers._
-import com.typesafe.sbt.SbtGit._
+import com.github.sbt.git.SbtGit._
+import com.github.sbt.git.SbtGit.GitKeys.gitReader
 import wartremover.WartRemover.autoImport._
 import scalafix.sbt.ScalafixPlugin.autoImport._
 import xerial.sbt.Sonatype.autoImport._
@@ -120,6 +120,7 @@ object Build {
   def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
     Project(id=moduleName, base=path)
       .settings(versionWithGit)
+      .settings(useReadableConsoleGit)
       .settings(
         // None of this stuff can be used because of scoping issues. Everything needs to be inlined to avoid just bubbling up to a singleton, since the keys (scopes?) are only valid at the root, not scoped per project.
         // git.gitDescribePatterns := Seq(s"${moduleSegment}-v*"),
