@@ -811,131 +811,139 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
                           SwitchEntry.Type.BLOCK,
                           new NodeList(response.value match {
                             case None =>
-                              new ReturnStmt(
-                                new ObjectCreationExpr(
-                                  null,
-                                  StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
-                                  new NodeList()
+                              new BlockStmt(
+                                new NodeList(
+                                  new ReturnStmt(
+                                    new ObjectCreationExpr(
+                                      null,
+                                      StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
+                                      new NodeList()
+                                    )
+                                  )
                                 )
                               )
                             case Some((contentType, valueType, _)) =>
-                              new TryStmt(
-                                new BlockStmt(
-                                  new NodeList(
-                                    new ExpressionStmt(
-                                      produces
-                                        .get(response.statusCode)
-                                        .flatten
-                                        .getOrElse {
-                                          println(
-                                            s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
-                                          )
-                                          ApplicationJson.empty
-                                        } match {
-                                        case _: ApplicationJson =>
-                                          new AssignExpr(
-                                            new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                            new MethodCallExpr(
-                                              new FieldAccessExpr(new ThisExpr, "objectMapper"),
-                                              "readValue",
-                                              new NodeList[Expression](
-                                                new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
-                                                jacksonTypeReferenceFor(valueType)
-                                              )
-                                            ),
-                                            AssignExpr.Operator.ASSIGN
-                                          )
-
-                                        case contentType =>
-                                          val bodyGetter = valueType match {
-                                            case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
-                                            case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
-                                            case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
-                                            case _ if valueType.isNamed("String")      => "getResponseBody"
-                                            case _ =>
+                              new BlockStmt(
+                                new NodeList(
+                                  new TryStmt(
+                                    new BlockStmt(
+                                      new NodeList(
+                                        new ExpressionStmt(
+                                          produces
+                                            .get(response.statusCode)
+                                            .flatten
+                                            .getOrElse {
                                               println(
-                                                s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
+                                                s"WARNING: no supported content type specified at ${operation.showHistory}'s ${response.statusCode} response; falling back to application/json"
                                               )
-                                              "getResponseBody"
-                                          }
-                                          val bodyGetterExpr = new MethodCallExpr(
-                                            new NameExpr("response"),
-                                            bodyGetter,
-                                            bodyGetter match {
-                                              case "getResponseBody" =>
-                                                new NodeList[Expression](
-                                                  new MethodCallExpr(
-                                                    new MethodCallExpr(
-                                                      new NameExpr("AsyncHttpClientUtils"),
-                                                      "getResponseCharset",
-                                                      new NodeList[Expression](new NameExpr("response"))
-                                                    ),
-                                                    "orElse",
-                                                    new NodeList[Expression](new FieldAccessExpr(new NameExpr("StandardCharsets"), "UTF_8"))
+                                              ApplicationJson.empty
+                                            } match {
+                                            case _: ApplicationJson =>
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
+                                                new MethodCallExpr(
+                                                  new FieldAccessExpr(new ThisExpr, "objectMapper"),
+                                                  "readValue",
+                                                  new NodeList[Expression](
+                                                    new MethodCallExpr(new NameExpr("response"), "getResponseBodyAsStream"),
+                                                    jacksonTypeReferenceFor(valueType)
                                                   )
+                                                ),
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+
+                                            case contentType =>
+                                              val bodyGetter = valueType match {
+                                                case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
+                                                case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
+                                                case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
+                                                case _ if valueType.isNamed("String")      => "getResponseBody"
+                                                case _ =>
+                                                  println(
+                                                    s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
+                                                  )
+                                                  "getResponseBody"
+                                              }
+                                              val bodyGetterExpr = new MethodCallExpr(
+                                                new NameExpr("response"),
+                                                bodyGetter,
+                                                bodyGetter match {
+                                                  case "getResponseBody" =>
+                                                    new NodeList[Expression](
+                                                      new MethodCallExpr(
+                                                        new MethodCallExpr(
+                                                          new NameExpr("AsyncHttpClientUtils"),
+                                                          "getResponseCharset",
+                                                          new NodeList[Expression](new NameExpr("response"))
+                                                        ),
+                                                        "orElse",
+                                                        new NodeList[Expression](new FieldAccessExpr(new NameExpr("StandardCharsets"), "UTF_8"))
+                                                      )
+                                                    )
+                                                  case _ => new NodeList[Expression]
+                                                }
+                                              )
+                                              new AssignExpr(
+                                                new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
+                                                bodyGetterExpr,
+                                                AssignExpr.Operator.ASSIGN
+                                              )
+                                          }
+                                        ),
+                                        new IfStmt(
+                                          new BinaryExpr(new NameExpr("result"), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
+                                          new BlockStmt(
+                                            new NodeList(
+                                              new ThrowStmt(
+                                                new ObjectCreationExpr(
+                                                  null,
+                                                  MARSHALLING_EXCEPTION_TYPE,
+                                                  new NodeList(new StringLiteralExpr("Failed to unmarshal response"))
                                                 )
-                                              case _ => new NodeList[Expression]
-                                            }
-                                          )
-                                          new AssignExpr(
-                                            new VariableDeclarationExpr(new VariableDeclarator(valueType, "result"), finalModifier),
-                                            bodyGetterExpr,
-                                            AssignExpr.Operator.ASSIGN
-                                          )
-                                      }
-                                    ),
-                                    new IfStmt(
-                                      new BinaryExpr(new NameExpr("result"), new NullLiteralExpr, BinaryExpr.Operator.EQUALS),
-                                      new BlockStmt(
-                                        new NodeList(
-                                          new ThrowStmt(
-                                            new ObjectCreationExpr(
-                                              null,
-                                              MARSHALLING_EXCEPTION_TYPE,
-                                              new NodeList(new StringLiteralExpr("Failed to unmarshal response"))
+                                              )
                                             )
+                                          ),
+                                          new BlockStmt(
+                                            new NodeList(
+                                              new ReturnStmt(
+                                                new ObjectCreationExpr(
+                                                  null,
+                                                  StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
+                                                  new NodeList[Expression](new NameExpr("result"))
+                                                )
+                                              )
+                                            )
+                                          )
+                                        )
+                                      )
+                                    ),
+                                    new NodeList(
+                                      new CatchClause(
+                                        new Parameter(new NodeList(finalModifier), MARSHALLING_EXCEPTION_TYPE, new SimpleName("e")),
+                                        new BlockStmt(
+                                          new NodeList(
+                                            new ThrowStmt(new NameExpr("e"))
                                           )
                                         )
                                       ),
-                                      new BlockStmt(
-                                        new NodeList(
-                                          new ReturnStmt(
-                                            new ObjectCreationExpr(
-                                              null,
-                                              StaticJavaParser.parseClassOrInterfaceType(s"$responseClsName.${response.statusCodeName.asString}"),
-                                              new NodeList[Expression](new NameExpr("result"))
+                                      new CatchClause(
+                                        new Parameter(new NodeList(finalModifier), EXCEPTION_TYPE, new SimpleName("e")),
+                                        new BlockStmt(
+                                          new NodeList(
+                                            new ThrowStmt(
+                                              new ObjectCreationExpr(
+                                                null,
+                                                MARSHALLING_EXCEPTION_TYPE,
+                                                new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
+                                              )
                                             )
                                           )
                                         )
                                       )
-                                    )
+                                    ),
+                                    null
                                   )
-                                ),
-                                new NodeList(
-                                  new CatchClause(
-                                    new Parameter(new NodeList(finalModifier), MARSHALLING_EXCEPTION_TYPE, new SimpleName("e")),
-                                    new BlockStmt(
-                                      new NodeList(
-                                        new ThrowStmt(new NameExpr("e"))
-                                      )
-                                    )
-                                  ),
-                                  new CatchClause(
-                                    new Parameter(new NodeList(finalModifier), EXCEPTION_TYPE, new SimpleName("e")),
-                                    new BlockStmt(
-                                      new NodeList(
-                                        new ThrowStmt(
-                                          new ObjectCreationExpr(
-                                            null,
-                                            MARSHALLING_EXCEPTION_TYPE,
-                                            new NodeList(new MethodCallExpr(new NameExpr("e"), "getMessage"), new NameExpr("e"))
-                                          )
-                                        )
-                                      )
-                                    )
-                                  )
-                                ),
-                                null
+                                )
                               )
                           })
                         )
