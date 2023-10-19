@@ -139,47 +139,47 @@ lazy val core = modules.core.project
   )
 
 lazy val cli = modules.cli.project
-  .customDependsOn(core)
+  .customDependsOn("core", core)
   .settings(run / fork := true)
   .dependsOn(scalaSupport % "test->compile")
   .dependsOn(scalaAkkaHttp % "test->compile")
   .dependsOn(scalaHttp4s % "test->compile")
 
 lazy val javaSupport = modules.javaSupport.project
-  .customDependsOn(core)
+  .customDependsOn("java-support", core)
 
 lazy val javaAsyncHttp = modules.javaAsyncHttp.project
-  .customDependsOn(javaSupport)
+  .customDependsOn("java-support", javaSupport)
 
 lazy val dropwizardSample = modules.javaDropwizard.sample
   .settings(javaSampleSettings)
 lazy val dropwizardVavrSample = modules.javaDropwizard.sampleVavr
   .settings(javaSampleSettings)
 lazy val javaDropwizard = modules.javaDropwizard.project
-  .customDependsOn(javaSupport)
+  .customDependsOn("java-support", javaSupport)
   .dependsOn(javaAsyncHttp % "test->compile")
 
 lazy val javaSpringMvcSample = modules.javaSpringMvc.sample
   .settings(javaSampleSettings)
 lazy val javaSpringMvc = modules.javaSpringMvc.project
-  .customDependsOn(javaSupport)
+  .customDependsOn("java-support", javaSupport)
 
 lazy val scalaSupport = modules.scalaSupport.project
-  .customDependsOn(core)
+  .customDependsOn("core", core)
 
 lazy val scalaAkkaHttpSample = modules.scalaAkkaHttp.sample
 lazy val scalaAkkaHttpJacksonSample = modules.scalaAkkaHttp.sampleJackson
 lazy val scalaAkkaHttp = modules.scalaAkkaHttp.project
-  .customDependsOn(scalaSupport)
+  .customDependsOn("scala-support", scalaSupport)
 
 lazy val scalaHttp4sSampleV0_22 = modules.scalaHttp4s.sampleV0_22
 lazy val scalaHttp4sSample = modules.scalaHttp4s.sample
 lazy val scalaHttp4s = modules.scalaHttp4s.project
-  .customDependsOn(scalaSupport)
+  .customDependsOn("scala-support", scalaSupport)
 
 lazy val scalaDropwizardSample = modules.scalaDropwizard.sample
 lazy val scalaDropwizard = modules.scalaDropwizard.project
-  .customDependsOn(scalaSupport)
+  .customDependsOn("scala-support", scalaSupport)
 
 lazy val microsite = baseModule("microsite", "microsite", file("modules/microsite"))
   .settings(

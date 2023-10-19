@@ -14,7 +14,7 @@ import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
 object Build {
   val stableVersion: SettingKey[String] = SettingKey("stable-version")
 
-  val useStableVersions: Boolean = {
+  def useStableVersions(moduleName: String): Boolean = {
     // NB: Currently, any time any PR that breaks semver is merged, it breaks
     //     the build until the next release.
     //
@@ -28,7 +28,7 @@ object Build {
     if (isCi || isRelease) {
       val ignoreBincompat = {
         import scala.sys.process._
-        "support/current-pr-labels.sh"
+        Seq("support/current-pr-labels.sh", moduleName)
           .lineStream_!
           .exists(Set("major", "minor").contains)
       }
@@ -225,8 +225,8 @@ object Build {
           (current ++ fromOther).distinct
         })
 
-    def customDependsOn(other: Project, useProvided: Boolean = false): Project = {
-      if (useStableVersions) {
+    def customDependsOn(moduleName: String, other: Project, useProvided: Boolean = false): Project = {
+      if (useStableVersions(moduleName)) {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
           .settings(libraryDependencies += {
@@ -249,7 +249,7 @@ object Build {
       }
     }
 
-    def providedDependsOn(other: Project): Project =
-      customDependsOn(other, true)
+    def providedDependsOn(moduleName: String, other: Project): Project =
+      customDependsOn(moduleName, other, true)
   }
 }
