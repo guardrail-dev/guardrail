@@ -28,6 +28,9 @@ jobs:
     - uses: olafurpg/setup-scala@v11
       with:
         java-version: zulu@${{ matrix.java }}
+    - name: Set scala version for matrix
+      id: set-scala-versions  # The greps on the following line are to ensure as much as possible that we've caught the right line
+      run: echo "scala_versions=$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)" >> $GITHUB_OUTPUT
     - name: print Java version
       run: java -version
     - uses: actions/cache@v1
@@ -51,9 +54,6 @@ jobs:
         fail_ci_if_error: true
         verbose: true
         token: ${{ secrets.CODECOV_TOKEN }}
-    - name: Set scala version for matrix
-      id: set-scala-versions  # The greps on the following line are to ensure as much as possible that we've caught the right line
-      run: echo "scala_versions=$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)" >> $GITHUB_OUTPUT
   java:
     runs-on: ubuntu-20.04
     needs: [core]
