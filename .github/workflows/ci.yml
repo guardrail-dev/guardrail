@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        java: [ '1.15' ]
+        java: [ '1.14' ]
         scala: [
             { version: '2.12.16', bincompat: '2.12' }
           ]
@@ -59,7 +59,7 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '1.8', '1.15', '1.17' ]
+        java: [ '1.14', '1.17' ]
         scala: [
             { version: '2.12.16', bincompat: '2.12' }
           ]
@@ -95,7 +95,7 @@ jobs:
     needs: [core]
     strategy:
       matrix:
-        java: [ '1.8', '1.15', '1.17' ]
+        java: [ '1.14', '1.17' ]
         scala: ${{ fromJson(needs.core.outputs.scala_versions) }}
         framework: [
             { framework: 'akka-http',         project: 'sample-akkaHttp'        },
@@ -107,7 +107,7 @@ jobs:
     steps:
     - run: echo 'combo_enabled=true' >> $GITHUB_ENV
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
-      if: ${{ matrix.java == '1.15' && matrix.scala.bincompat == '2.12' }}
+      if: ${{ matrix.java == '1.17' && matrix.scala.bincompat == '2.12' }}
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
       if: matrix.scala.bincompat == '2.13' && matrix.framework.framework == 'dropwizard'
     - uses: actions/checkout@v2
