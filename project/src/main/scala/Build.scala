@@ -3,9 +3,9 @@ package dev.guardrail.sbt
 import sbt._
 import sbt.Keys._
 import scoverage.ScoverageKeys
-import com.typesafe.sbt.SbtGit.GitKeys.gitReader
 import complete.DefaultParsers._
-import com.typesafe.sbt.SbtGit._
+import com.github.sbt.git.SbtGit._
+import com.github.sbt.git.SbtGit.GitKeys.gitReader
 import wartremover.WartRemover.autoImport._
 import scalafix.sbt.ScalafixPlugin.autoImport._
 import xerial.sbt.Sonatype.autoImport._
