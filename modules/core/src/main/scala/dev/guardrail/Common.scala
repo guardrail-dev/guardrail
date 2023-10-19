@@ -2,6 +2,7 @@ package dev.guardrail
 
 import _root_.io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.security.{ SecurityScheme => SwSecurityScheme }
+import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import cats.Id
@@ -23,7 +24,7 @@ object Common {
   val resolveFile: Path => List[String] => Path            = root => _.foldLeft(root)(_.resolve(_))
   val resolveFileNel: Path => NonEmptyList[String] => Path = root => _.foldLeft(root)(_.resolve(_))
 
-  private[this] def extractSecuritySchemes[L <: LA, F[_]](
+  private[this] def extractSecuritySchemes[L <: LA, F[_]: Monad](
       spec: OpenAPI,
       prefixes: List[String]
   )(implicit Sw: SwaggerTerms[L, F], Sc: LanguageTerms[L, F]): F[Map[String, SecurityScheme[L]]] = {
@@ -51,7 +52,7 @@ object Common {
       .map(_.toMap)
   }
 
-  def prepareDefinitions[L <: LA, F[_]](
+  def prepareDefinitions[L <: LA, F[_]: Monad](
       kind: CodegenTarget,
       context: Context,
       spec: Tracker[OpenAPI],
@@ -139,7 +140,7 @@ object Common {
     } yield (proto, codegen))
   }
 
-  def writePackage[L <: LA, F[_]](proto: ProtocolDefinitions[L], codegen: CodegenDefinitions[L], context: Context)(
+  def writePackage[L <: LA, F[_]: Monad](proto: ProtocolDefinitions[L], codegen: CodegenDefinitions[L], context: Context)(
       outputPath: Path,
       pkgName: List[String],
       dtoPackage: List[String],
@@ -226,7 +227,7 @@ object Common {
     ).toList
   }
 
-  def processArgs[L <: LA, F[_]](
+  def processArgs[L <: LA, F[_]: Monad](
       args: NonEmptyList[Args]
   )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSpec[Target[List[WriteTree]]]]] = {
     import C._
@@ -239,7 +240,7 @@ object Common {
     )
   }
 
-  def runM[L <: LA, F[_]](
+  def runM[L <: LA, F[_]: Monad](
       args: NonEmptyList[Args]
   )(implicit C: CoreTerms[L, F]): F[NonEmptyList[ReadSpec[Target[List[WriteTree]]]]] = {
     import C._

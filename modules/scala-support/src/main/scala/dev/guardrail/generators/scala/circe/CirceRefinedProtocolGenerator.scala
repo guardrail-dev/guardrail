@@ -514,7 +514,9 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
           tpe <- parseTypeName(clsName)
 
           discriminators <- (_extends :: concreteInterfaces).flatTraverse(
-            _.refine[Target[List[Discriminator[ScalaLanguage]]]] { case m: ObjectSchema => m }(m => Discriminator.fromSchema(m).map(_.toList))
+            _.refine[Target[List[Discriminator[ScalaLanguage]]]] { case m: ObjectSchema => m }(m =>
+              Discriminator.fromSchema[ScalaLanguage, Target](m).map(_.toList)
+            )
               .getOrElse(List.empty[Discriminator[ScalaLanguage]].pure[Target])
           )
         } yield tpe
@@ -865,7 +867,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
             .fold(Option.empty[Discriminator[ScalaLanguage]].pure[Target])(Discriminator.fromSchema[ScalaLanguage, Target])
             .map(_.map((_, getRequiredFieldsRec(c))))
         )
-        .orRefine { case x: Schema[_] => x }(m => Discriminator.fromSchema(m).map(_.map((_, getRequiredFieldsRec(m)))))
+        .orRefine { case x: Schema[_] => x }(m => Discriminator.fromSchema[ScalaLanguage, Target](m).map(_.map((_, getRequiredFieldsRec(m)))))
         .getOrElse(Option.empty[(Discriminator[ScalaLanguage], List[String])].pure[Target])
         .map(_.map { case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) })
 

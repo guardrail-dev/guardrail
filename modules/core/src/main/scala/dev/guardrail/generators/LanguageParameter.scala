@@ -1,5 +1,6 @@
 package dev.guardrail.generators
 
+import cats.Monad
 import cats.syntax.all._
 import io.swagger.v3.oas.models.media
 import io.swagger.v3.oas.models.parameters._
@@ -49,7 +50,7 @@ object LanguageParameter {
   def unapply[L <: LA](param: LanguageParameter[L]): Some[(Option[String], L#MethodParameter, L#TermName, RawParameterName, L#Type)] =
     Some((param.in, param.param, param.paramName, param.argName, param.argType))
 
-  def fromParameter[L <: LA, F[_]](
+  def fromParameter[L <: LA, F[_]: Monad](
       protocolElems: List[StrictProtocolElems[L]],
       components: Tracker[Option[Components]]
   )(implicit
@@ -181,7 +182,7 @@ object LanguageParameter {
     )
   }
 
-  def fromParameters[L <: LA, F[_]](
+  def fromParameters[L <: LA, F[_]: Monad](
       protocolElems: List[StrictProtocolElems[L]],
       components: Tracker[Option[Components]]
   )(implicit

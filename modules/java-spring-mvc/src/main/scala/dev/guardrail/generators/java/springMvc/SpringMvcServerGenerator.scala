@@ -124,7 +124,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
           responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
             for {
               operationId           <- getOperationId(operation)
-              responses             <- Responses.getResponses(operationId, operation, protocolElems, components)
+              responses             <- Responses.getResponses[JavaLanguage, Target](operationId, operation, protocolElems, components)
               responseClsName       <- formatTypeName(operationId, Some("Response"))
               responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
               methodName            <- formatMethodName(operationId)
