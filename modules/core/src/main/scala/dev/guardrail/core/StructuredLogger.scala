@@ -81,12 +81,11 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
           case ((acc, newHistory), StructuredLoggerReset) =>
             (acc, Chain.empty)
           case ((acc, newHistory), StructuredLogBlock(lines)) =>
-            val newAcc: Chain[(LogLevel, NonEmptyChain[String], String)] = acc ++ lines
+            val history = NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>"))
+            val nextLines: Chain[(LogLevel, NonEmptyChain[String], String)] = lines
               .filter(_._1 >= desiredLevel)
-              .map { case (level, message) =>
-                (level, NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>")), message)
-              }
-            (newAcc, newHistory)
+              .map { case (level, message) => (level, history, message) }
+            (acc ++ nextLines, newHistory)
         }
         ._1
         .foldLeft((Chain.empty[String], Chain.empty[String])) { case ((lastHistory, messages), (level, history, message)) =>
