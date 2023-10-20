@@ -17,7 +17,7 @@ fetch_pr() {
   pr_number="$1"
   cache="$2"
   echo "Fetching labels for current PR (${pr_number})" >&2
-  gh_api "repos/guardrail-dev/guardrail/pulls/${pr_number}" -o "$cache"
+  gh_api "repos/guardrail-dev/guardrail/pulls/${pr_number}"
 }
 
 labels_since_last_release() {
@@ -30,8 +30,7 @@ labels_since_last_release() {
   else
     module_released_on="$(git show "${latest_tag}" --format=%cI)"
     gh_api "search/issues?q=repo:guardrail-dev/guardrail+type:pr+is:merged+closed:>${module_released_on}" \
-      | jq -cM '{labels: (.items | map(.labels) | flatten | map(.name) | unique | map({ name: . })) }' \
-      > "$cache"
+      | jq -cM '{labels: (.items | map(.labels) | flatten | map(.name) | unique | map({ name: . })) }'
   fi
 }
 
@@ -44,9 +43,9 @@ if [ -n "$GITHUB_EVENT_PATH" ]; then
   if [ -f "$cache" ]; then
     echo "Using PR labels from $cache" >&2
   elif [ -n "$module_name" ]; then
-    labels_since_last_release "$module_name" "$cache"
+    labels_since_last_release "$module_name" > "$cache"
   elif [ "$pr_number" != "null" ]; then
-    fetch_pr "$pr_number" "$cache"
+    fetch_pr "$pr_number" > "$cache"
   else
     # If $pr_number is null, we're either building a branch or master,
     # so either way just skip labels.
