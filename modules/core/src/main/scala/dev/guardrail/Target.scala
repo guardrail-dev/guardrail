@@ -37,17 +37,21 @@ object Target {
 
     def flatMap[A, B](fa: Target[A])(f: A => Target[B]): Target[B] = fa.flatMap(f)
 
-    @scala.annotation.tailrec
-    def tailRecM[A, B](a: A)(f: A => Target[Either[A, B]]): Target[B] =
-      f(a) match {
-        case TargetError(err, la) =>
-          new TargetError(err, la)
-        case TargetValue(e, la) =>
-          e match {
-            case Left(b)  => tailRecM(b)(if (loggerEnabled.get) f.map(_.prependLogger(la)) else f)
-            case Right(a) => new TargetValue(a, la)
-          }
-      }
+    def tailRecM[A, B](a: A)(f: A => Target[Either[A, B]]): Target[B] = {
+      @scala.annotation.tailrec
+      def work(a: A, prependedLogs: StructuredLogger)(f: A => Target[Either[A, B]]): Target[B] =
+        f(a) match {
+          case TargetError(err, la) =>
+            new TargetError(err, la)
+          case TargetValue(e, la) =>
+            e match {
+              case Left(b) =>
+                work(b, if (loggerEnabled.get) prependedLogs |+| la else prependedLogs)(f)
+              case Right(a) => new TargetValue(a, prependedLogs |+| la)
+            }
+        }
+      work(a, StructuredLogger.Empty)(f)
+    }
 
     def foldLeft[A, B](fa: Target[A], b: B)(f: (B, A) => B): B = fa match {
       case TargetValue(a, _) => f(b, a)
