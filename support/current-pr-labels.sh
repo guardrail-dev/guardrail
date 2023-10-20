@@ -34,6 +34,11 @@ labels_since_last_release() {
   fi
 }
 
+merge_labels() {
+  sofar="$1"
+  jq --argjson sofar "$sofar" '{ labels: ($sofar.labels + .labels) | unique }'
+}
+
 cachedir=target/github
 if [ -n "$GITHUB_EVENT_PATH" ]; then
   mkdir -p "$cachedir"
@@ -42,14 +47,20 @@ if [ -n "$GITHUB_EVENT_PATH" ]; then
 
   if [ -f "$cache" ]; then
     echo "Using PR labels from $cache" >&2
-  elif [ -n "$module_name" ]; then
-    labels_since_last_release "$module_name" > "$cache"
-  elif [ "$pr_number" != "null" ]; then
-    fetch_pr "$pr_number" > "$cache"
   else
     # If $pr_number is null, we're either building a branch or master,
     # so either way just skip labels.
-    echo '{"labels": []}' > "$cache"
+    sofar='{"labels": []}'
+
+    # Accumulate all labels up until now
+    if [ -n "$module_name" ]; then
+      sofar="$(labels_since_last_release "$module_name" | merge_labels "$sofar")"
+    fi
+    # Include this PR's labels too
+    if [ "$pr_number" != "null" ]; then
+      sofar="$(fetch_pr "$pr_number" | merge_labels "$sofar")"
+    fi
+    echo "$sofar" > "$cache"
   fi
 
   msg="$(jq -r .message < "$cache")"
