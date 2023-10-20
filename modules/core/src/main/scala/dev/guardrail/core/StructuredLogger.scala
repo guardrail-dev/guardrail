@@ -49,9 +49,26 @@ object StructuredLogger extends StructuredLoggerInstances {
   object Empty extends StructuredLogger(Chain.empty)
 }
 sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
+  object StructuredLogEntryCombine {
+    def unapply(chains: (Chain[StructuredLogEntry], Chain[StructuredLogEntry])): Option[Chain[StructuredLogEntry]] = {
+      val (xs, ys) = chains
+      for {
+        (init, last) <- xs.initLast
+        (head, tail) <- ys.uncons
+        combined <- ((last, head) match {
+          case (StructuredLogBlock(lastLines), StructuredLogBlock(headLines)) =>
+            Some(StructuredLogBlock(lastLines ++ headLines))
+          case (_, _) => None
+        }).map(mid => (init :+ mid) ++ tail)
+      } yield combined
+    }
+  }
   implicit object StructuredLoggerMonoid extends Monoid[StructuredLogger] {
-    def empty: StructuredLogger                                             = StructuredLogger(Chain.empty)
-    def combine(x: StructuredLogger, y: StructuredLogger): StructuredLogger = StructuredLogger(Monoid[Chain[StructuredLogEntry]].combine(x.entries, y.entries))
+    def empty: StructuredLogger = StructuredLogger(Chain.empty)
+    def combine(x: StructuredLogger, y: StructuredLogger): StructuredLogger = StructuredLogger((x.entries, y.entries) match {
+      case StructuredLogEntryCombine(combined) => combined
+      case (xs, ys)                            => Monoid[Chain[StructuredLogEntry]].combine(xs, ys)
+    })
   }
   class ShowStructuredLogger(desiredLevel: LogLevel) extends Show[StructuredLogger] {
     def show(value: StructuredLogger): String =
@@ -64,12 +81,11 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
           case ((acc, newHistory), StructuredLoggerReset) =>
             (acc, Chain.empty)
           case ((acc, newHistory), StructuredLogBlock(lines)) =>
-            val newAcc: Chain[(LogLevel, NonEmptyChain[String], String)] = acc ++ lines
+            val history = NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>"))
+            val nextLines: Chain[(LogLevel, NonEmptyChain[String], String)] = lines
               .filter(_._1 >= desiredLevel)
-              .map { case (level, message) =>
-                (level, NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>")), message)
-              }
-            (newAcc, newHistory)
+              .map { case (level, message) => (level, history, message) }
+            (acc ++ nextLines, newHistory)
         }
         ._1
         .foldLeft((Chain.empty[String], Chain.empty[String])) { case ((lastHistory, messages), (level, history, message)) =>

@@ -104,8 +104,7 @@ trait CLICommon extends GuardrailRunner {
       FlatMap[Target].tailRecM[From, To](start) { case pair @ (sofars, rest) =>
         val empty = sofars
           .filter(_.defaults)
-          .reverse
-          .headOption
+          .lastOption
           .getOrElse(defaultArgs)
           .copy(defaults = false)
         def Continue(x: From): Target[Either[From, To]] = Target.pure(Either.left(x))
