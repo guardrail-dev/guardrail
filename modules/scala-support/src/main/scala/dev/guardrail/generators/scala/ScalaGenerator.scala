@@ -1,6 +1,5 @@
 package dev.guardrail.generators.scala
 
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import java.nio.charset.StandardCharsets
@@ -47,8 +46,6 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
   private val buildTermSelect: NonEmptyList[String] => Term.Ref = { case NonEmptyList(start, rest) =>
     rest.map(Term.Name.apply _).foldLeft[Term.Ref](Term.Name(start))(Term.Select.apply _)
   }
-
-  implicit def MonadF: Monad[Target] = Target.targetInstances
 
   override def litString(value: String): Target[scala.meta.Term]   = Target.pure(Lit.String(value))
   override def litFloat(value: Float): Target[scala.meta.Term]     = Target.pure(Lit.Float(value))

@@ -1,5 +1,6 @@
 package dev.guardrail.terms.protocol
 
+import cats.Monad
 import cats.syntax.all._
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media._
@@ -13,12 +14,11 @@ import dev.guardrail.terms.framework.FrameworkTerms
 case class PropMeta[L <: LA](clsName: String, tpe: L#Type)
 
 object PropMeta {
-  def extractConcreteTypes[L <: LA, F[_]](
+  def extractConcreteTypes[L <: LA, F[_]: Monad](
       definitions: List[(String, Tracker[Schema[_]])],
       components: Tracker[Option[Components]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): F[List[PropMeta[L]]] = {
     import Sc._
-    implicit val M = Sc.MonadF
     for {
       entries <- definitions.traverse[F, (String, ResolvedType[L])] { case (clsName, schema) =>
         schema

@@ -131,7 +131,6 @@ class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner wit
   test("Big objects can be generated") {
     implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
     implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
-      def MonadF                                                                                                    = Target.targetInstances
       def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"String")
       def getFrameworkDefinitions(
           tracing: Boolean

@@ -2,7 +2,6 @@ package dev.guardrail.core
 
 import cats.data.{ NonEmptyList, State }
 import cats.syntax.all._
-import cats.Monad
 import java.nio.file.Paths
 import scala.util.control.NonFatal
 
@@ -29,8 +28,6 @@ class CoreTermInterp[L <: LA](
     val frameworkMapping: String => Target[Set[String]],
     val handleImport: String => Either[Error, L#Import]
 ) extends CoreTerms[L, Target] { self =>
-  implicit def MonadF: Monad[Target] = Target.targetInstances
-
   def extendWith(
       defaultFramework: String = self.defaultFramework,
       handleModules: Set[String] => Target[Framework[L, Target]] = self.handleModules,

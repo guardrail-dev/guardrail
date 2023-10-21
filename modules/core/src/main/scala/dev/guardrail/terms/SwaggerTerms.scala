@@ -1,6 +1,5 @@
 package dev.guardrail.terms
 
-import cats.Monad
 import cats.data.NonEmptyList
 import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media.{ ArraySchema, Schema }
@@ -29,8 +28,6 @@ abstract class SwaggerLogAdapter[F[_]] {
 }
 
 abstract class SwaggerTerms[L <: LA, F[_]] {
-  def MonadF: Monad[F]
-
   def extractCommonRequestBodies(components: Tracker[Option[Components]]): F[Map[String, RequestBody]]
   def extractEnum(spec: Tracker[EnumSchema]): F[Either[String, HeldEnum]]
   def extractOperations(

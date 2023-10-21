@@ -1,7 +1,6 @@
 package dev.guardrail.generators.scala.dropwizard
 
 import _root_.io.swagger.v3.oas.models.Components
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import dev.guardrail._
@@ -54,8 +53,6 @@ object DropwizardServerGenerator {
 }
 
 class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Target] {
-  override def MonadF: Monad[Target] = Target.targetInstances
-
   override def fromSpec(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[ScalaLanguage#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
@@ -89,7 +86,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
           responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
             for {
               operationId           <- getOperationId(operation)
-              responses             <- Responses.getResponses(operationId, operation, protocolElems, components)
+              responses             <- Responses.getResponses[ScalaLanguage, Target](operationId, operation, protocolElems, components)
               responseClsName       <- formatTypeName(operationId, Some("Response"))
               responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
               methodName            <- formatMethodName(operationId)

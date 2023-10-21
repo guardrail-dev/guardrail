@@ -3,7 +3,6 @@ package dev.guardrail.generators.scala.jackson
 import _root_.io.swagger.v3.oas.models.media.{ Discriminator => _, _ }
 import _root_.io.swagger.v3.oas.models.{ Components, OpenAPI }
 import cats.Foldable
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import scala.jdk.CollectionConverters._
@@ -54,11 +53,6 @@ object JacksonProtocolGenerator {
 }
 
 class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Target] {
-
-  override implicit def MonadF: Monad[Target] = Target.targetInstances
-
-  import Target.targetInstances // TODO: Remove me. This resolves implicit ambiguity from MonadChain
-
   private def discriminatorValue(discriminator: Discriminator[ScalaLanguage], className: String): String =
     discriminator.mapping
       .collectFirst { case (value, elem) if elem.name == className => value }
@@ -380,7 +374,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
     for {
       enum     <- extractEnum(schema.map(wrapEnumSchema))
       prefixes <- vendorPrefixes()
-      (tpe, _) <- ModelResolver.determineTypeName(schema, Tracker.cloneHistory(schema, CustomTypeName(schema, prefixes)), components)
+      (tpe, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](schema, Tracker.cloneHistory(schema, CustomTypeName(schema, prefixes)), components)
       fullType <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
       res      <- enum.traverse(validProg(_, tpe, fullType))
     } yield res
@@ -535,7 +529,9 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
           tpe <- parseTypeName(clsName)
 
           discriminators <- (_extends :: concreteInterfaces).flatTraverse(
-            _.refine[Target[List[Discriminator[ScalaLanguage]]]] { case m: ObjectSchema => m }(m => Discriminator.fromSchema(m).map(_.toList))
+            _.refine[Target[List[Discriminator[ScalaLanguage]]]] { case m: ObjectSchema => m }(m =>
+              Discriminator.fromSchema[ScalaLanguage, Target](m).map(_.toList)
+            )
               .getOrElse(List.empty[Discriminator[ScalaLanguage]].pure[Target])
           )
         } yield tpe
@@ -688,7 +684,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
-            resolvedType          <- ModelResolver.propMetaWithName(tpe, schema, components)
+            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](tpe, schema, components)
             prefixes              <- vendorPrefixes()
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
@@ -833,7 +829,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       Sw: SwaggerTerms[ScalaLanguage, Target]
   ): Target[ProtocolElems[ScalaLanguage]] =
     for {
-      deferredTpe <- ModelResolver.modelMetaType(arr, components)
+      deferredTpe <- ModelResolver.modelMetaType[ScalaLanguage, Target](arr, components)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
       ret         <- typeAlias(clsName, tpe)
     } yield ret
@@ -885,7 +881,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             .fold(Option.empty[Discriminator[ScalaLanguage]].pure[Target])(Discriminator.fromSchema[ScalaLanguage, Target])
             .map(_.map((_, getRequiredFieldsRec(c))))
         )
-        .orRefine { case x: Schema[_] => x }(m => Discriminator.fromSchema(m).map(_.map((_, getRequiredFieldsRec(m)))))
+        .orRefine { case x: Schema[_] => x }(m => Discriminator.fromSchema[ScalaLanguage, Target](m).map(_.map((_, getRequiredFieldsRec(m)))))
         .getOrElse(Option.empty[(Discriminator[ScalaLanguage], List[String])].pure[Target])
         .map(_.map { case (discriminator, reqFields) => ClassParent(cls, model, children(cls), discriminator, reqFields) })
 

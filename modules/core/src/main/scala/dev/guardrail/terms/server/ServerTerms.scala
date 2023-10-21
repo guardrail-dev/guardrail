@@ -1,7 +1,6 @@
 package dev.guardrail.terms.server
 
 import cats.data.NonEmptyList
-import cats.Monad
 
 import dev.guardrail._
 import dev.guardrail.languages.LA
@@ -32,8 +31,6 @@ object SecurityExposure {
 }
 
 abstract class ServerTerms[L <: LA, F[_]] { self =>
-  def MonadF: Monad[F]
-
   def fromSpec(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[L#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(

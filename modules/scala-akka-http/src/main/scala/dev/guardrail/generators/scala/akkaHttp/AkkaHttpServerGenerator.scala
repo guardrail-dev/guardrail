@@ -3,7 +3,6 @@ package dev.guardrail.generators.scala.akkaHttp
 import _root_.io.swagger.v3.oas.models.Components
 import _root_.io.swagger.v3.oas.models.Operation
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.implicits._
 import dev.guardrail._
@@ -116,8 +115,6 @@ object AkkaHttpServerGenerator {
 class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType) extends ServerTerms[ScalaLanguage, Target] {
   val customExtractionTypeName: Type.Name = Type.Name("E")
 
-  implicit def MonadF: Monad[Target] = Target.targetInstances
-
   override def fromSpec(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[ScalaLanguage#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
@@ -151,7 +148,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
             for {
               operationId           <- getOperationId(operation)
-              responses             <- Responses.getResponses(operationId, operation, protocolElems, components)
+              responses             <- Responses.getResponses[ScalaLanguage, Target](operationId, operation, protocolElems, components)
               responseClsName       <- formatTypeName(operationId, Some("Response"))
               responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
               methodName            <- formatMethodName(operationId)

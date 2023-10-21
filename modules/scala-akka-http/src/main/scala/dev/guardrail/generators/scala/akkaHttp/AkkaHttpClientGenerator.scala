@@ -2,7 +2,6 @@ package dev.guardrail.generators.scala.akkaHttp
 
 import _root_.io.swagger.v3.oas.models.Components
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import dev.guardrail._
@@ -57,8 +56,6 @@ object AkkaHttpClientGenerator {
 }
 
 class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) extends ClientTerms[ScalaLanguage, Target] {
-  override implicit def MonadF: Monad[Target] = Target.targetInstances
-
   private def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)

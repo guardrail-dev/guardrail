@@ -1,9 +1,8 @@
 package dev.guardrail.core
 
-import cats.{ FlatMap, Foldable }
+import cats.{ FlatMap, Foldable, Monad }
 import cats.syntax.all._
 
-import dev.guardrail._
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol._
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
@@ -27,7 +26,7 @@ case class DeferredArray[L <: LA](value: String, containerTpe: Option[L#Type])  
 case class DeferredMap[L <: LA](value: String, containerTpe: Option[L#Type])                                                   extends LazyResolvedType[L]
 
 object ResolvedType {
-  def resolveReferences[L <: LA, F[_]](
+  def resolveReferences[L <: LA, F[_]: Monad](
       values: List[(String, ResolvedType[L])]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[List[(String, Resolved[L])]] =
     Sw.log.function("resolveReferences") {
@@ -71,7 +70,7 @@ object ResolvedType {
         }
     }
 
-  def resolve[L <: LA, F[_]](
+  def resolve[L <: LA, F[_]: Monad](
       value: ResolvedType[L],
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[Resolved[L]] = {

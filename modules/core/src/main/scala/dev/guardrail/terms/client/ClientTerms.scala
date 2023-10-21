@@ -1,6 +1,5 @@
 package dev.guardrail.terms.client
 
-import cats.Monad
 import cats.data.NonEmptyList
 import dev.guardrail.Context
 import dev.guardrail.core.Tracker
@@ -14,8 +13,6 @@ import io.swagger.v3.oas.models.Components
 import java.net.URI
 
 abstract class ClientTerms[L <: LA, F[_]] { self =>
-  def MonadF: Monad[F]
-
   def fromSpec(context: Context, frameworkImports: List[L#Import])(
       serverUrls: Option[NonEmptyList[URI]],
       basePath: Option[String],

@@ -1,6 +1,5 @@
 package dev.guardrail.generators.java.dropwizard
 
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import com.github.javaparser.StaticJavaParser
@@ -89,8 +88,6 @@ object DropwizardServerGenerator {
 class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, Target], Ca: CollectionsAbstraction[JavaLanguage])
     extends ServerTerms[JavaLanguage, Target] {
 
-  override implicit def MonadF: Monad[Target] = Target.targetInstances
-
   override def fromSpec(context: Context, supportPackage: NonEmptyList[String], basePath: Option[String], frameworkImports: List[JavaLanguage#Import])(
       groupedRoutes: List[(List[String], List[RouteMeta])]
   )(
@@ -125,7 +122,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
           responseServerPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
             for {
               operationId           <- getOperationId(operation)
-              responses             <- Responses.getResponses(operationId, operation, protocolElems, components)
+              responses             <- Responses.getResponses[JavaLanguage, Target](operationId, operation, protocolElems, components)
               responseClsName       <- formatTypeName(operationId, Some("Response"))
               responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
               methodName            <- formatMethodName(operationId)

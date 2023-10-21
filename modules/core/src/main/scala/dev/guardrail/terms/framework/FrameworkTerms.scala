@@ -1,11 +1,8 @@
 package dev.guardrail.terms.framework
 
-import cats.Monad
-
 import dev.guardrail.languages.LA
 
 abstract class FrameworkTerms[L <: LA, F[_]] { self =>
-  def MonadF: Monad[F]
   def getFrameworkImports(tracing: Boolean): F[List[L#Import]]
   def getFrameworkImplicits(): F[Option[(L#TermName, L#ObjectDefinition)]]
   def getFrameworkDefinitions(tracing: Boolean): F[List[(L#TermName, List[L#Definition])]]
@@ -14,7 +11,6 @@ abstract class FrameworkTerms[L <: LA, F[_]] { self =>
   def objectType(format: Option[String]): F[L#Type]
 
   def copy(
-      MonadF: Monad[F] = self.MonadF,
       getFrameworkImports: Boolean => F[List[L#Import]] = self.getFrameworkImports _,
       getFrameworkImplicits: () => F[Option[(L#TermName, L#ObjectDefinition)]] = self.getFrameworkImplicits _,
       getFrameworkDefinitions: Boolean => F[List[(L#TermName, List[L#Definition])]] = self.getFrameworkDefinitions _,
@@ -22,7 +18,6 @@ abstract class FrameworkTerms[L <: LA, F[_]] { self =>
       fileType: Option[String] => F[L#Type] = self.fileType _,
       objectType: Option[String] => F[L#Type] = self.objectType _
   ) = {
-    val newMonadF                  = MonadF
     val newGetFrameworkImports     = getFrameworkImports
     val newGetFrameworkImplicits   = getFrameworkImplicits
     val newGetFrameworkDefinitions = getFrameworkDefinitions
@@ -31,7 +26,6 @@ abstract class FrameworkTerms[L <: LA, F[_]] { self =>
     val newObjectType              = objectType
 
     new FrameworkTerms[L, F] {
-      def MonadF                                    = newMonadF
       def getFrameworkImports(tracing: Boolean)     = newGetFrameworkImports(tracing)
       def getFrameworkImplicits()                   = newGetFrameworkImplicits()
       def getFrameworkDefinitions(tracing: Boolean) = newGetFrameworkDefinitions(tracing)
