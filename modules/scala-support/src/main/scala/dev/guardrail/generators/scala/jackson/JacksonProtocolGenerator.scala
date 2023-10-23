@@ -1193,7 +1193,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
         for {
           discrimTpe <- Target.fromOption(param.term.decltpe, RuntimeFailure(s"Property ${param.name.value} has no type"))
           discrimValue <- JacksonHelpers
-            .discriminatorExpression[ScalaLanguage](
+            .discriminatorExpression(
               param.name.value,
               discriminatorValue(discriminator, className),
               param.rawType

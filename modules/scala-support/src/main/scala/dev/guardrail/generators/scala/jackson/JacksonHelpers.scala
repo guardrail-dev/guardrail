@@ -1,22 +1,24 @@
 package dev.guardrail.generators.scala.jackson
 
+import scala.util.Try
+import scala.meta.Term
+
 import dev.guardrail.Target
 import dev.guardrail.core.{ LiteralRawType, ReifiedRawType }
-import dev.guardrail.languages.LA
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.terms.LanguageTerms
-import scala.util.Try
 
 /* There's a copy of this file in guardrail-java-support,
  * modules/java-support/src/main/scala/dev/guardrail/generators/java/jackson/JacksonHelpers.scala
  */
 object JacksonHelpers {
-  def discriminatorExpression[L <: LA](
+  def discriminatorExpression(
       discriminatorName: String,
       discriminatorValue: String,
       discriminatorTpe: ReifiedRawType
-  )(litBigInteger: String => Target[L#Term], litBigDecimal: String => Target[L#Term], fallback: String => Target[L#Term])(implicit
-      Lt: LanguageTerms[L, Target]
-  ): Target[L#Term] = {
+  )(litBigInteger: String => Target[Term], litBigDecimal: String => Target[Term], fallback: String => Target[Term])(implicit
+      Lt: LanguageTerms[ScalaLanguage, Target]
+  ): Target[Term] = {
     import Lt._
 
     def parseLiteral[T](parser: String => T, friendlyName: String): Target[T] =
@@ -24,8 +26,8 @@ object JacksonHelpers {
         t => Target.raiseUserError[T](s"Unable to parse '$discriminatorValue' as '$friendlyName': ${t.getMessage}"),
         Target.pure[T]
       )
-    def errorUnsupported(tpe: String, fmt: String): Target[L#Term] =
-      Target.raiseUserError[L#Term](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '$discriminatorName'")
+    def errorUnsupported(tpe: String, fmt: String): Target[Term] =
+      Target.raiseUserError[Term](s"Unsupported discriminator type '$tpe' with format '$fmt' for property '$discriminatorName'")
 
     discriminatorTpe match {
       case LiteralRawType(Some(tpe @ "string"), fmt) =>

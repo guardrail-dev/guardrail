@@ -1271,7 +1271,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             .getOrElse(clsName)
 
           JacksonHelpers
-            .discriminatorExpression[JavaLanguage](
+            .discriminatorExpression(
               discriminator.propertyName,
               discriminatorValue,
               term.rawType

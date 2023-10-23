@@ -3,7 +3,6 @@ package tests.generators.helpers
 import dev.guardrail.core.LiteralRawType
 import dev.guardrail.generators.scala.ScalaGenerator
 import dev.guardrail.generators.scala.jackson.JacksonHelpers
-import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.{ Target, TargetValue }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -20,7 +19,7 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
   }
 
   def discriminatorExpression(value: String, tpe: String, fmt: Option[String] = None): Target[Term] =
-    JacksonHelpers.discriminatorExpression[ScalaLanguage](
+    JacksonHelpers.discriminatorExpression(
       "discrim",
       value,
       LiteralRawType(Some(tpe), fmt)

@@ -3,7 +3,6 @@ package tests.generators.helpers
 import dev.guardrail.core.LiteralRawType
 import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.jackson.JacksonHelpers
-import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.{ Target, TargetValue }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -26,7 +25,7 @@ class JacksonHelpersTest extends AnyFreeSpec with Matchers {
   val BIG_DECIMAL_FQ_TYPE = StaticJavaParser.parseClassOrInterfaceType("java.math.BigDecimal")
 
   def discriminatorExpression(value: String, tpe: String, fmt: Option[String] = None): Target[ast.Node] =
-    JacksonHelpers.discriminatorExpression[JavaLanguage](
+    JacksonHelpers.discriminatorExpression(
       "discrim",
       value,
       LiteralRawType(Some(tpe), fmt)
