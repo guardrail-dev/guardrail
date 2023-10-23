@@ -39,7 +39,6 @@ import dev.guardrail.generators.ProtocolDefinitions
 import dev.guardrail.generators.ProtocolGenerator.{ WrapEnumSchema, wrapNumberEnumSchema, wrapObjectEnumSchema, wrapStringEnumSchema }
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.generators.java.JavaCollectionsGenerator
-import dev.guardrail.generators.java.JavaGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
 import dev.guardrail.generators.java.syntax._
@@ -1226,7 +1225,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       supportPackage: List[String],
       selfParams: List[ProtocolParameter[JavaLanguage]],
       parents: List[SuperClass[JavaLanguage]]
-  ): Target[TypeDeclaration[_ <: TypeDeclaration[_]]] = {
+  )(implicit Lt: LanguageTerms[JavaLanguage, Target]): Target[TypeDeclaration[_ <: TypeDeclaration[_]]] = {
     val parentsWithDiscriminators = parents.collect { case p if p.discriminators.nonEmpty => p }
     val discriminators            = parents.flatMap(_.discriminators)
     val discriminatorNames        = discriminators.map(_.propertyName).toSet
@@ -1282,11 +1281,11 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
                 term.fieldType match {
                   case cls: ClassOrInterfaceType =>
                     // hopefully it's an enum type; nothing else really makes sense here
-                    JavaGenerator().formatEnumName(v).map(ev => new FieldAccessExpr(cls.getNameAsExpression, ev))
+                    Lt.formatEnumName(v).map(ev => new FieldAccessExpr(cls.getNameAsExpression, ev))
                   case tpe =>
                     Target.raiseUserError[Node](s"Unsupported discriminator type '${tpe.asString}' for property '${term.propertyName}'")
                 }
-            )(JavaGenerator())
+            )
             .flatMap[Expression] {
               case expr: Expression => Target.pure(expr)
               case node =>

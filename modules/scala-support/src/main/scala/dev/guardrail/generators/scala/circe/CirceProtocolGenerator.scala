@@ -17,7 +17,7 @@ import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull
 import dev.guardrail.generators.ProtocolGenerator.{ WrapEnumSchema, wrapNumberEnumSchema, wrapObjectEnumSchema, wrapStringEnumSchema }
 import dev.guardrail.generators.protocol.{ ClassChild, ClassHierarchy, ClassParent }
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator.WithValidations
-import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaLanguage }
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.generators.{ ProtocolDefinitions, RawParameterName }
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -979,7 +979,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       requirement: PropertyRequirement,
       isCustomType: Boolean,
       defaultValue: Option[scala.meta.Term]
-  ): Target[ProtocolParameter[ScalaLanguage]] =
+  )(implicit Lt: LanguageTerms[ScalaLanguage, Target]): Target[ProtocolParameter[ScalaLanguage]] =
     Target.log.function(s"transformProperty") {
       val fallbackRawType = ReifiedRawType.of(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
       for {
@@ -1035,8 +1035,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           _.map(regex => PropertyValidations(Some(regex)))
         )
 
-        presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
-        presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+        presence     <- Lt.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+        presenceType <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         (finalDeclType, finalDefaultValue) = requirement match {
           case PropertyRequirement.Required => tpe -> defaultValue
           case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
@@ -1176,7 +1176,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       supportPackage: List[String],
       selfParams: List[ProtocolParameter[ScalaLanguage]],
       parents: List[SuperClass[ScalaLanguage]] = Nil
-  ): Target[Option[Defn.Val]] = {
+  )(implicit Lt: LanguageTerms[ScalaLanguage, Target]): Target[Option[Defn.Val]] = {
     val discriminators            = parents.flatMap(_.discriminators)
     val discriminatorNames        = discriminators.map(_.propertyName).toSet
     val allParams                 = parents.reverse.flatMap(_.params) ++ selfParams
@@ -1184,7 +1184,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     val needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
     val paramCount                = params.length
     for {
-      presence <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+      presence <- Lt.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
       decVal <-
         if (paramCount == 0) {
           Target.pure(

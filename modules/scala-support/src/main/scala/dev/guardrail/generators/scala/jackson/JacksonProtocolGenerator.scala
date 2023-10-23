@@ -15,7 +15,7 @@ import dev.guardrail.core.{ DataRedacted, DataVisible, EmptyIsEmpty, EmptyIsNull
 import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.generators.ProtocolGenerator.{ WrapEnumSchema, wrapNumberEnumSchema, wrapObjectEnumSchema, wrapStringEnumSchema }
 import dev.guardrail.generators.protocol.{ ClassChild, ClassHierarchy, ClassParent }
-import dev.guardrail.generators.scala.{ JacksonModelGenerator, ScalaGenerator, ScalaLanguage }
+import dev.guardrail.generators.scala.{ JacksonModelGenerator, ScalaLanguage }
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.generators.{ ProtocolDefinitions, RawParameterName }
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -1104,7 +1104,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       requirement: PropertyRequirement,
       isCustomType: Boolean,
       defaultValue: Option[scala.meta.Term]
-  ): Target[ProtocolParameter[ScalaLanguage]] =
+  )(implicit Lt: LanguageTerms[ScalaLanguage, Target]): Target[ProtocolParameter[ScalaLanguage]] =
     Target.log.function(s"transformProperty") {
       val fallbackRawType = ReifiedRawType.of(property.downField("type", _.getType()).unwrapTracker, property.downField("format", _.getFormat()).unwrapTracker)
       for {
@@ -1152,8 +1152,8 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
           _.map(regex => PropertyValidations(Some(regex)))
         )
 
-        presence     <- ScalaGenerator().selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
-        presenceType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+        presence     <- Lt.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
+        presenceType <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         (finalDeclType, finalDefaultValue) = requirement match {
           case PropertyRequirement.Required => tpe -> defaultValue
           case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
@@ -1185,7 +1185,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       supportPackage: List[String],
       selfParams: List[ProtocolParameter[ScalaLanguage]],
       parents: List[SuperClass[ScalaLanguage]] = Nil
-  ) = {
+  )(implicit Lt: LanguageTerms[ScalaLanguage, Target]) = {
     val discriminatorParams =
       parents.flatMap(parent => parent.discriminators.flatMap(discrim => parent.params.find(_.name.value == discrim.propertyName).map((discrim, _))))
     for {
@@ -1205,20 +1205,20 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
                   Target.raiseUserError[Term](s"No declared type for property '${param.name.value}' on class $className")
                 ) {
                   case tpe @ (_: Type.Name | _: Type.Select) =>
-                    ScalaGenerator().formatEnumName(v).map(ev => Term.Select(Term.Name(tpe.toString), Term.Name(ev)))
+                    Lt.formatEnumName(v).map(ev => Term.Select(Term.Name(tpe.toString), Term.Name(ev)))
                   case tpe => Target.raiseError(RuntimeFailure(s"Assumed property ${param.name.value} was an enum, but can't handle $tpe"))
                 }
-            )(ScalaGenerator())
+            )
         } yield (param.name.value, param.term.name.value, param.term.decltpe, discrimValue)
       }
-      presenceSerType        <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
-      presenceDeserType      <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
-      optionNonNullDeserType <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
-      emptyIsNullDeserType   <- ScalaGenerator().selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
-      emptyIsNullOptionDeserType <- ScalaGenerator().selectType(
+      presenceSerType        <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
+      presenceDeserType      <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
+      optionNonNullDeserType <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
+      emptyIsNullDeserType   <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
+      emptyIsNullOptionDeserType <- Lt.selectType(
         NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer")
       )
-      optionNonMissingDeserType <- ScalaGenerator().selectType(
+      optionNonMissingDeserType <- Lt.selectType(
         NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonMissingDeserializer")
       )
       allTerms = selfParams ++ parents.flatMap(_.params)
