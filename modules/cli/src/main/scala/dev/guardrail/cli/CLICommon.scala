@@ -239,7 +239,6 @@ trait CLICommon extends GuardrailRunner {
             fallback
           case UserError(message) =>
             putErrLn(s"${AnsiColor.RED}Error: $message${AnsiColor.RESET}")
-            unsafePrintHelp()
             fallback
           case MissingModule(section, choices) =>
             putErrLn(s"${AnsiColor.RED}Error: Missing module ${section} (options are: ${choices.mkString(",")})${AnsiColor.RESET}")
