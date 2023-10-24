@@ -453,7 +453,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
         val producesAnnotation = NonEmptyList
           .fromList(
             responses.value
-              .flatMap(ResponseHelpers.getBestProduces[ScalaLanguage](operation, allProduces, _, isTypePlain))
+              .flatMap(ResponseHelpers.getBestProduces(operation, allProduces, _, isTypePlain))
               .distinct
               .map(toJaxRsAnnotationName)
           )

@@ -2,17 +2,19 @@ package dev.guardrail.scalaext.helpers
 
 import cats.data.NonEmptyList
 import cats.syntax.all._
+import io.swagger.v3.oas.models.Operation
+import scala.meta.Type
+
 import dev.guardrail.core.{ LiteralRawType, Tracker }
 import dev.guardrail.generators.LanguageParameters
-import dev.guardrail.languages.LA
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.terms.{ ApplicationJson, BinaryContent, ContentType, MultipartFormData, OctetStream, Response, TextContent, TextPlain, UrlencodedFormData }
-import io.swagger.v3.oas.models.Operation
 
 object ResponseHelpers {
   private val CONSUMES_PRIORITY = NonEmptyList.of(ApplicationJson.empty, TextPlain.empty, OctetStream.empty)
   private val PRODUCES_PRIORITY = NonEmptyList.of(ApplicationJson.empty, TextPlain.empty, OctetStream.empty)
 
-  def getBestConsumes[L <: LA](operation: Tracker[Operation], contentTypes: List[ContentType], parameters: LanguageParameters[L]): Option[ContentType] =
+  def getBestConsumes(operation: Tracker[Operation], contentTypes: List[ContentType], parameters: LanguageParameters[ScalaLanguage]): Option[ContentType] =
     if (parameters.formParams.nonEmpty) {
       if (parameters.formParams.exists(_.isFile) || contentTypes.exists(ContentType.isSubtypeOf[MultipartFormData])) {
         Some(MultipartFormData.empty)
@@ -37,11 +39,11 @@ object ResponseHelpers {
       }
     }
 
-  def getBestProduces[L <: LA](
+  def getBestProduces(
       operation: Tracker[Operation],
       contentTypes: List[ContentType],
-      response: Response[L],
-      fallbackIsString: L#Type => Boolean
+      response: Response[ScalaLanguage],
+      fallbackIsString: Type => Boolean
   ): Option[ContentType] =
     response.value
       .map(_._2)

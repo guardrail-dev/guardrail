@@ -439,7 +439,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
             NonEmptyList
               .fromList(
                 responses.value
-                  .flatMap(ResponseHelpers.getBestProduces[JavaLanguage](operation, allProduces, _, _.isPlain))
+                  .flatMap(ResponseHelpers.getBestProduces(operation, allProduces, _, _.isPlain))
                   .distinct
                   .map(toJaxRsAnnotationName)
               )

@@ -29,6 +29,3 @@ abstract class CoreTerms[L <: LA, F[_]] { self =>
     }
   }
 }
-object CoreTerms {
-  implicit def coreTerm[L <: LA, F[_]](implicit ev: CoreTerms[L, F]): CoreTerms[L, F] = ev
-}
