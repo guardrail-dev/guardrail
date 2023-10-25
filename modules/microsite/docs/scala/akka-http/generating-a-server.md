@@ -11,7 +11,6 @@ guardrail-generated servers come in two parts: a `Resource` and a `Handler`. The
 The following is an example from the [akka-http](https://github.com/akka/akka-http) server generator:
 
 ```scala mdoc:passthrough
-import dev.guardrail.generators.scala.akkaHttp.AkkaHttp
 import dev.guardrail.docs._
 DocsHelpers.renderScalaSnippet("akka-http", GeneratingAServer)("""
     |// The `Handler` trait is fully abstracted from the underlying http framework. As a result, with the exception of some
