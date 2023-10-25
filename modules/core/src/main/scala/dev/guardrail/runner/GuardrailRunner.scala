@@ -15,7 +15,7 @@ trait GuardrailRunner {
       .flatMap(
         _.flatTraverse(rs =>
           ReadSpec
-            .readSwagger(rs)
+            .readSpec(rs)
             .flatMap(_.traverse(WriteTree.writeTree))
             .leftFlatMap(value =>
               Target.pushLogger(StructuredLogger.error(s"${AnsiColor.RED}Error in ${rs.path}${AnsiColor.RESET}")) *> Target.raiseError[List[Path]](value)

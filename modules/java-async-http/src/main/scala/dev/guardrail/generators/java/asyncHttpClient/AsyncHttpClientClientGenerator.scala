@@ -49,7 +49,7 @@ import dev.guardrail.terms.Response
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.RouteMeta
 import dev.guardrail.terms.SecurityScheme
-import dev.guardrail.terms.SwaggerTerms
+import dev.guardrail.terms.OpenAPITerms
 import dev.guardrail.terms.TextContent
 import dev.guardrail.terms.TextPlain
 import dev.guardrail.terms.client.ClientTerms
@@ -97,7 +97,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       Fw: FrameworkTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[Clients[JavaLanguage]] = {
     import Sc._
     import Sw._

@@ -24,7 +24,7 @@ abstract class ProtocolTerms[L <: LA, F[_]] { self =>
       P: ProtocolTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
-      Sw: SwaggerTerms[L, F]
+      Sw: OpenAPITerms[L, F]
   ): F[ProtocolDefinitions[L]]
 
   def buildAccessor(clsName: String, termName: String): F[L#TermSelect]

@@ -18,7 +18,7 @@ import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.RandomType
 import dev.guardrail.terms.server.ServerTerms
-import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, ProtocolTerms, SecurityRequirements, SecurityScheme, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, CoreTerms, LanguageTerms, OpenAPITerms, ProtocolTerms, SecurityRequirements, SecurityScheme }
 
 object Common {
   val resolveFile: Path => List[String] => Path            = root => _.foldLeft(root)(_.resolve(_))
@@ -27,7 +27,7 @@ object Common {
   private[this] def extractSecuritySchemes[L <: LA, F[_]: Monad](
       spec: OpenAPI,
       prefixes: List[String]
-  )(implicit Sw: SwaggerTerms[L, F], Sc: LanguageTerms[L, F]): F[Map[String, SecurityScheme[L]]] = {
+  )(implicit Sw: OpenAPITerms[L, F], Sc: LanguageTerms[L, F]): F[Map[String, SecurityScheme[L]]] = {
     import Sw._
     import Sc._
 
@@ -65,7 +65,7 @@ object Common {
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Se: ServerTerms[L, F],
-      Sw: SwaggerTerms[L, F]
+      Sw: OpenAPITerms[L, F]
   ): F[(ProtocolDefinitions[L], CodegenDefinitions[L])] = {
     import Fw.{ getFrameworkImports, getFrameworkImplicits }
     import Sw._

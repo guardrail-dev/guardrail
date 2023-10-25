@@ -54,13 +54,13 @@ import dev.guardrail.terms.{
   IntHeldEnum,
   LanguageTerms,
   LongHeldEnum,
+  OpenAPITerms,
   ProtocolTerms,
   RenderedEnum,
   RenderedIntEnum,
   RenderedLongEnum,
   RenderedStringEnum,
-  StringHeldEnum,
-  SwaggerTerms
+  StringHeldEnum
 }
 import dev.guardrail.{ RuntimeFailure, Target, UserError }
 
@@ -105,7 +105,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       definitions: Mappish[List, String, Tracker[Schema[_]]]
   )(implicit
       Sc: LanguageTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[(List[ClassParent[JavaLanguage]], List[(String, Tracker[Schema[_]])])] = {
 
     def firstInHierarchy(model: Tracker[Schema[_]]): Option[Tracker[ObjectSchema]] =
@@ -192,7 +192,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       F: FrameworkTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target],
+      Sw: OpenAPITerms[JavaLanguage, Target],
       wrapEnumSchema: WrapEnumSchema[A]
   ): Target[Either[String, EnumDefinition[JavaLanguage]]] = {
     import Cl._
@@ -343,7 +343,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       P: ProtocolTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[ProtocolElems[JavaLanguage]] = {
     import Cl._
     import Sc._
@@ -419,7 +419,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       P: ProtocolTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[(List[ProtocolParameter[JavaLanguage]], List[NestedProtocolElems[JavaLanguage]])] = {
     import Cl._
     import Sc._
@@ -498,7 +498,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
 
   private def deduplicateParams(
       params: List[Tracker[ProtocolParameter[JavaLanguage]]]
-  )(implicit Sw: SwaggerTerms[JavaLanguage, Target], Sc: LanguageTerms[JavaLanguage, Target]): Target[List[ProtocolParameter[JavaLanguage]]] = {
+  )(implicit Sw: OpenAPITerms[JavaLanguage, Target], Sc: LanguageTerms[JavaLanguage, Target]): Target[List[ProtocolParameter[JavaLanguage]]] = {
     import Sc._
     Foldable[List]
       .foldLeftM[Target, Tracker[ProtocolParameter[JavaLanguage]], List[ProtocolParameter[JavaLanguage]]](params, List.empty[ProtocolParameter[JavaLanguage]]) {
@@ -569,7 +569,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       Fw: FrameworkTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[ProtocolElems[JavaLanguage]] = {
     import Cl._
     import Fw._
@@ -614,7 +614,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       P: ProtocolTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[ProtocolElems[JavaLanguage]] =
     for {
       deferredTpe <- ModelResolver.modelMetaType[JavaLanguage, Target](arr, components)
@@ -635,7 +635,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       P: ProtocolTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[List[SuperClass[JavaLanguage]]] = {
     import Sc._
 
@@ -716,7 +716,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       P: ProtocolTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[Either[String, ClassDefinition[JavaLanguage]]] = {
     import Sc._
 
@@ -774,7 +774,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       P: ProtocolTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[ProtocolDefinitions[JavaLanguage]] = {
     import Cl._
     import Sc._

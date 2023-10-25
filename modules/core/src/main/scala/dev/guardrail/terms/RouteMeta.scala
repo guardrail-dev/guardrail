@@ -210,7 +210,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
   def getParameters[L <: LA, F[_]: Monad](
       components: Tracker[Option[Components]],
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[LanguageParameters[L]] =
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[LanguageParameters[L]] =
     for {
       a <- LanguageParameter.fromParameters[L, F](protocolElems, components).apply(parameters)
     } yield new LanguageParameters[L](a)

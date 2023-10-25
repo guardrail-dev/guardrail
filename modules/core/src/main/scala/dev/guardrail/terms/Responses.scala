@@ -37,7 +37,7 @@ object Responses {
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
-      Sw: SwaggerTerms[L, F]
+      Sw: OpenAPITerms[L, F]
   ): F[Responses[L]] = Sw.log.function("getResponses") {
     import Sc.{ pureTermName, pureTypeName, widenTypeName, formatMethodArgName }
     import Fw.lookupStatusCode

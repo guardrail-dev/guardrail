@@ -7,7 +7,7 @@ import dev.guardrail.languages.LA
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, RouteMeta, SecurityScheme, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, OpenAPITerms, RouteMeta, SecurityScheme }
 import dev.guardrail.core.Tracker
 import io.swagger.v3.oas.models.Components
 import dev.guardrail.generators._
@@ -37,5 +37,5 @@ abstract class ServerTerms[L <: LA, F[_]] { self =>
       protocolElems: List[StrictProtocolElems[L]],
       securitySchemes: Map[String, SecurityScheme[L]],
       components: Tracker[Option[Components]]
-  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[Servers[L]]
+  )(implicit Fw: FrameworkTerms[L, F], Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[Servers[L]]
 }

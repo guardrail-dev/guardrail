@@ -23,12 +23,12 @@ import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
 import cats.data.NonEmptyList
 
-object SwaggerGenerator {
-  def apply[L <: LA](): SwaggerTerms[L, Target] =
-    new SwaggerGenerator[L]
+object OpenAPIGenerator {
+  def apply[L <: LA](): OpenAPITerms[L, Target] =
+    new OpenAPIGenerator[L]
 }
 
-class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
+class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
   private def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)
@@ -308,7 +308,7 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
   def dereferenceSchema(ref: Tracker[String], components: Tracker[Option[Components]]): dev.guardrail.Target[Tracker[Schema[_]]] =
     buildExtractor(components, "schemas", _.getSchemas())(ref)
 
-  override def log: SwaggerLogAdapter[Target] = new SwaggerLogAdapter[Target] {
+  override def log: LogAdapter[Target] = new LogAdapter[Target] {
     def function[A](name: String): Target[A] => Target[A] = Target.log.function(name)
     def push(name: String): Target[Unit]                  = Target.log.push(name)
     def pop: Target[Unit]                                 = Target.log.pop

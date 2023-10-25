@@ -5,7 +5,7 @@ import cats.syntax.all._
 
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, OpenAPITerms }
 
 sealed trait ReifiedRawType
 object ReifiedRawType {
@@ -28,7 +28,7 @@ case class DeferredMap[L <: LA](value: String, containerTpe: Option[L#Type])    
 object ResolvedType {
   def resolveReferences[L <: LA, F[_]: Monad](
       values: List[(String, ResolvedType[L])]
-  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[List[(String, Resolved[L])]] =
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[List[(String, Resolved[L])]] =
     Sw.log.function("resolveReferences") {
       import Cl._
       import Sw._
@@ -73,7 +73,7 @@ object ResolvedType {
   def resolve[L <: LA, F[_]: Monad](
       value: ResolvedType[L],
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F]): F[Resolved[L]] = {
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[Resolved[L]] = {
     import Sc._
     import Cl._
     import Sw._

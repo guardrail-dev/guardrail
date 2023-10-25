@@ -8,7 +8,7 @@ import io.swagger.v3.oas.models.media._
 import dev.guardrail.languages.LA
 import dev.guardrail.core.{ ReifiedRawType, Resolved, ResolvedType, Tracker }
 import dev.guardrail.core.resolvers.ModelResolver
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, OpenAPITerms }
 import dev.guardrail.terms.framework.FrameworkTerms
 
 case class PropMeta[L <: LA](clsName: String, tpe: L#Type)
@@ -17,7 +17,7 @@ object PropMeta {
   def extractConcreteTypes[L <: LA, F[_]: Monad](
       definitions: List[(String, Tracker[Schema[_]])],
       components: Tracker[Option[Components]]
-  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], F: FrameworkTerms[L, F]): F[List[PropMeta[L]]] = {
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F], F: FrameworkTerms[L, F]): F[List[PropMeta[L]]] = {
     import Sc._
     for {
       entries <- definitions.traverse[F, (String, ResolvedType[L])] { case (clsName, schema) =>

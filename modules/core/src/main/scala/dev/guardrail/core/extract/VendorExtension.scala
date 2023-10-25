@@ -37,7 +37,7 @@ object VendorExtension {
     implicit val defaultVendorExtensibleResponse: VendorExtensible[ApiResponse] =
       build[ApiResponse](m => key => Option(m.getExtensions).map(_.get(key)))
 
-    implicit val defaultVendorExtensibleSwagger: VendorExtensible[OpenAPI] =
+    implicit val defaultVendorExtensibleOpenAPI: VendorExtensible[OpenAPI] =
       build[OpenAPI](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleSchemaProperty: VendorExtensible[Schema[_]] =

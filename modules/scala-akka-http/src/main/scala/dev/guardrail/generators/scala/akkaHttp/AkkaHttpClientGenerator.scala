@@ -82,7 +82,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
       Fw: FrameworkTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[Clients[ScalaLanguage]] = {
     import Sc._
     import Sw._

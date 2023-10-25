@@ -4,7 +4,7 @@ import cats.{ FlatMap, Monad }
 import cats.syntax.all._
 
 import dev.guardrail.languages.LA
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, ProtocolTerms, RenderedEnum, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, OpenAPITerms, ProtocolTerms, RenderedEnum }
 
 case class StaticDefns[L <: LA](className: String, extraImports: List[L#Import], definitions: List[L#Definition])
 
@@ -44,7 +44,7 @@ object ProtocolElems {
   def resolve[L <: LA, F[_]: Monad](
       elems: List[ProtocolElems[L]],
       limit: Int = 10
-  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: SwaggerTerms[L, F], P: ProtocolTerms[L, F]): F[List[StrictProtocolElems[L]]] = {
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F], P: ProtocolTerms[L, F]): F[List[StrictProtocolElems[L]]] = {
     import Sc._
     import Cl._
     import Sw._
