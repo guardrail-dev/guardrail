@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 import cats.implicits._
 import dev.guardrail.{ ModuleConflict, Target, UnspecifiedModules, UnusedModules }
 import dev.guardrail.generators.Framework
-import dev.guardrail.generators.SwaggerGenerator
+import dev.guardrail.generators.OpenAPIGenerator
 import dev.guardrail.languages.LA
 import dev.guardrail.terms
 import java.util.ServiceLoader
@@ -29,7 +29,7 @@ trait FrameworkLoader {
         override implicit def FrameworkInterp: terms.framework.FrameworkTerms[L, Target] = framework
         override implicit def ProtocolInterp: terms.ProtocolTerms[L, Target]             = protocol
         override implicit def ServerInterp: terms.server.ServerTerms[L, Target]          = server
-        override implicit def SwaggerInterp: terms.SwaggerTerms[L, Target]               = SwaggerGenerator[L]()
+        override implicit def SwaggerInterp: terms.SwaggerTerms[L, Target]               = OpenAPIGenerator[L]()
         override implicit def LanguageInterp: terms.LanguageTerms[L, Target]             = language
         override implicit def CollectionsLibInterp: terms.CollectionsLibTerms[L, Target] = collections
       }

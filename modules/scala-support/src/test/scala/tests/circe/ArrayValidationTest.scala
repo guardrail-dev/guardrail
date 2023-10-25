@@ -4,7 +4,7 @@ import cats.data.NonEmptyList
 import dev.guardrail.Target
 import dev.guardrail.core.Tracker
 import dev.guardrail.generators.ProtocolDefinitions
-import dev.guardrail.generators.SwaggerGenerator
+import dev.guardrail.generators.OpenAPIGenerator
 import dev.guardrail.generators.scala.CirceRefinedModelGenerator
 import dev.guardrail.generators.scala.ScalaCollectionsGenerator
 import dev.guardrail.generators.scala.ScalaGenerator
@@ -62,7 +62,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
     }
     implicit val circeProtocolGenerator: ProtocolTerms[ScalaLanguage, Target] = CirceRefinedProtocolGenerator(CirceRefinedModelGenerator.V012)
     implicit val scalaGenerator                                               = ScalaGenerator()
-    implicit val swaggerGenerator                                             = SwaggerGenerator[ScalaLanguage]()
+    implicit val swaggerGenerator                                             = OpenAPIGenerator[ScalaLanguage]()
 
     "pattern" in {
 

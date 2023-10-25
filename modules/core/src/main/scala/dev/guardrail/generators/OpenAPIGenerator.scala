@@ -23,12 +23,12 @@ import dev.guardrail.terms._
 import dev.guardrail.terms.protocol._
 import cats.data.NonEmptyList
 
-object SwaggerGenerator {
+object OpenAPIGenerator {
   def apply[L <: LA](): SwaggerTerms[L, Target] =
-    new SwaggerGenerator[L]
+    new OpenAPIGenerator[L]
 }
 
-class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
+class OpenAPIGenerator[L <: LA] extends SwaggerTerms[L, Target] {
   private def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)
