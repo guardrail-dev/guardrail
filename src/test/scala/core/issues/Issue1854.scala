@@ -30,6 +30,23 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
        |        x-scala-type: dev.guardrail.foo.bar.Baz
        |""".stripMargin
 
+  val spec30: String =
+    s"""
+       |openapi: "3.0.0"
+       |info:
+       |  title: Whatever
+       |  version: 1.0.0
+       |host: localhost:1234
+       |components:
+       |  schemas:
+       |    Baz:
+       |      type: object
+       |      properties:
+       |        foo:
+       |          type: string
+       |          x-scala-type: dev.guardrail.foo.bar.Baz
+       |""".stripMargin
+
   val spec31: String =
     s"""
        |openapi: "3.1.0"
@@ -48,7 +65,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
        |""".stripMargin
 
   test("Generate no definitions") {
-    forAll(Seq(spec20, spec31)) { spec =>
+    forAll(Seq(spec20, spec30, spec31)) { spec =>
       val result = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
       val (ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _), _, _) = result
 
