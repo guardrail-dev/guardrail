@@ -29,13 +29,13 @@ import dev.guardrail.terms.{
   IntHeldEnum,
   LanguageTerms,
   LongHeldEnum,
+  OpenAPITerms,
   ProtocolTerms,
   RenderedEnum,
   RenderedIntEnum,
   RenderedLongEnum,
   RenderedStringEnum,
-  StringHeldEnum,
-  SwaggerTerms
+  StringHeldEnum
 }
 import dev.guardrail.{ Target, UserError }
 
@@ -142,7 +142,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       P: ProtocolTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[ProtocolDefinitions[ScalaLanguage]] = {
     import Cl._
     import Sc._
@@ -294,7 +294,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       F: FrameworkTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target],
+      Sw: OpenAPITerms[ScalaLanguage, Target],
       wrapEnumSchema: WrapEnumSchema[A]
   ): Target[Either[String, EnumDefinition[ScalaLanguage]]] = {
     import Cl._
@@ -390,7 +390,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       P: ProtocolTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[ProtocolElems[ScalaLanguage]] = {
     import Cl._
     import Sc._
@@ -463,7 +463,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       P: ProtocolTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[List[SuperClass[ScalaLanguage]]] = {
     import Sc._
 
@@ -544,7 +544,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       P: ProtocolTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[Either[String, ClassDefinition[ScalaLanguage]]] = {
     import Sc._
 
@@ -609,7 +609,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       P: ProtocolTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[(List[ProtocolParameter[ScalaLanguage]], List[NestedProtocolElems[ScalaLanguage]])] = {
     import Cl._
     import Sc._
@@ -688,7 +688,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
 
   private def deduplicateParams(
       params: List[Tracker[ProtocolParameter[ScalaLanguage]]]
-  )(implicit Sw: SwaggerTerms[ScalaLanguage, Target], Sc: LanguageTerms[ScalaLanguage, Target]): Target[List[ProtocolParameter[ScalaLanguage]]] = {
+  )(implicit Sw: OpenAPITerms[ScalaLanguage, Target], Sc: LanguageTerms[ScalaLanguage, Target]): Target[List[ProtocolParameter[ScalaLanguage]]] = {
     import Sc._
     Foldable[List]
       .foldLeftM[Target, Tracker[ProtocolParameter[ScalaLanguage]], List[ProtocolParameter[ScalaLanguage]]](
@@ -761,7 +761,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       Fw: FrameworkTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[ProtocolElems[ScalaLanguage]] = {
     import Cl._
     import Fw._
@@ -806,7 +806,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       P: ProtocolTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[ProtocolElems[ScalaLanguage]] =
     for {
       deferredTpe <- ModelResolver.modelMetaType[ScalaLanguage, Target](arr, components)
@@ -820,7 +820,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       definitions: Mappish[List, String, Tracker[Schema[_]]]
   )(implicit
       Sc: LanguageTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[(List[ClassParent[ScalaLanguage]], List[(String, Tracker[Schema[_]])])] = {
 
     def firstInHierarchy(model: Tracker[Schema[_]]): Option[Tracker[ObjectSchema]] =

@@ -42,7 +42,7 @@ class DropwizardClientGenerator private extends ClientTerms[ScalaLanguage, Targe
       Fw: FrameworkTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[Clients[ScalaLanguage]] =
     Target.raiseError(RuntimeFailure("Dropwizard Scala clients are not yet supported"))
 }

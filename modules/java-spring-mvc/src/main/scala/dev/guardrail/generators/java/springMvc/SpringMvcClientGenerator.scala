@@ -31,7 +31,7 @@ class SpringMvcClientGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
       Fw: FrameworkTerms[JavaLanguage, Target],
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
-      Sw: SwaggerTerms[JavaLanguage, Target]
+      Sw: OpenAPITerms[JavaLanguage, Target]
   ): Target[Clients[JavaLanguage]] =
     Target.raiseUserError("spring client generation is not currently supported")
 }

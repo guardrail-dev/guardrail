@@ -15,7 +15,7 @@ import dev.guardrail.languages.LA
 import dev.guardrail.shims._
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol._
-import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, SchemaLiteral, SchemaRef, SwaggerTerms }
+import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, OpenAPITerms, SchemaLiteral, SchemaRef }
 
 case class RawParameterName private[generators] (value: String)
 class LanguageParameters[L <: LA](val parameters: List[LanguageParameter[L]]) {
@@ -57,7 +57,7 @@ object LanguageParameter {
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
-      Sw: SwaggerTerms[L, F]
+      Sw: OpenAPITerms[L, F]
   ): Tracker[Parameter] => F[LanguageParameter[L]] = { parameter =>
     import Fw._
     import Sc._
@@ -189,7 +189,7 @@ object LanguageParameter {
       Fw: FrameworkTerms[L, F],
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
-      Sw: SwaggerTerms[L, F]
+      Sw: OpenAPITerms[L, F]
   ): List[Tracker[Parameter]] => F[List[LanguageParameter[L]]] = { params =>
     import Sc._
     for {

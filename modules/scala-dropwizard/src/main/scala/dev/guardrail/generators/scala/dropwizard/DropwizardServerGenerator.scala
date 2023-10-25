@@ -29,7 +29,7 @@ import dev.guardrail.terms.OctetStream
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.RouteMeta
 import dev.guardrail.terms.SecurityScheme
-import dev.guardrail.terms.SwaggerTerms
+import dev.guardrail.terms.OpenAPITerms
 import dev.guardrail.terms.TextContent
 import dev.guardrail.terms.TextPlain
 import dev.guardrail.terms.UrlencodedFormData
@@ -63,7 +63,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
       Fw: FrameworkTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[Servers[ScalaLanguage]] = {
     import Sw._
     import Sc._

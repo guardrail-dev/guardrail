@@ -121,7 +121,7 @@ class CoreTermInterp[L <: LA](
         spec =>
           try {
             import targetInterpreter._
-            val Sw = implicitly[SwaggerTerms[L, Target]]
+            val Sw = implicitly[OpenAPITerms[L, Target]]
             val Sc = implicitly[LanguageTerms[L, Target]]
             val Ps = implicitly[ProtocolTerms[L, Target]]
             for {

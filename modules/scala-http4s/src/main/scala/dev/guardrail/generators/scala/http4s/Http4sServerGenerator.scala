@@ -41,7 +41,7 @@ import dev.guardrail.terms.Responses
 import dev.guardrail.terms.RouteMeta
 import dev.guardrail.terms.SecurityRequirements
 import dev.guardrail.terms.SecurityScheme
-import dev.guardrail.terms.SwaggerTerms
+import dev.guardrail.terms.OpenAPITerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server._
@@ -94,7 +94,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       Fw: FrameworkTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[Servers[ScalaLanguage]] = {
     import Sw._
     import Sc._

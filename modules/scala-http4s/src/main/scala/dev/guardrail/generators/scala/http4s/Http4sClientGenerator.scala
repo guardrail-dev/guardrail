@@ -69,7 +69,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       Fw: FrameworkTerms[ScalaLanguage, Target],
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
-      Sw: SwaggerTerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[Clients[ScalaLanguage]] = {
     import Sc._
     import Sw._

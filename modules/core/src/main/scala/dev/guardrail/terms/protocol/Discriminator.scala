@@ -6,12 +6,12 @@ import io.swagger.v3.oas.models.media.Schema
 
 import dev.guardrail.core.Tracker
 import dev.guardrail.languages.LA
-import dev.guardrail.terms.{ LanguageTerms, SwaggerTerms }
+import dev.guardrail.terms.{ LanguageTerms, OpenAPITerms }
 
 case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
 
 object Discriminator {
-  def fromSchema[L <: LA, F[_]: Monad](schema: Tracker[Schema[_]])(implicit Sc: LanguageTerms[L, F], Sw: SwaggerTerms[L, F]): F[Option[Discriminator[L]]] =
+  def fromSchema[L <: LA, F[_]: Monad](schema: Tracker[Schema[_]])(implicit Sc: LanguageTerms[L, F], Sw: OpenAPITerms[L, F]): F[Option[Discriminator[L]]] =
     Sw.log.function("Discriminator.fromSchema") {
       import Sc._
       schema

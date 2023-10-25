@@ -27,7 +27,7 @@ abstract class SwaggerLogAdapter[F[_]] {
   def error(message: String): F[Unit]
 }
 
-abstract class SwaggerTerms[L <: LA, F[_]] {
+abstract class OpenAPITerms[L <: LA, F[_]] {
   def extractCommonRequestBodies(components: Tracker[Option[Components]]): F[Map[String, RequestBody]]
   def extractEnum(spec: Tracker[EnumSchema]): F[Either[String, HeldEnum]]
   def extractOperations(
