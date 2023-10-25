@@ -36,21 +36,21 @@ trait CLICommon extends GuardrailRunner {
     | ${AnsiColor.CYAN}guardrail${AnsiColor.RESET}
     |
     |  Required:
-    |   --specPath path/to/[foo-swagger.json|foo-swagger.yaml] : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, and must be valid
-    |   --outputPath path/to/project                           : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, intermediate paths will be created
-    |   --packageName com.twilio.myservice.clients             : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, Where to store your clients. Files will end up in the directory specified by replacing all dots with slashes.
+    |   --specPath path/to/[foo-spec.json|foo-spec.yaml] : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, and must be a valid OpenAPI or Swagger specification.
+    |   --outputPath path/to/project                     : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, intermediate paths will be created
+    |   --packageName com.twilio.myservice.clients       : ${AnsiColor.BOLD}Required${AnsiColor.RESET}, Where to store your clients. Files will end up in the directory specified by replacing all dots with slashes.
     |
     |  Argmuent list separators:
-    |   --client                                               : Start specifying arguments for a new client
-    |   --server                                               : Start specifying arguments for a new server
+    |   --client                                         : Start specifying arguments for a new client
+    |   --server                                         : Start specifying arguments for a new server
     |
     |  Optional:
-    |   --dtoPackage foo                                       : Where to put your client's DTOs. Effectively: "$${packageName}.definitions.$${dtoPackage}"
-    |   --tracing                                              : Pass through tracing context to all requests
-    |   --framework <framework name>                           : Use one of the pre-composed frameworks
-    |   --module <module name>                                 : Explicitly select libraries to satisfy composition requirements
-    |   --custom-extraction                                    : Permit supplying an akka-http Directive into the generated guardrail routing layer (server only)
-    |   --package-from-tags                                    : Use the tags, defined in the OpenAPI specification, to guide the generated package structures
+    |   --dtoPackage foo                                 : Where to put your client's DTOs. Effectively: "$${packageName}.definitions.$${dtoPackage}"
+    |   --tracing                                        : Pass through tracing context to all requests
+    |   --framework <framework name>                     : Use one of the pre-composed frameworks
+    |   --module <module name>                           : Explicitly select libraries to satisfy composition requirements
+    |   --custom-extraction                              : Permit supplying an akka-http Directive into the generated guardrail routing layer (server only)
+    |   --package-from-tags                              : Use the tags, defined in the OpenAPI specification, to guide the generated package structures
     |
     |Examples:
     |  Generate two clients, put both in src/main/scala, under different packages, one with tracing, one without:
