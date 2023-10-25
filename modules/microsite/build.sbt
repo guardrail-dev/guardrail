@@ -19,8 +19,9 @@ mdocIn := baseDirectory.value / "docs"
 //micrositeDataDirectory := baseDirectory.value / "docs" / "data"
 //micrositeImgDirectory := baseDirectory.value / "docs" / "images"
 
-// micrositeDocumentationLabelDescription := "Documentation"
-// micrositeDocumentationUrl := "https://guardrail.dev/..."
+micrositeDocumentationLabelDescription := "Documentation"
+micrositeDocumentationUrl := "/docs/"
+micrositeHomeButtonTarget := "docs"
 
 // micrositeCssDirectory
 // micrositeExternalIncludesDirectory
