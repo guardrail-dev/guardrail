@@ -308,7 +308,7 @@ class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
   def dereferenceSchema(ref: Tracker[String], components: Tracker[Option[Components]]): dev.guardrail.Target[Tracker[Schema[_]]] =
     buildExtractor(components, "schemas", _.getSchemas())(ref)
 
-  override def log: SwaggerLogAdapter[Target] = new SwaggerLogAdapter[Target] {
+  override def log: LogAdapter[Target] = new LogAdapter[Target] {
     def function[A](name: String): Target[A] => Target[A] = Target.log.function(name)
     def push(name: String): Target[Unit]                  = Target.log.push(name)
     def pop: Target[Unit]                                 = Target.log.pop

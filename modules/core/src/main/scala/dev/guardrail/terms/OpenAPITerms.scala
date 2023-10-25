@@ -16,7 +16,7 @@ sealed trait SchemaProjection
 case class SchemaLiteral(schema: Schema[_])              extends SchemaProjection
 case class SchemaRef(schema: SchemaLiteral, ref: String) extends SchemaProjection
 
-abstract class SwaggerLogAdapter[F[_]] {
+abstract class LogAdapter[F[_]] {
   def schemaToString(value: Schema[_]): String = "    " + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n    ")
   def function[A](name: String): F[A] => F[A]
   def push(name: String): F[Unit]
@@ -60,5 +60,5 @@ abstract class OpenAPITerms[L <: LA, F[_]] {
   def dereferenceResponse(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[ApiResponse]]
   def dereferenceSchema(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[Schema[_]]]
 
-  def log: SwaggerLogAdapter[F]
+  def log: LogAdapter[F]
 }
