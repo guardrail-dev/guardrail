@@ -282,13 +282,13 @@ class SwaggerGenerator[L <: LA] extends SwaggerTerms[L, Target] {
     val extract = s"^#/components/$label/([^/]*)$$".r
     ref
       .refine[Target[Tracker[A]]] { case extract(name) => name }(name =>
-        components.indexedDistribute
-          .fold[Target[Tracker[A]]](Target.raiseException("Attempting to dereference a $ref, but no components defined"))(components =>
-            Target.fromOption(
-              components.downField(label, proj).indexedDistribute.value.toMap.get(name.unwrapTracker),
-              UserError(s"Attempting to dereference a $$ref, but no object found at the specified pointer")
-            )
-          )
+        for {
+          components <- components.raiseErrorIfEmpty("Attempting to dereference a $ref, but no components defined")
+          result <- components
+            .downField(label, proj)
+            .map(_.value.toMap.get(name.unwrapTracker))
+            .raiseErrorIfEmpty(s"Attempting to dereference a $$ref, but no object found at the specified pointer")
+        } yield result
       )
       .orRefineFallback(_ =>
         Target.raiseException(
