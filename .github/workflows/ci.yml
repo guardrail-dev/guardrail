@@ -22,7 +22,7 @@ jobs:
     outputs:
       scala_versions: ${{ steps.set-scala-versions.outputs.scala_versions }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - uses: olafurpg/setup-scala@v14
@@ -69,7 +69,7 @@ jobs:
             { framework: 'spring-mvc',         project: 'sample-springMvc'      }
           ]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - uses: olafurpg/setup-scala@v14
@@ -110,7 +110,7 @@ jobs:
       if: ${{ matrix.java == '1.17' && matrix.scala.bincompat == '2.12' }}
     - run: echo 'combo_enabled=false' >> $GITHUB_ENV
       if: matrix.scala.bincompat == '2.13' && matrix.framework.framework == 'dropwizard'
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - uses: olafurpg/setup-scala@v14
