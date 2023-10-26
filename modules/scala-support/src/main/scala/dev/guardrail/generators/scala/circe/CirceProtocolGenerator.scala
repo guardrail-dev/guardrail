@@ -111,7 +111,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               array            <- fromArray(formattedClsName, arr, concreteTypes, components)
             } yield array
           )
-          .orRefine { case o: ObjectSchema => o }(m =>
+          .orRefine { case ObjectExtractor(o) => o }(m =>
             for {
               formattedClsName <- formatTypeName(clsName)
               enum             <- fromEnum[Object](formattedClsName, m, dtoPackage, components)
@@ -439,7 +439,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           tpe <- parseTypeName(clsName)
 
           discriminators <- (_extends :: concreteInterfaces).flatTraverse(
-            _.refine[Target[List[Discriminator[ScalaLanguage]]]] { case m: ObjectSchema => m }(m =>
+            _.refine[Target[List[Discriminator[ScalaLanguage]]]] { case ObjectExtractor(m) => m }(m =>
               Discriminator.fromSchema[ScalaLanguage, Target](m).map(_.toList)
             )
               .getOrElse(List.empty[Discriminator[ScalaLanguage]].pure[Target])
@@ -524,6 +524,25 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
   }
 
+  // NB: In OpenAPI 3.1 ObjectSchema was broadly replaced with JsonSchema.
+  // This broke a lot of assumptions, but seems to indicate that we're moving
+  // into a world where OAI has encoding information pushed to all models,
+  // instead of hoping that the operation code generators or global
+  // object-mappers can manage it all.
+  //
+  // This seems like a good change, but I'm opting to defer major refactors
+  // until the particulars of this change have had a time to sink in.
+  //
+  // This extractor is copy/pasted to a few different classes in guardrail.
+  // Should you copy it further, please copy this note as well.
+  private object ObjectExtractor {
+    def unapply(m: Schema[_]): Option[Schema[Object]] = m match {
+      case m: ObjectSchema => Some(m)
+      case m: JsonSchema   => Some(m)
+      case _               => None
+    }
+  }
+
   private def prepareProperties(
       clsName: NonEmptyList[String],
       propertyToTypeLookup: Map[String, String],
@@ -550,7 +569,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       for {
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
         defn <- schema
-          .refine[Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]]] { case x: ObjectSchema => x }(o =>
+          .refine[Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]]] { case ObjectExtractor(x) => x }(o =>
             for {
               defn <- fromModel(
                 nestedClassName,
@@ -696,13 +715,13 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   ): Target[ProtocolElems[ScalaLanguage]] = {
     import Cl._
     import Fw._
-    val model: Option[Tracker[ObjectSchema]] = abstractModel
-      .refine[Option[Tracker[ObjectSchema]]] { case m: ObjectSchema => m }(x => Option(x))
+    val model: Option[Tracker[Schema[Object]]] = abstractModel
+      .refine[Option[Tracker[Schema[Object]]]] { case ObjectExtractor(m) => m }(x => Option(x))
       .orRefine { case m: ComposedSchema => m }(
         _.downField("allOf", _.getAllOf()).indexedCosequence
           .get(1)
           .flatMap(
-            _.refine { case o: ObjectSchema => o }(Option.apply)
+            _.refine { case ObjectExtractor(o) => o }(Option.apply)
               .orRefineFallback(_ => None)
           )
       )
@@ -754,7 +773,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Sw: OpenAPITerms[ScalaLanguage, Target]
   ): Target[(List[ClassParent[ScalaLanguage]], List[(String, Tracker[Schema[_]])])] = {
 
-    def firstInHierarchy(model: Tracker[Schema[_]]): Option[Tracker[ObjectSchema]] =
+    def firstInHierarchy(model: Tracker[Schema[_]]): Option[Tracker[Schema[Object]]] =
       model
         .refine { case x: ComposedSchema => x } { elem =>
           definitions.value
@@ -765,7 +784,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             }
             .flatMap(
               _.refine { case x: ComposedSchema => x }(firstInHierarchy)
-                .orRefine { case o: ObjectSchema => o }(x => Option(x))
+                .orRefine { case ObjectExtractor(o) => o }(x => Option(x))
                 .getOrElse(None)
             )
         }
@@ -950,7 +969,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
   private def extractProperties(spec: Tracker[Schema[_]]) =
     spec
-      .refine[Target[List[(String, Tracker[Schema[_]])]]] { case o: ObjectSchema => o }(m =>
+      .refine[Target[List[(String, Tracker[Schema[_]])]]] { case ObjectExtractor(o) => o }(m =>
         Target.pure(m.downField("properties", _.getProperties()).indexedCosequence.value)
       )
       .orRefine { case c: ComposedSchema => c } { comp =>

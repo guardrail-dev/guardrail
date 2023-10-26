@@ -14,6 +14,25 @@ import io.swagger.v3.oas.models.media._
 import scala.jdk.CollectionConverters._
 
 object ModelResolver {
+  // NB: In OpenAPI 3.1 ObjectSchema was broadly replaced with JsonSchema.
+  // This broke a lot of assumptions, but seems to indicate that we're moving
+  // into a world where OAI has encoding information pushed to all models,
+  // instead of hoping that the operation code generators or global
+  // object-mappers can manage it all.
+  //
+  // This seems like a good change, but I'm opting to defer major refactors
+  // until the particulars of this change have had a time to sink in.
+  //
+  // This extractor is copy/pasted to a few different classes in guardrail.
+  // Should you copy it further, please copy this note as well.
+  private object ObjectExtractor {
+    def unapply(m: Schema[_]): Option[Schema[Object]] = m match {
+      case m: ObjectSchema => Some(m)
+      case m: JsonSchema   => Some(m)
+      case _               => None
+    }
+  }
+
   def propMeta[L <: LA, F[_]: Monad](property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
@@ -28,7 +47,7 @@ object ModelResolver {
       Fw: FrameworkTerms[L, F]
   ): F[core.ResolvedType[L]] =
     propMetaImpl(property, components)(
-      _.refine[core.ResolvedType[L]] { case schema: ObjectSchema if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
+      _.refine[core.ResolvedType[L]] { case ObjectExtractor(schema) if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
         core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty)
       ).orRefine { case c: ComposedSchema => c }(_ => core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty))
         .orRefine { case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) => schema }(_ =>
@@ -57,7 +76,7 @@ object ModelResolver {
 
         res <- strategy(property)
           .orRefine { case ref: Schema[_] if Option(ref.get$ref).isDefined => ref }(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
-          .orRefine { case o: ObjectSchema => o }(o =>
+          .orRefine { case ObjectExtractor(o) => o }(o =>
             for {
               prefixes  <- vendorPrefixes()
               customTpe <- CustomTypeName(o, prefixes).flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
@@ -177,7 +196,7 @@ object ModelResolver {
               )
             )
             // Explicitly return `string` if ObjectSchema has enum values. Should this go?
-            .orRefine { case SchemaLiteral(x: ObjectSchema) if Option(x.getEnum).map(_.asScala).exists(_.nonEmpty) => x }(
+            .orRefine { case SchemaLiteral(ObjectExtractor(x)) if Option(x.getEnum).map(_.asScala).exists(_.nonEmpty) => x }(
               extractFormat(fmt => stringType(None))
             )
             // First, match SchemaLiteral's that have conditionals on either the type or format
@@ -200,10 +219,9 @@ object ModelResolver {
             .orRefine { case SchemaLiteral(x: EmailSchema) => x }(const(stringType(None)))
             .orRefine { case SchemaLiteral(x: FileSchema) => x }(const(fileType(None)))
             .orRefine { case SchemaLiteral(x: IntegerSchema) => x }(extractFormat(fmt => integerType(fmt)))
-            .orRefine { case SchemaLiteral(x: JsonSchema) => x }(extractFormat(fmt => objectType(fmt)))
             .orRefine { case SchemaLiteral(x: MapSchema) => x }(extractFormat(fmt => objectType(fmt)))
             .orRefine { case SchemaLiteral(x: NumberSchema) => x }(extractFormat(fmt => numberType(fmt)))
-            .orRefine { case SchemaLiteral(x: ObjectSchema) => x }(extractFormat(fmt => objectType(fmt)))
+            .orRefine { case SchemaLiteral(ObjectExtractor(x)) => x }(extractFormat(fmt => objectType(fmt)))
             .orRefine { case SchemaLiteral(x: PasswordSchema) => x }(const(stringType(None)))
             .orRefine { case SchemaLiteral(x: StringSchema) => x }(extractFormat(fmt => stringType(None)))
             .orRefine { case SchemaLiteral(x: UUIDSchema) => x }(const(uuidType()))
