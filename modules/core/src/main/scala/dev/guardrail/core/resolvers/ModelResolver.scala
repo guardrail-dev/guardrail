@@ -56,6 +56,7 @@ object ModelResolver {
         _ <- log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})")
 
         res <- strategy(property)
+          .orRefine { case ref: Schema[_] if Option(ref.get$ref).isDefined => ref }(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
           .orRefine { case o: ObjectSchema => o }(o =>
             for {
               prefixes  <- vendorPrefixes()
@@ -110,7 +111,6 @@ object ModelResolver {
               }
             } yield res
           }
-          .orRefine { case ref: Schema[_] if Option(ref.get$ref).isDefined => ref }(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
           .pure[F]
         scalarResolved <- resolveScalarTypes[L, F](res, components)
         withDefaults   <- enrichWithDefault[L, F](property).apply(scalarResolved)
