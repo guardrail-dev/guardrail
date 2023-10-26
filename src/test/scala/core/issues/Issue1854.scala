@@ -26,8 +26,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
        |    type: object
        |    properties:
        |      foo:
-       |        type: string
-       |        x-scala-type: dev.guardrail.foo.bar.Baz
+       |        $$ref: '#/definitions/Baz'
        |""".stripMargin
 
   val spec30: String =
@@ -43,8 +42,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
        |      type: object
        |      properties:
        |        foo:
-       |          type: string
-       |          x-scala-type: dev.guardrail.foo.bar.Baz
+       |          $$ref: '#/components/schemas/Baz'
        |""".stripMargin
 
   val spec31: String =
@@ -60,8 +58,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
        |      type: object
        |      properties:
        |        foo:
-       |          type: string
-       |          x-scala-type: dev.guardrail.foo.bar.Baz
+       |          $$ref: '#/components/schemas/Baz'
        |""".stripMargin
 
   test("Generate no definitions") {
@@ -73,7 +70,7 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
 
       val definition =
         q"""
-       case class Baz(foo: Option[dev.guardrail.foo.bar.Baz] = None)
+       case class Baz(foo: Option[Baz] = None)
      """
 
       val companion =
@@ -82,12 +79,12 @@ class ScalaTypesTest extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
          implicit val encodeBaz: _root_.io.circe.Encoder.AsObject[Baz] = {
            _root_.io.circe.Encoder.AsObject.instance[Baz](a => _root_.io.circe.JsonObject.fromIterable(_root_.scala.Vector(("foo", a.foo.asJson))))
          }
-         implicit val decodeBaz: _root_.io.circe.Decoder[Baz] = new _root_.io.circe.Decoder[Baz] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Baz] = for (v0 <- c.downField("foo").as[Option[dev.guardrail.foo.bar.Baz]]) yield Baz(v0) }
+         implicit val decodeBaz: _root_.io.circe.Decoder[Baz] = new _root_.io.circe.Decoder[Baz] { final def apply(c: _root_.io.circe.HCursor): _root_.io.circe.Decoder.Result[Baz] = for (v0 <- c.downField("foo").as[Option[Baz]]) yield Baz(v0) }
        }
      """
 
-      cls.structure shouldEqual definition.structure
-      cmp.structure shouldEqual companion.structure
+      cls.syntax shouldEqual definition.syntax
+      cmp.syntax shouldEqual companion.syntax
     }
   }
 }
