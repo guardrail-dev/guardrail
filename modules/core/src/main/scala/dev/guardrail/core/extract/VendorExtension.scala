@@ -64,8 +64,8 @@ object VendorExtension {
     implicit val defaultVendorExtensibleMapProperty: VendorExtensible[MapSchema] =
       build[MapSchema](m => key => Option(m.getExtensions).map(_.get(key)))
 
-    implicit val defaultVendorExtensibleObjectProperty: VendorExtensible[ObjectSchema] =
-      build[ObjectSchema](m => key => Option(m.getExtensions).map(_.get(key)))
+    implicit val defaultVendorExtensibleObjectProperty: VendorExtensible[Schema[Object]] =
+      build[Schema[Object]](m => key => Option(m.getExtensions).map(_.get(key)))
 
     implicit val defaultVendorExtensibleStringProperty: VendorExtensible[StringSchema] =
       build[StringSchema](m => key => Option(m.getExtensions).map(_.get(key)))
