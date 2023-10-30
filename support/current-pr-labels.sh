@@ -22,11 +22,10 @@ fetch_pr() {
 
 labels_since_last_release() {
   module_name="$1"; shift || die 'Missing module_name'
-  cache="$1"; shift || die 'Missing cache target'
 
   latest_tag="$(git tag | grep "^$module_name-v[0-9]" | tail -n 1)"
   if [ -z "$latest_tag" ]; then
-    echo '{"labels":[]}' > "$cache"
+    echo '{"labels":[]}'
   else
     module_released_on="$(git show "${latest_tag}" --format=%cI)"
     gh_api "search/issues?q=repo:guardrail-dev/guardrail+type:pr+is:merged+closed:>${module_released_on}" \
