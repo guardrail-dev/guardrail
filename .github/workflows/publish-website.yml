@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: zulu
-          java-version: 1.14
+          java-version: 14
       - uses: ruby/setup-ruby@v1.159.0
         with:
           bundler-cache: true
