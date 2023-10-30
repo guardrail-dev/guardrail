@@ -4,7 +4,23 @@ on:
   release:
     types:
       - released
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      module:
+        type: choice
+        description: Which module to release
+        options:
+          - From Tag
+          - core
+          - java-async-http
+          - java-dropwizard
+          - java-spring-mvc
+          - java-support
+          - scala-akka-http
+          - scala-dropwizard
+          - scala-http4s
+          - scala-support
+          - cli
 
 jobs:
   publish:
@@ -14,8 +30,13 @@ jobs:
       - name: 'Extract project from tag'
         id: set-project-from-tag
         run: |
-          module="$(echo "$GITHUB_REF" | sed 's~^refs/tags/\(.*\)-v[0-9.]\+$~\1~')"
-          echo "extract project: ${GITHUB_REF}, ${module}"
+          module="${{ github.event.inputs.message }}"
+          if [ -z "$module" ] || [ "$module" = "From Tag" ]; then
+            module="$(echo "$GITHUB_REF" | sed 's~^refs/tags/\(.*\)-v[0-9.]\+$~\1~')"
+            echo "extract project: ${GITHUB_REF}, ${module}"
+          else
+            echo "Using supplied module: $module"
+          fi
           echo "module=$module" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v4
         with:
