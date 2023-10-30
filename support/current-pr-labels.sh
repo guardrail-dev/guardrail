@@ -63,7 +63,7 @@ if [ -n "$GITHUB_EVENT_PATH" ]; then
   fi
 
   msg="$(jq -r .message < "$cache")"
-  if [ "$msg" != "null" ]; then  # If the API returned an error message
+  if [ -n "$msg" ] && [ "$msg" != "null" ]; then  # If the API returned an error message
     echo "ERROR: ${msg}" >&2
     exit 1
   fi
