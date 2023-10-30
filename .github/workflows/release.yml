@@ -30,7 +30,7 @@ jobs:
       - name: 'Extract project from tag'
         id: set-project-from-tag
         run: |
-          module="${{ github.event.inputs.message }}"
+          module="${{ github.event.inputs.module }}"
           if [ -z "$module" ] || [ "$module" = "From Tag" ]; then
             module="$(echo "$GITHUB_REF" | sed 's~^refs/tags/\(.*\)-v[0-9.]\+$~\1~')"
             echo "extract project: ${GITHUB_REF}, ${module}"
