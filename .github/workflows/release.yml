@@ -4,7 +4,23 @@ on:
   release:
     types:
       - released
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      module:
+        type: choice
+        description: Which module to release
+        options:
+          - From Tag
+          - core
+          - java-async-http
+          - java-dropwizard
+          - java-spring-mvc
+          - java-support
+          - scala-akka-http
+          - scala-dropwizard
+          - scala-http4s
+          - scala-support
+          - cli
 
 jobs:
   publish:
@@ -14,8 +30,13 @@ jobs:
       - name: 'Extract project from tag'
         id: set-project-from-tag
         run: |
-          module="$(echo "$GITHUB_REF" | sed 's~^refs/tags/\(.*\)-v[0-9.]\+$~\1~')"
-          echo "extract project: ${GITHUB_REF}, ${module}"
+          module="${{ github.event.inputs.message }}"
+          if [ -z "$module" ] || [ "$module" = "From Tag" ]; then
+            module="$(echo "$GITHUB_REF" | sed 's~^refs/tags/\(.*\)-v[0-9.]\+$~\1~')"
+            echo "extract project: ${GITHUB_REF}, ${module}"
+          else
+            echo "Using supplied module: $module"
+          fi
           echo "module=$module" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v4
         with:
@@ -27,7 +48,6 @@ jobs:
         run: |
           java -version
           gpg --version
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [core]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'core' }}
         run: sbt 'show version' "project guardrail-core" clean compile versionCheck test ci-release
@@ -37,7 +57,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [java-async-http]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-async-http' }}
         run: sbt 'show version' "project guardrail-java-async-http" clean compile versionCheck test ci-release
@@ -47,7 +66,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [java-dropwizard]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-dropwizard' }}
         run: sbt 'show version' "project guardrail-java-dropwizard" clean compile versionCheck test ci-release
@@ -57,7 +75,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [java-spring-mvc]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-spring-mvc' }}
         run: sbt 'show version' "project guardrail-java-spring-mvc" clean compile versionCheck test ci-release
@@ -67,7 +84,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [java-support]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-support' }}
         run: sbt 'show version' "project guardrail-java-support" clean compile versionCheck test ci-release
@@ -77,7 +93,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [scala-akka-http]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-akka-http' }}
         run: sbt 'show version' "project guardrail-scala-akka-http" clean compile versionCheck test ci-release
@@ -87,7 +102,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [scala-dropwizard]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-dropwizard' }}
         run: sbt 'show version' "project guardrail-scala-dropwizard" clean compile versionCheck test ci-release
@@ -97,7 +111,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [scala-http4s]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-http4s' }}
         run: sbt 'show version' "project guardrail-scala-http4s" clean compile versionCheck test ci-release
@@ -107,7 +120,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [scala-support]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-support' }}
         run: sbt 'show version' "project guardrail-scala-support" clean compile versionCheck test ci-release
@@ -117,7 +129,6 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
-      # NB: Managed by support/regenerate-release-drafter.sh
       - name: 'Publish artifacts [cli]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'cli' }}
         run: sbt 'show version' "project guardrail-cli" clean compile versionCheck test ci-release
