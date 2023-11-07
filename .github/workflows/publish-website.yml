@@ -15,7 +15,7 @@ jobs:
         with:
           distribution: zulu
           java-version: 14
-      - uses: ruby/setup-ruby@v1.159.0
+      - uses: ruby/setup-ruby@v1.160.0
         with:
           bundler-cache: true
       - name: Install microsite deps
