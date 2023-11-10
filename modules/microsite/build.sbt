@@ -20,8 +20,9 @@ mdocIn := baseDirectory.value / "docs"
 //micrositeImgDirectory := baseDirectory.value / "docs" / "images"
 
 micrositeDocumentationLabelDescription := "Documentation"
-micrositeDocumentationUrl := "/docs/"
+micrositeDocumentationUrl := "docs"
 micrositeHomeButtonTarget := "docs"
+micrositeBaseUrl := "."
 
 // micrositeCssDirectory
 // micrositeExternalIncludesDirectory
@@ -30,7 +31,6 @@ micrositeHomeButtonTarget := "docs"
 // micrositePluginsDirectory
 // micrositeStaticDirectory
 
-// micrositeBaseUrl
 // micrositeCDNDirectives
 // micrositeConfig
 // micrositeConfigYaml
