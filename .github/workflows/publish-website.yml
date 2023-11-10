@@ -26,8 +26,8 @@ jobs:
           java -version
           gpg --version
           ruby --version
-          jekyll --version
+          bundle exec jekyll --version
       - name: Update website
         env:
           MICROSITE_PUBLISH_TOKEN: ${{ secrets.MICROSITE_PUBLISH_TOKEN }}
-        run: sbt microsite/makeMicrosite microsite/publishMicrosite
+        run: bundle exec sbt microsite/makeMicrosite microsite/publishMicrosite
