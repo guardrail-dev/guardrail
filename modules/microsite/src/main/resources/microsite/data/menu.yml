@@ -1,6 +1,6 @@
 options:
   - title: Getting Started
-    url: ""
+    url: "docs/"
 
   - title: Java
     url: docs/java/
