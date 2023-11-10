@@ -1,0 +1,211 @@
+<!DOCTYPE html><html><head><title>guardrail: guardrail extensions - akka-http - scala - guardrail</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="guardrail.dev" /><meta name="description" content="Principled code generation from OpenAPI specifications" /><meta name="og:image" content="/./img/poster.png" /><meta name="image" property="og:image" content="/./img/poster.png" /><meta name="og:title" content="guardrail: guardrail extensions - akka-http - scala - guardrail" /><meta name="title" property="og:title" content="guardrail: guardrail extensions - akka-http - scala - guardrail" /><meta name="og:site_name" content="guardrail" /><meta name="og:url" content="https://github.com/guardrail-dev/guardrail" /><meta name="og:type" content="website" /><meta name="og:description" content="Principled code generation from OpenAPI specifications" /><link rel="icon" type="image/png" href="/./img/favicon.png" /><meta name="twitter:title" content="guardrail: guardrail extensions - akka-http - scala - guardrail" /><meta name="twitter:image" content="https://guardrail.dev//./img/poster.png" /><meta name="twitter:description" content="Principled code generation from OpenAPI specifications" /><meta name="twitter:card" content="summary_large_image" /><meta name="twitter:site" content="@guardrail_code" /><meta name="twitter:creator" content="@guardrail_dev" /><link rel="icon" type="image/png" sizes="16x16" href="/./img/favicon16x16.png" /><link rel="icon" type="image/png" sizes="24x24" href="/./img/favicon24x24.png" /><link rel="icon" type="image/png" sizes="32x32" href="/./img/favicon32x32.png" /><link rel="icon" type="image/png" sizes="48x48" href="/./img/favicon48x48.png" /><link rel="icon" type="image/png" sizes="57x57" href="/./img/favicon57x57.png" /><link rel="icon" type="image/png" sizes="60x60" href="/./img/favicon60x60.png" /><link rel="icon" type="image/png" sizes="64x64" href="/./img/favicon64x64.png" /><link rel="icon" type="image/png" sizes="70x70" href="/./img/favicon70x70.png" /><link rel="icon" type="image/png" sizes="72x72" href="/./img/favicon72x72.png" /><link rel="icon" type="image/png" sizes="76x76" href="/./img/favicon76x76.png" /><link rel="icon" type="image/png" sizes="96x96" href="/./img/favicon96x96.png" /><link rel="icon" type="image/png" sizes="114x114" href="/./img/favicon114x114.png" /><link rel="icon" type="image/png" sizes="120x120" href="/./img/favicon120x120.png" /><link rel="icon" type="image/png" sizes="128x128" href="/./img/favicon128x128.png" /><link rel="icon" type="image/png" sizes="144x144" href="/./img/favicon144x144.png" /><link rel="icon" type="image/png" sizes="150x150" href="/./img/favicon150x150.png" /><link rel="icon" type="image/png" sizes="152x152" href="/./img/favicon152x152.png" /><link rel="icon" type="image/png" sizes="196x196" href="/./img/favicon196x196.png" /><link rel="icon" type="image/png" sizes="310x310" href="/./img/favicon310x310.png" /><link rel="icon" type="image/png" sizes="310x150" href="/./img/favicon310x150.png" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/./highlight/styles/vs.css" /><link rel="stylesheet" href="/./css/light-style.css" /><script async="async">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-154175369-1' , 'auto');
+ga('send', 'pageview');
+      </script></head><body class="docs"><div id="wrapper"><div id="sidebar-wrapper"><div id="sidebar-brand"><a href="/./" class="brand"><div class="brand-wrapper"></div><span>guardrail</span></a><button id="main-toggle" class="sidebar-toggle"><span class="close"></span></button></div><div class="sidebar-nav"> <div class="sidebar-nav-item  "><a href="/" title="Getting Started" class="">Getting Started</a></div> <div class="sidebar-nav-item  "><a href="/docs/java/" title="Java" class="drop-nested">Java</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/docs/java/dropwizard/" title="Dropwizard" class="">Dropwizard</a> <a href="/docs/java/spring-mvc/" title="Spring-MVC" class="">Spring-MVC</a></div></div> <div class="sidebar-nav-item  "><a href="/docs/scala/" title="Scala" class="drop-nested">Scala</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/docs/scala/akka-http" title="akka-http" class="">akka-http</a> <a href="/docs/scala/akka-http-jackson" title="akka-http-jackson" class="">akka-http-jackson</a> <a href="/docs/scala/http4s" title="http4s" class="">http4s</a></div></div></div></div><div id="page-content-wrapper"><div class="nav"><div class="container-fluid"><div class="row"><div class="col-lg-12"><div class="action-menu pull-left clearfix"><a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars" aria-hidden="true"></i></a></div><ul class="pull-right"><li class="search-nav"><div id="search-dropdown"><label><i class="fa fa-search"></i>Search</label><input id="search-bar" type="text" placeholder="Enter keywords here..." onclick="displayToggleSearch(event)" /><ul id="search-dropdown-content" class="dropdown dropdown-content"></ul></div></li><li id="gh-eyes-item" class="hidden-xs to-uppercase"><a href="https://github.com/guardrail-dev/guardrail" target="_blank" rel="noopener noreferrer"><i class="fa fa-eye"></i><span>Watchers<span id="eyes" class="label label-default">--</span></span></a></li><li id="gh-stars-item" class="hidden-xs to-uppercase"><a href="https://github.com/guardrail-dev/guardrail" target="_blank" rel="noopener noreferrer"><i class="fa fa-star-o"></i><span>Stars<span id="stars" class="label label-default">--</span></span></a></li></ul></div></div></div></div><div id="content" data-github-owner="guardrail-dev" data-github-repo="guardrail"><div class="content-wrapper"><section><h1 id="guardrail-extensions">guardrail Extensions</h1>
+
+<p>guardrail has <a href="https://github.com/guardrail-dev/guardrail/blob/master/modules/codegen/src/main/scala/dev/guardrail/extract/package.scala">a number of vendor extensions</a> designed to enhance safety and provide more idiomatic generated code. The following table lists all vendor extensions, contexts where they are applicable, and a short description of how to use them effectively.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Extension</th>
+      <th>Type</th>
+      <th>Contexts</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap=""><code>x-empty-is-null</code></td>
+      <td>boolean</td>
+      <td>clients/servers, definitions</td>
+      <td>
+        Instructs the JSON decoder to convert empty strings to <code>null</code> before
+        decoding, causing empty strings to not satisfy the <code>required</code> directive,
+        or being represented as <code>None</code> instead of <code>Some("")</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-file-hash</code></td>
+      <td>string</td>
+      <td nowrap="">servers, parameters, file</td>
+      <td>
+        During a streaming file upload, keep track of the file hash in one of
+        the <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#MessageDigest">supported file hash types</a>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-scala-package</code></td>
+      <td>string</td>
+      <td nowrap="">clients/servers, paths</td>
+      <td>
+        A dot-separated package segment concatenated to the end of the supplied
+        <code>packageName</code> when generating Scala code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. See also <code>x-jvm-package</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-java-package</code></td>
+      <td>string</td>
+      <td nowrap="">clients/servers, paths</td>
+      <td>
+        A dot-separated package segment concatenated to the end of the supplied
+        <code>packageName</code> when generating Java code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. See also <code>x-jvm-package</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-jvm-package</code></td>
+      <td>string</td>
+      <td nowrap="">clients/servers, paths</td>
+      <td>
+        A dot-separated package segment concatenated to the end of the supplied
+        <code>packageName</code> when generating JVM code. This permits
+        splitting up large specifications into smaller, domain-specific
+        <code>Handler</code>s. Note that <code>x-scala-package</code> and
+        <code>x-java-package</code> take precedence over this property.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-server-raw-response</code></td>
+      <td>boolean</td>
+      <td nowrap="">servers, paths</td>
+      <td>
+        Exposes the underlying HTTP framework's response-building
+        infrastructure. Type-safe `respond` wrappers are still generated
+        and supplied, though this escape-hatch is intended to work around
+        bugs in guardrail itself. This is not recommended for long-term use,
+        as no guarantees around compile-time-safe protocol adherence can be
+        made.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-tracing-label</code></td>
+      <td>string</td>
+      <td nowrap="">clients/servers, paths</td>
+      <td>
+        When <code>tracing</code> is enabled, override the provided function
+        label with a custom string. This string will be supplied to your
+        supplied <code>trace</code> function in your servers and your supplied
+        <code>traceBuilder</code> in your clients.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-scala-type</code></td>
+      <td>string</td>
+      <td nowrap="">definitions, parameters</td>
+      <td>
+        Override the primitive types specified in the OpenAPI specification
+        with a domain-specific type for generated Scala code. This requires the
+        type to have either serializers/deserializers in the underlying JSON
+        framework or HTTP framework. As this is an advanced feature, it may
+        require use of custom <code>imports</code> provided via build tool
+        plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-java-type</code></td>
+      <td>string</td>
+      <td nowrap="">definitions, parameters</td>
+      <td>
+        Override the primitive types specified in the OpenAPI specification
+        with a domain-specific type for generated Java code. This requires the
+        type to have either serializers/deserializers in the underlying JSON
+        framework or HTTP framework. As this is an advanced feature, it may
+        require use of custom <code>imports</code> provided via build tool
+        plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-jvm-type</code></td>
+      <td>string</td>
+      <td nowrap="">definitions, parameters</td>
+      <td>
+        Override the primitive types specified in the OpenAPI specification
+        with a domain-specific type for generated JVM (Scala and Java) code.
+        This requires the type to have either serializers/deserializers in the
+        underlying JSON framework or HTTP framework. As this is an advanced
+        feature, it may require use of custom <code>imports</code> provided via
+        build tool plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-scala-array-type</code>, <code>x-java-array-type</code></td>
+      <td>string</td>
+      <td nowrap="">definitions, parameters</td>
+      <td>
+        Override the generated array type from `Vector` to some custom type.
+        This requires the type to have either serializers/deserializers in the
+        underlying JSON framework or HTTP framework. As this is an advanced
+        feature, it may require use of custom <code>imports</code> provided via
+        build tool plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-scala-map-type</code>, <code>x-java-map-type</code></td>
+      <td>string</td>
+      <td nowrap="">definitions, parameters</td>
+      <td>
+        Override the generated map type from `Map` to some custom type.
+        This requires the type to have either serializers/deserializers in the
+        underlying JSON framework or HTTP framework. As this is an advanced
+        feature, it may require use of custom <code>imports</code> provided via
+        build tool plugins or at the CLI.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-scala-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap="">clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating Scala code. See also <code>x-jvm-class-prefix</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-java-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap="">clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating Java code. See also <code>x-jvm-class-prefix</code>.
+      </td>
+    </tr>
+    <tr>
+      <td nowrap=""><code>x-jvm-class-prefix</code></td>
+      <td>string</td>
+      <td nowrap="">clients/servers</td>
+      <td>
+        An arbitrary class name prefix that overrides the default class name
+        when generating JVM code. See also <code>x-scala-class-prefix</code>.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p><span style="float: left"><a href="generating-clients">Prev: Generating clients</a></span></p>
+</section></div></div></div></div><script src="/./highlight/highlight.pack.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/yaml.min.js"></script><script src="/./lunr/lunr.js"></script><script>
+// For all code blocks, copy the language from the containing div
+// to the inner code tag (where hljs expects it to be)
+const langPrefix = 'language-';
+document.querySelectorAll(`div[class^='${langPrefix}']`).forEach(function(div) {
+  div.classList.forEach(function(cssClass) {
+    if (cssClass.startsWith(langPrefix)) {
+      const lang = cssClass.substring(langPrefix.length);
+      div.querySelectorAll('pre code').forEach(function(code) {
+        code.classList.add(lang);
+      });
+    }
+  });
+});
+
+hljs.configure({languages:['scala','java','bash','yaml','scala']});
+hljs.initHighlightingOnLoad();
+      </script><script>console.info('\x57\x65\x62\x73\x69\x74\x65\x20\x62\x75\x69\x6c\x74\x20\x77\x69\x74\x68\x3a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x5f\x5f\x0a\x20\x20\x20\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x5f\x20\x20\x2f\x20\x2f\x5f\x20\x20\x20\x20\x20\x20\x5f\x5f\x5f\x5f\x20\x5f\x5f\x5f\x20\x20\x28\x5f\x29\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x28\x5f\x29\x20\x2f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x0a\x20\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x60\x5f\x5f\x20\x5c\x2f\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x20\x2f\x20\x5f\x5f\x2f\x20\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x0a\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x5f\x2f\x20\x2f\x20\x2f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x5f\x5f\x2f\x20\x2f\x20\x20\x2f\x20\x2f\x5f\x2f\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x20\x2f\x5f\x2f\x20\x20\x5f\x5f\x28\x5f\x5f\x20\x20\x29\x0a\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2e\x5f\x5f\x5f\x2f\x5c\x5f\x5f\x2f\x20\x20\x20\x20\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x2f\x20\x20\x20\x5c\x5f\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x0a\x0a\x68\x74\x74\x70\x73\x3a\x2f\x2f\x34\x37\x64\x65\x67\x2e\x67\x69\x74\x68\x75\x62\x2e\x69\x6f\x2f\x73\x62\x74\x2d\x6d\x69\x63\x72\x6f\x73\x69\x74\x65\x73')</script><script src="/./js/search.js"></script><script src="/./js/docs.js"></script></body></html>
