@@ -7,16 +7,10 @@ technologies:
  - second: ['<a href="https://www.twilio.com/">Twilio</a>', "Communications APIs for SMS, Voice, Video, and Authentication"]
 ---
 
-guardrail is a code generation tool, capable of reading from OpenAPI/Swagger specification files and generating source code for a variety of languages and frameworks.
+`guardrail` is a code generation tool, capable of reading from OpenAPI/Swagger specification files and generating high quality source code for a variety of languages and frameworks.
 
-Getting started:
-- Scala
-  - [akka-http](scala/akka-http)
-  - [akka-http-jackson](scala/akka-http-jackson)
-  - [http4s](scala/http4s)
-  - [dropwizard](scala/dropwizard)
-- Java
-  - [dropwizard](java/dropwizard)
-  - [spring-mvc](java/spring-mvc)
+There are plugins available for [`sbt`](https://github.com/guardrail-dev/sbt-guardrail), [`maven`](https://github.com/guardrail-dev/guardrail-maven-plugin), [`gradle`](https://github.com/guardrail-dev/guardrail-gradle-plugin), and there's a manual CLI driver.
 
 Additionally, check out the [`guardrail-sample`](https://github.com/topics/guardrail-sample) topic on GitHub for more examples.
+
+**Consulting**: If you need help getting started, getting migrated, or adding features, please contact [hello@guardrail.dev](mailto:hello@guardrail.dev).
