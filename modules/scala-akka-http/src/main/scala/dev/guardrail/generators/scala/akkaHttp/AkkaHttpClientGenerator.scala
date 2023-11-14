@@ -570,7 +570,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
         )
       }.toList
 
-    val ctorCall: Term.New = Term.New(Init(Type.Name(clientName), Name.Anonymous(), paramsToArgs(ctorArgs)))
+    val ctorCall: Term.New = q"new ${Type.Name(clientName)}(...${paramsToArgs(ctorArgs)})"
 
     for {
       extraDecls <- extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)

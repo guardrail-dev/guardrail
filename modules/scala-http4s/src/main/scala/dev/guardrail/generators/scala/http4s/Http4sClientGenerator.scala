@@ -549,7 +549,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
         )
       }.toList
 
-    val ctorCall: Term.New = Term.New(Init(Type.Apply(Type.Name(clientName), Type.ArgClause(List(Type.Name("F")))), Name.Anonymous(), paramsToArgs(ctorArgs)))
+    val ctorCall: Term.New = q"new ${Type.Apply(Type.Name(clientName), Type.ArgClause(List(Type.Name("F"))))}(...${paramsToArgs(ctorArgs)})"
 
     val decls: List[Defn] =
       q"""def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), Type.ArgClause(List(Type.Name("F"))))} = ${ctorCall}""" +:
