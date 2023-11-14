@@ -114,7 +114,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           .orRefine { case ObjectExtractor(o) => o }(m =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              enum             <- fromEnum[Object](formattedClsName, m, dtoPackage, components)
+              enum_            <- fromEnum[Object](formattedClsName, m, dtoPackage, components)
               model <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 m,
@@ -127,12 +127,12 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 components
               )
               alias <- modelTypeAlias(formattedClsName, m, components)
-            } yield enum.orElse(model).getOrElse(alias)
+            } yield enum_.orElse(model).getOrElse(alias)
           )
           .orRefine { case x: StringSchema => x }(x =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
+              enum_            <- fromEnum(formattedClsName, x, dtoPackage, components)
               model <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
@@ -147,12 +147,12 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
               (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
               alias         <- typeAlias(formattedClsName, declType)
-            } yield enum.orElse(model).getOrElse(alias)
+            } yield enum_.orElse(model).getOrElse(alias)
           )
           .orRefine { case x: IntegerSchema => x }(x =>
             for {
               formattedClsName <- formatTypeName(clsName)
-              enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
+              enum_            <- fromEnum(formattedClsName, x, dtoPackage, components)
               model <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
@@ -166,7 +166,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               )
               (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
               alias         <- typeAlias(formattedClsName, declType)
-            } yield enum.orElse(model).getOrElse(alias)
+            } yield enum_.orElse(model).getOrElse(alias)
           )
           .valueOr(x =>
             for {
@@ -279,11 +279,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       } yield EnumDefinition[ScalaLanguage](clsName, classType, fullType, wrappedValues, defn, staticDefns)
 
     for {
-      enum     <- extractEnum(schema.map(wrapEnumSchema))
+      enum_    <- extractEnum(schema.map(wrapEnumSchema))
       prefixes <- vendorPrefixes()
       (tpe, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](schema, Tracker.cloneHistory(schema, CustomTypeName(schema, prefixes)), components)
       fullType <- selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
-      res      <- enum.traverse(validProg(_, tpe, fullType))
+      res      <- enum_.traverse(validProg(_, tpe, fullType))
     } yield res
   }
 
