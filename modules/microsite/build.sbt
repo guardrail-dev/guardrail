@@ -14,6 +14,7 @@ micrositeGithubRepo := "guardrail"
 micrositeHighlightLanguages ++= Seq("yaml", "scala")
 micrositeGitterChannel := false
 micrositeAnalyticsToken := "UA-154175369-1"
+micrositeGoogleAnalytics4Token := "G-L51EVMQF15"
 micrositeTheme := "light"
 mdocIn := baseDirectory.value / "docs"
 //micrositeDataDirectory := baseDirectory.value / "docs" / "data"
