@@ -35,6 +35,7 @@ object WelcomeMessage {
         |${section("Generate sample sources")}
         |${subItem("runScalaExample")} - Only generate Scala sources for integration tests
         |${subItem("runJavaExample")} - Only generate Java sources for integration tests
+        |${subItem("runIssue")} - Only run codegen for a single issue (usage: runIssue [scala|java|*] $$framework <file>)
         |${item("publishLocal")} - Publish to local ivy repo
         |${item("publishM2")} - Publish to local m2 repo
         |${item("mdoc")} - Generate the docs microsite locally
