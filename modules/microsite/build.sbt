@@ -5,20 +5,24 @@ micrositeGithubToken := Option(System.getenv("MICROSITE_PUBLISH_TOKEN"))
 micrositeName := "guardrail"
 micrositeDescription := "Principled code generation from OpenAPI specifications"
 micrositeUrl := "https://guardrail.dev/"
-micrositeDocumentationLabelDescription := "Documentation"
-micrositeAuthor := "Twilio"
-micrositeOrganizationHomepage := "https://www.twilio.com/"
+micrositeAuthor := "guardrail.dev"
+micrositeOrganizationHomepage := "https://guardrail.dev/"
 micrositeTwitter := "@guardrail_code"
-micrositeTwitterCreator := "@twilio"
+micrositeTwitterCreator := "@guardrail_dev"
 micrositeGithubOwner := "guardrail-dev"
 micrositeGithubRepo := "guardrail"
 micrositeHighlightLanguages ++= Seq("yaml", "scala")
 micrositeGitterChannel := false
 micrositeAnalyticsToken := "UA-154175369-1"
-micrositeTheme := "pattern"
+micrositeTheme := "light"
 mdocIn := baseDirectory.value / "docs"
 //micrositeDataDirectory := baseDirectory.value / "docs" / "data"
 //micrositeImgDirectory := baseDirectory.value / "docs" / "images"
+
+micrositeDocumentationLabelDescription := "Documentation"
+micrositeDocumentationUrl := "docs"
+micrositeHomeButtonTarget := "docs"
+micrositeBaseUrl := "."
 
 // micrositeCssDirectory
 // micrositeExternalIncludesDirectory
@@ -27,11 +31,9 @@ mdocIn := baseDirectory.value / "docs"
 // micrositePluginsDirectory
 // micrositeStaticDirectory
 
-// micrositeBaseUrl
 // micrositeCDNDirectives
 // micrositeConfig
 // micrositeConfigYaml
-// micrositeDocumentationUrl
 // micrositeEditButton
 // micrositeExtraMdFiles
 // micrositeExtraMdFilesOutput

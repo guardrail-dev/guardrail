@@ -1,24 +1,24 @@
 options:
   - title: Getting Started
-    url: ""
+    url: "docs/"
 
   - title: Java
-    url: java/
+    url: docs/java/
     nested_options:
       - title: Dropwizard
-        url: java/dropwizard/
+        url: docs/java/dropwizard/
 
       - title: Spring-MVC
-        url: java/spring-mvc/
+        url: docs/java/spring-mvc/
 
   - title: Scala
-    url: scala/
+    url: docs/scala/
     nested_options:
       - title: akka-http
-        url: scala/akka-http
+        url: docs/scala/akka-http
 
       - title: akka-http-jackson
-        url: scala/akka-http-jackson
+        url: docs/scala/akka-http-jackson
 
       - title: http4s
-        url: scala/http4s
+        url: docs/scala/http4s
