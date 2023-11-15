@@ -37,13 +37,13 @@ object ResolvedType {
         case (clsName, x: LazyResolvedType[L]) => Left((clsName, x))
       }
 
-      def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved[L])])(
+      def lookupTypeName(tpeName: String, resolvedTypes: List[(String, Resolved[L])])(
           f: L#Type => F[L#Type]
-      ): F[Option[(String, Resolved[L])]] =
+      ): F[Option[Resolved[L]]] =
         resolvedTypes
           .find(_._1 == tpeName)
           .map(_._2)
-          .traverse(x => f(x.tpe).map(tpe => (clsName, x.copy(tpe = tpe))))
+          .traverse(x => f(x.tpe).map(tpe => x.copy(tpe = tpe)))
 
       type Continue = (List[(String, LazyResolvedType[L])], List[(String, Resolved[L])])
       type Stop     = List[(String, Resolved[L])]
@@ -57,11 +57,17 @@ object ResolvedType {
             lazyTypes
               .partitionEitherM {
                 case x @ (clsName, Deferred(tpeName)) =>
-                  lookupTypeName(clsName, tpeName, resolvedTypes)(_.pure[F]).map(Either.fromOption(_, x))
+                  lookupTypeName(tpeName, resolvedTypes)(_.pure[F])
+                    .map(_.map((clsName, _)))
+                    .map(Either.fromOption(_, x))
                 case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
-                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftVectorType(_, containerTpe)).map(Either.fromOption(_, x))
+                  lookupTypeName(tpeName, resolvedTypes)(liftVectorType(_, containerTpe))
+                    .map(_.map((clsName, _)))
+                    .map(Either.fromOption(_, x))
                 case x @ (clsName, DeferredMap(tpeName, containerTpe)) =>
-                  lookupTypeName(clsName, tpeName, resolvedTypes)(liftMapType(_, containerTpe)).map(Either.fromOption(_, x))
+                  lookupTypeName(tpeName, resolvedTypes)(liftMapType(_, containerTpe))
+                    .map(_.map((clsName, _)))
+                    .map(Either.fromOption(_, x))
               }
               .map { case (newLazyTypes, newResolvedTypes) =>
                 Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
