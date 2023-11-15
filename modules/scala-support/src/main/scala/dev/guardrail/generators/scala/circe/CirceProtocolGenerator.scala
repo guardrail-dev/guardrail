@@ -1336,9 +1336,6 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       }
     } yield result
 
-  private def extractConcreteTypes(definitions: Either[String, List[PropMeta[ScalaLanguage]]]) =
-    definitions.fold[Target[List[PropMeta[ScalaLanguage]]]](Target.raiseUserError _, Target.pure _)
-
   private def protocolImports() =
     Target.pure(
       List(
