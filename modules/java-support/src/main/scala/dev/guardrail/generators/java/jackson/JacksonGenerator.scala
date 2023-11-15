@@ -363,7 +363,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
       Sw: OpenAPITerms[JavaLanguage, Target]
-  ): Target[ProtocolElems[JavaLanguage]] = {
+  ): Target[StrictProtocolElems[JavaLanguage]] = {
     import Cl._
     import Sc._
 
@@ -589,7 +589,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
       Sw: OpenAPITerms[JavaLanguage, Target]
-  ): Target[ProtocolElems[JavaLanguage]] = {
+  ): Target[StrictProtocolElems[JavaLanguage]] = {
     import Cl._
     import Fw._
     val model: Option[Tracker[Schema[Object]]] = abstractModel
@@ -616,7 +616,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
 
   private def plainTypeAlias(
       clsName: String
-  )(implicit Fw: FrameworkTerms[JavaLanguage, Target], Sc: LanguageTerms[JavaLanguage, Target]): Target[ProtocolElems[JavaLanguage]] = {
+  )(implicit Fw: FrameworkTerms[JavaLanguage, Target], Sc: LanguageTerms[JavaLanguage, Target]): Target[StrictProtocolElems[JavaLanguage]] = {
     import Fw._
     for {
       tpe <- objectType(None)
@@ -624,8 +624,8 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     } yield res
   }
 
-  private def typeAlias(clsName: String, tpe: Type): Target[ProtocolElems[JavaLanguage]] =
-    (RandomType[JavaLanguage](clsName, tpe): ProtocolElems[JavaLanguage]).pure[Target]
+  private def typeAlias(clsName: String, tpe: Type): Target[StrictProtocolElems[JavaLanguage]] =
+    (RandomType[JavaLanguage](clsName, tpe): StrictProtocolElems[JavaLanguage]).pure[Target]
 
   private def fromArray(clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[JavaLanguage]], components: Tracker[Option[Components]])(
       implicit
@@ -634,7 +634,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       Sc: LanguageTerms[JavaLanguage, Target],
       Cl: CollectionsLibTerms[JavaLanguage, Target],
       Sw: OpenAPITerms[JavaLanguage, Target]
-  ): Target[ProtocolElems[JavaLanguage]] =
+  ): Target[StrictProtocolElems[JavaLanguage]] =
     for {
       deferredTpe <- ModelResolver.modelMetaType[JavaLanguage, Target](arr, components)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)
@@ -900,10 +900,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       pkgImports        <- packageObjectImports()
       pkgObjectContents <- packageObjectContents()
       implicitsObject   <- implicitsObject()
-
-      polyADTElems <- ProtocolElems.resolve[JavaLanguage, Target](polyADTs)
-      strictElems  <- ProtocolElems.resolve[JavaLanguage, Target](elems)
-    } yield ProtocolDefinitions[JavaLanguage](strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents, implicitsObject))
+    } yield ProtocolDefinitions[JavaLanguage](elems ++ polyADTs, protoImports, pkgImports, pkgObjectContents, implicitsObject))
   }
 
   // returns a tuple of (requiredTerms, optionalTerms)

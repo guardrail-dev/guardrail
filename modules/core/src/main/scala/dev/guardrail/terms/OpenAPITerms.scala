@@ -52,7 +52,7 @@ abstract class OpenAPITerms[L <: LA, F[_]] {
   def getType(model: Tracker[Schema[_]]): F[Tracker[String]]
   def fallbackPropertyTypeHandler(prop: Tracker[Schema[_]]): F[L#Type]
   def resolveType(name: String, protocolElems: List[StrictProtocolElems[L]]): F[StrictProtocolElems[L]]
-  def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]): F[List[StrictProtocolElems[L]]]
+  def fallbackResolveElems(lazyElems: List[core.LazyResolvedType[L]]): F[List[StrictProtocolElems[L]]]
 
   def dereferenceHeader(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[headers.Header]]
   def dereferenceParameter(ref: Tracker[String], components: Tracker[Option[Components]]): F[Tracker[Parameter]]

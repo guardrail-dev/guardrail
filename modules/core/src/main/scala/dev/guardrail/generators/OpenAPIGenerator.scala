@@ -273,8 +273,8 @@ class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
   override def resolveType(name: String, protocolElems: List[StrictProtocolElems[L]]) =
     Target.fromOption(protocolElems.find(_.name == name), UserError(s"Unable to resolve ${name}"))
 
-  override def fallbackResolveElems(lazyElems: List[LazyProtocolElems[L]]) =
-    Target.raiseUserError(s"Unable to resolve: ${lazyElems.map(_.name)}")
+  override def fallbackResolveElems(lazyElems: List[core.LazyResolvedType[L]]) =
+    Target.raiseUserError(s"Unable to resolve: ${lazyElems.map(_.value).mkString(",")}")
 
   private def buildExtractor[A](components: Tracker[Option[Components]], label: String, proj: Components => ju.Map[String, A])(
       ref: Tracker[String]
