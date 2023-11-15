@@ -116,15 +116,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               formattedClsName <- formatTypeName(clsName)
               enum_            <- fromEnum[Object](formattedClsName, m, dtoPackage, components)
               model <- fromModel(
-                NonEmptyList.of(formattedClsName),
-                m,
-                List.empty,
-                concreteTypes,
-                definitions.value,
-                dtoPackage,
-                supportPackage.toList,
-                defaultPropertyRequirement,
-                components
+                clsName = NonEmptyList.of(formattedClsName),
+                model = m,
+                parents = List.empty,
+                concreteTypes = concreteTypes,
+                definitions = definitions.value,
+                dtoPackage = dtoPackage,
+                supportPackage = supportPackage.toList,
+                defaultPropertyRequirement = defaultPropertyRequirement,
+                components = components
               )
               alias <- modelTypeAlias(formattedClsName, m, components)
             } yield enum_.orElse(model).getOrElse(alias)
