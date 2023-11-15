@@ -46,6 +46,7 @@ object RegressionTests {
     ExampleCase(sampleResource("issues/issue164.yaml"), "issues.issue164"),
     ExampleCase(sampleResource("issues/issue184.yaml"), "issues.issue184"),
     ExampleCase(sampleResource("issues/issue179.yaml"), "issues.issue179"),
+    ExampleCase(sampleResource("issues/issue195.yaml"), "issues.issue195").frameworks("scala" -> Set("akka-http", "http4s")),
     ExampleCase(sampleResource("issues/issue215.yaml"), "issues.issue215"),
     ExampleCase(sampleResource("issues/issue218.yaml"), "issues.issue218"),
     ExampleCase(sampleResource("issues/issue222.yaml"), "issues.issue222"),
