@@ -8,7 +8,7 @@ import dev.guardrail.core.Tracker
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.{ LanguageTerms, OpenAPITerms }
 
-case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, ProtocolElems[L]])
+case class Discriminator[L <: LA](propertyName: String, mapping: Map[String, StrictProtocolElems[L]])
 
 object Discriminator {
   def fromSchema[L <: LA, F[_]: Monad](schema: Tracker[Schema[_]])(implicit Sc: LanguageTerms[L, F], Sw: OpenAPITerms[L, F]): F[Option[Discriminator[L]]] =

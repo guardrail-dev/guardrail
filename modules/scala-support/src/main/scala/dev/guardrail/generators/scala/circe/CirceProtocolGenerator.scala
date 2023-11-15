@@ -180,10 +180,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       pkgImports        <- packageObjectImports()
       pkgObjectContents <- packageObjectContents()
       implicitsObject   <- implicitsObject()
-
-      polyADTElems <- ProtocolElems.resolve[ScalaLanguage, Target](polyADTs)
-      strictElems  <- ProtocolElems.resolve[ScalaLanguage, Target](elems)
-    } yield ProtocolDefinitions[ScalaLanguage](strictElems ++ polyADTElems, protoImports, pkgImports, pkgObjectContents, implicitsObject))
+    } yield ProtocolDefinitions[ScalaLanguage](elems ++ polyADTs, protoImports, pkgImports, pkgObjectContents, implicitsObject))
   }
 
   private[this] def isFile(typeName: String, format: Option[String]): Boolean =
@@ -322,7 +319,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
       Sw: OpenAPITerms[ScalaLanguage, Target]
-  ): Target[ProtocolElems[ScalaLanguage]] = {
+  ): Target[StrictProtocolElems[ScalaLanguage]] = {
     import Cl._
     import Sc._
 
@@ -521,7 +518,6 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       if (parents.isEmpty && props.isEmpty) Left("Entity isn't model"): Either[String, ClassDefinition[ScalaLanguage]]
       else tpe.toRight("Empty entity name").map(ClassDefinition[ScalaLanguage](clsName.last, _, fullType, defn, finalStaticDefns, parents))
     }
-
   }
 
   // NB: In OpenAPI 3.1 ObjectSchema was broadly replaced with JsonSchema.
@@ -712,7 +708,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
       Sw: OpenAPITerms[ScalaLanguage, Target]
-  ): Target[ProtocolElems[ScalaLanguage]] = {
+  ): Target[StrictProtocolElems[ScalaLanguage]] = {
     import Cl._
     import Fw._
     val model: Option[Tracker[Schema[Object]]] = abstractModel
@@ -739,7 +735,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
   private def plainTypeAlias(
       clsName: String
-  )(implicit Fw: FrameworkTerms[ScalaLanguage, Target], Sc: LanguageTerms[ScalaLanguage, Target]): Target[ProtocolElems[ScalaLanguage]] = {
+  )(implicit Fw: FrameworkTerms[ScalaLanguage, Target], Sc: LanguageTerms[ScalaLanguage, Target]): Target[StrictProtocolElems[ScalaLanguage]] = {
     import Fw._
     for {
       tpe <- objectType(None)
@@ -747,8 +743,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     } yield res
   }
 
-  private def typeAlias(clsName: String, tpe: scala.meta.Type): Target[ProtocolElems[ScalaLanguage]] =
-    (RandomType[ScalaLanguage](clsName, tpe): ProtocolElems[ScalaLanguage]).pure[Target]
+  private def typeAlias(clsName: String, tpe: scala.meta.Type): Target[StrictProtocolElems[ScalaLanguage]] =
+    (RandomType[ScalaLanguage](clsName, tpe): StrictProtocolElems[ScalaLanguage]).pure[Target]
 
   private def fromArray(clsName: String, arr: Tracker[ArraySchema], concreteTypes: List[PropMeta[ScalaLanguage]], components: Tracker[Option[Components]])(
       implicit
@@ -757,7 +753,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
       Sw: OpenAPITerms[ScalaLanguage, Target]
-  ): Target[ProtocolElems[ScalaLanguage]] =
+  ): Target[StrictProtocolElems[ScalaLanguage]] =
     for {
       deferredTpe <- ModelResolver.modelMetaType[ScalaLanguage, Target](arr, components)
       tpe         <- extractArrayType(deferredTpe, concreteTypes)

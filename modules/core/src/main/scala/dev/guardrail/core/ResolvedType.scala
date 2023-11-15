@@ -20,10 +20,10 @@ case class MapRawType(items: ReifiedRawType)                                  ex
 
 sealed trait ResolvedType[L <: LA]
 case class Resolved[L <: LA](tpe: L#Type, classDep: Option[L#TermName], defaultValue: Option[L#Term], rawType: ReifiedRawType) extends ResolvedType[L]
-sealed trait LazyResolvedType[L <: LA]                                                                                         extends ResolvedType[L]
-case class Deferred[L <: LA](value: String)                                                                                    extends LazyResolvedType[L]
-case class DeferredArray[L <: LA](value: String, containerTpe: Option[L#Type])                                                 extends LazyResolvedType[L]
-case class DeferredMap[L <: LA](value: String, containerTpe: Option[L#Type])                                                   extends LazyResolvedType[L]
+sealed trait LazyResolvedType[L <: LA]                                         extends ResolvedType[L] { def value: String }
+case class Deferred[L <: LA](value: String)                                    extends LazyResolvedType[L]
+case class DeferredArray[L <: LA](value: String, containerTpe: Option[L#Type]) extends LazyResolvedType[L]
+case class DeferredMap[L <: LA](value: String, containerTpe: Option[L#Type])   extends LazyResolvedType[L]
 
 object ResolvedType {
   def resolveReferences[L <: LA, F[_]: Monad](
