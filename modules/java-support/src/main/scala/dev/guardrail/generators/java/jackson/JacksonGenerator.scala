@@ -1722,7 +1722,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             for {
               innerType <- concreteType.fold(safeParseType(tpeName))(Target.pure)
               tpe       <- Cl.liftMapType(innerType, containerTpe)
-            } yield (tpe, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
+            } yield (tpe, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
 
         expressionDefaultValue <- (defaultValue match {
