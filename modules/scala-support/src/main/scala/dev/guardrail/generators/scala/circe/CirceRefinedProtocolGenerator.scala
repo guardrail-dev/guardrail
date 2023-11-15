@@ -1060,7 +1060,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       name: String,
       fieldName: String,
       property: Tracker[Schema[_]],
-      meta: core.ResolvedType[ScalaLanguage],
+      meta: Either[core.LazyResolvedType[ScalaLanguage], core.Resolved[ScalaLanguage]],
       requirement: PropertyRequirement,
       isCustomType: Boolean,
       defaultValue: Option[scala.meta.Term]
@@ -1082,14 +1082,15 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
         dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
         (tpe, classDep, rawType) <- meta match {
-          case core.Resolved(declType, classDep, _, rawType @ LiteralRawType(Some(rawTypeStr), rawFormat)) if isFile(rawTypeStr, rawFormat) && !isCustomType =>
+          case Right(core.Resolved(declType, classDep, _, rawType @ LiteralRawType(Some(rawTypeStr), rawFormat)))
+              if isFile(rawTypeStr, rawFormat) && !isCustomType =>
             // assume that binary data are represented as a string. allow users to override.
             Target.pure((t"String", classDep, rawType))
-          case core.Resolved(declType, classDep, _, rawType) =>
+          case Right(core.Resolved(declType, classDep, _, rawType)) =>
             for {
               validatedType <- applyValidations(clsName, declType, property)
             } yield (validatedType, classDep, rawType)
-          case core.Deferred(tpeName) =>
+          case Left(core.Deferred(tpeName)) =>
             val tpe = concreteTypes.find(_.clsName == tpeName).map(_.tpe).getOrElse {
               println(s"Unable to find definition for ${tpeName}, just inlining")
               Type.Name(tpeName)
@@ -1097,14 +1098,14 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
             for {
               validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, fallbackRawType)
-          case core.DeferredArray(tpeName, containerTpe) =>
+          case Left(core.DeferredArray(tpeName, containerTpe)) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
             val tpe          = t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[$innerType]"
             for {
               validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
-          case core.DeferredMap(tpeName, customTpe) =>
+          case Left(core.DeferredMap(tpeName, customTpe)) =>
             val concreteType = lookupTypeName(tpeName, concreteTypes)(identity)
             val innerType    = concreteType.getOrElse(Type.Name(tpeName))
             val tpe          = t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]"
@@ -1402,18 +1403,18 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
     )
   }
 
-  private def extractArrayType(arr: core.ResolvedType[ScalaLanguage], concreteTypes: List[PropMeta[ScalaLanguage]]) =
+  private def extractArrayType(arr: Either[core.LazyResolvedType[ScalaLanguage], core.Resolved[ScalaLanguage]], concreteTypes: List[PropMeta[ScalaLanguage]]) =
     for {
       result <- arr match {
-        case core.Resolved(tpe, dep, default, _) => Target.pure(tpe)
-        case core.Deferred(tpeName) =>
+        case Right(core.Resolved(tpe, dep, default, _)) => Target.pure(tpe)
+        case Left(core.Deferred(tpeName)) =>
           Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
-        case core.DeferredArray(tpeName, containerTpe) =>
+        case Left(core.DeferredArray(tpeName, containerTpe)) =>
           Target.fromOption(
             lookupTypeName(tpeName, concreteTypes)(tpe => t"${containerTpe.getOrElse(t"_root_.scala.Vector")}[${tpe}]"),
             UserError(s"Unresolved reference ${tpeName}")
           )
-        case core.DeferredMap(tpeName, customTpe) =>
+        case Left(core.DeferredMap(tpeName, customTpe)) =>
           Target.fromOption(
             lookupTypeName(tpeName, concreteTypes)(tpe =>
               t"_root_.scala.Vector[${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, ${tpe}]]"

@@ -38,33 +38,43 @@ object ModelResolver {
       Cl: CollectionsLibTerms[L, F],
       Sw: OpenAPITerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): F[core.ResolvedType[L]] = propMetaImpl[L, F](property, components)(Left(_))
+  ): F[Either[core.LazyResolvedType[L], core.Resolved[L]]] = propMetaImpl[L, F](property, components)(Left(_))
 
   def propMetaWithName[L <: LA, F[_]: Monad](tpe: L#Type, property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: OpenAPITerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): F[core.ResolvedType[L]] =
+  ): F[Either[core.LazyResolvedType[L], core.Resolved[L]]] =
     propMetaImpl(property, components)(
-      _.refine[core.ResolvedType[L]] { case ObjectExtractor(schema) if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
+      _.refine[core.Resolved[L]] { case ObjectExtractor(schema) if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
         core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty)
       ).orRefine { case c: ComposedSchema => c }(_ => core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty))
         .orRefine { case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) => schema }(_ =>
           core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty)
         )
-        .map(_.pure[F])
+        .map(r => r.pure[Either[core.LazyResolvedType[L], *]].pure[F])
     )
 
   def modelMetaType[L <: LA, F[_]: Monad](
       model: Tracker[Schema[_]],
       components: Tracker[Option[Components]]
-  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
+  )(implicit
+      Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
+      Sw: OpenAPITerms[L, F],
+      Fw: FrameworkTerms[L, F]
+  ): F[Either[core.LazyResolvedType[L], core.Resolved[L]]] =
     propMetaImpl[L, F](model, components)(Left(_))
 
   private def propMetaImpl[L <: LA, F[_]: Monad](property: Tracker[Schema[_]], components: Tracker[Option[Components]])(
-      strategy: Tracker[Schema[_]] => Either[Tracker[Schema[_]], F[core.ResolvedType[L]]]
-  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] =
+      strategy: Tracker[Schema[_]] => Either[Tracker[Schema[_]], F[Either[core.LazyResolvedType[L], core.Resolved[L]]]]
+  )(implicit
+      Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
+      Sw: OpenAPITerms[L, F],
+      Fw: FrameworkTerms[L, F]
+  ): F[Either[core.LazyResolvedType[L], core.Resolved[L]]] =
     Sw.log.function("propMeta") {
       import Fw._
       import Sc._
@@ -74,14 +84,16 @@ object ModelResolver {
       for {
         _ <- log.debug(s"property:\n${log.schemaToString(property.unwrapTracker)} (${property.unwrapTracker.getExtensions()}, ${property.showHistory})")
 
-        res <- strategy(property)
-          .orRefine { case ref: Schema[_] if Option(ref.get$ref).isDefined => ref }(ref => getSimpleRef(ref.map(Option.apply _)).map(core.Deferred[L]))
+        scalarResolved <- strategy(property)
+          .orRefine { case ref: Schema[_] if Option(ref.get$ref).isDefined => ref }(ref =>
+            getSimpleRef(ref.map(Option.apply _)).map(t => Left(core.Deferred[L](t)))
+          )
           .orRefine { case ObjectExtractor(o) => o }(o =>
             for {
               prefixes  <- vendorPrefixes()
               customTpe <- CustomTypeName(o, prefixes).flatTraverse(x => liftCustomType[L, F](Tracker.cloneHistory(o, x)))
               fallback  <- objectType(None)
-            } yield core.Resolved[L](customTpe.getOrElse(fallback), None, None, ReifiedRawType.unsafeEmpty)
+            } yield Right(core.Resolved[L](customTpe.getOrElse(fallback), None, None, ReifiedRawType.unsafeEmpty))
           )
           .orRefine { case arr: ArraySchema => arr }(arr =>
             for {
@@ -96,12 +108,14 @@ object ModelResolver {
               prefixes  <- vendorPrefixes()
               arrayType <- CustomArrayTypeName(arr, prefixes).flatTraverse(x => parseType(Tracker.cloneHistory(arr, x)))
               res <- meta match {
-                case core.Resolved(inner, dep, default, _) =>
+                case Right(core.Resolved(inner, dep, default, _)) =>
                   (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm))
-                    .mapN(core.Resolved[L](_, dep, _, ReifiedRawType.ofVector(ReifiedRawType.of(itemsRawType.unwrapTracker, itemsRawFormat.unwrapTracker))))
-                case x: core.Deferred[L]      => embedArray(x, arrayType)
-                case x: core.DeferredArray[L] => embedArray(x, arrayType)
-                case x: core.DeferredMap[L]   => embedArray(x, arrayType)
+                    .mapN((t, d) =>
+                      Right(core.Resolved[L](t, dep, d, ReifiedRawType.ofVector(ReifiedRawType.of(itemsRawType.unwrapTracker, itemsRawFormat.unwrapTracker))))
+                    )
+                case Left(x: core.Deferred[L])      => embedArray(x, arrayType).map(Left(_))
+                case Left(x: core.DeferredArray[L]) => embedArray(x, arrayType).map(Left(_))
+                case Left(x: core.DeferredMap[L])   => embedArray(x, arrayType).map(Left(_))
               }
             } yield res
           )
@@ -112,27 +126,27 @@ object ModelResolver {
               rec <- map
                 .downField("additionalProperties", _.getAdditionalProperties())
                 .map(_.getOrElse(false))
-                .refine[F[core.ResolvedType[L]]] { case b: java.lang.Boolean => b }(_ =>
-                  objectType(None).map(core.Resolved[L](_, None, None, ReifiedRawType.ofMap(ReifiedRawType.unsafeEmpty)))
+                .refine[F[Either[core.LazyResolvedType[L], core.Resolved[L]]]] { case b: java.lang.Boolean => b }(_ =>
+                  objectType(None).map(t => Right(core.Resolved[L](t, None, None, ReifiedRawType.ofMap(ReifiedRawType.unsafeEmpty))))
                 )
                 .orRefine { case s: Schema[_] => s }(s => propMetaImpl[L, F](s, components)(strategy))
                 .orRefineFallback { s =>
                   log.debug(s"Unknown structure cannot be reflected: ${s.unwrapTracker} (${s.showHistory})") >> objectType(None)
-                    .map(core.Resolved[L](_, None, None, ReifiedRawType.ofMap(ReifiedRawType.of(rawType.unwrapTracker, rawFormat.unwrapTracker))))
+                    .map(t => Right(core.Resolved[L](t, None, None, ReifiedRawType.ofMap(ReifiedRawType.of(rawType.unwrapTracker, rawFormat.unwrapTracker)))))
                 }
               prefixes <- vendorPrefixes()
               mapType  <- CustomMapTypeName(map, prefixes).flatTraverse(x => parseType(Tracker.cloneHistory(map, x)))
               res <- rec match {
-                case core.Resolved(inner, dep, _, rawType) => liftMapType(inner, mapType).map(core.Resolved[L](_, dep, None, ReifiedRawType.ofMap(rawType)))
-                case x: core.DeferredMap[L]                => embedMap(x, mapType)
-                case x: core.DeferredArray[L]              => embedMap(x, mapType)
-                case x: core.Deferred[L]                   => embedMap(x, mapType)
+                case Right(core.Resolved(inner, dep, _, rawType)) =>
+                  liftMapType(inner, mapType).map(t => Right(core.Resolved[L](t, dep, None, ReifiedRawType.ofMap(rawType))))
+                case Left(x: core.DeferredMap[L])   => embedMap(x, mapType).map(Left(_))
+                case Left(x: core.DeferredArray[L]) => embedMap(x, mapType).map(Left(_))
+                case Left(x: core.Deferred[L])      => embedMap(x, mapType).map(Left(_))
               }
             } yield res
           }
-          .pure[F]
-        scalarResolved <- resolveScalarTypes[L, F](res, components)
-        withDefaults   <- enrichWithDefault[L, F](property).apply(scalarResolved)
+          .orRefineFallback(r => resolveScalarTypes[L, F](r, components).map(Right(_): Either[core.LazyResolvedType[L], core.Resolved[L]]))
+        withDefaults <- enrichWithDefault[L, F](property, scalarResolved)
       } yield withDefaults
     }
 
@@ -252,23 +266,25 @@ object ModelResolver {
       } yield (result, reifiedRawType)
     }
 
-  private def enrichWithDefault[L <: LA, F[_]: Monad](schema: Tracker[Schema[_]])(implicit
+  private def enrichWithDefault[L <: LA, F[_]: Monad](schema: Tracker[Schema[_]], resolved: Either[core.LazyResolvedType[L], core.Resolved[L]])(implicit
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: OpenAPITerms[L, F],
       Fw: FrameworkTerms[L, F]
-  ): core.ResolvedType[L] => F[core.ResolvedType[L]] = { resolved =>
+  ): F[Either[core.LazyResolvedType[L], core.Resolved[L]]] = {
     import Sc._
-    def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](transformLit: B => F[L#Term]): Tracker[A] => F[core.ResolvedType[L]] = { a =>
+    def buildResolve[B: Extractable, A <: Schema[_]: Default.GetDefault](
+        transformLit: B => F[L#Term]
+    ): Tracker[A] => F[Either[core.LazyResolvedType[L], core.Resolved[L]]] = { a =>
       for {
         default <- Default(a).extract[B].traverse(transformLit(_))
       } yield resolved match {
-        case x: core.Resolved[L] => x.copy(defaultValue = default)
-        case other               => other
+        case Right(x: core.Resolved[L]) => Right(x.copy(defaultValue = default))
+        case other                      => other
       }
     }
     schema
-      .refine[F[core.ResolvedType[L]]] { case b: BooleanSchema => b }(buildResolve(litBoolean))
+      .refine[F[Either[core.LazyResolvedType[L], core.Resolved[L]]]] { case b: BooleanSchema => b }(buildResolve(litBoolean))
       .orRefine { case s: StringSchema => s }(buildResolve(litString))
       .orRefine { case s: IntegerSchema => s }(buildResolve(litInt))
       .orRefineFallback(_ => resolved.pure[F])
@@ -283,20 +299,20 @@ object ModelResolver {
   }
 
   private def resolveScalarTypes[L <: LA, F[_]: Monad](
-      partial: Either[Tracker[Schema[_]], F[core.ResolvedType[L]]],
+      schema: Tracker[Schema[_]],
       components: Tracker[Option[Components]]
-  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F], Fw: FrameworkTerms[L, F]): F[core.ResolvedType[L]] = {
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F], Fw: FrameworkTerms[L, F]): F[core.Resolved[L]] = {
     import Cl._
     import Sw._
-    def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => F[core.ResolvedType[L]] = { a =>
+    def buildResolveNoDefault[A <: Schema[_]]: Tracker[A] => F[core.Resolved[L]] = { a =>
       for {
         prefixes       <- vendorPrefixes()
         (tpe, rawType) <- determineTypeName[L, F](a, Tracker.cloneHistory(a, CustomTypeName(a, prefixes)), components)
       } yield core.Resolved[L](tpe, None, None, rawType)
     }
 
-    partial
-      .orRefine { case b: BooleanSchema => b }(buildResolveNoDefault)
+    schema
+      .refine[F[core.Resolved[L]]] { case b: BooleanSchema => b }(buildResolveNoDefault)
       .orRefine { case s: StringSchema => s }(buildResolveNoDefault)
       .orRefine { case s: EmailSchema => s }(buildResolveNoDefault)
       .orRefine { case d: DateSchema => d }(buildResolveNoDefault)
@@ -308,7 +324,7 @@ object ModelResolver {
       .orRefine { case b: BinarySchema => b }(buildResolveNoDefault)
       .orRefine { case u: UUIDSchema => u }(buildResolveNoDefault)
       .orRefineFallback(x =>
-        fallbackPropertyTypeHandler(x).map(core.Resolved[L](_, None, None, ReifiedRawType.unsafeEmpty))
+        fallbackPropertyTypeHandler(x).map(t => core.Resolved[L](t, None, None, ReifiedRawType.unsafeEmpty))
       ) // This may need to be rawType=string?
   }
 }
