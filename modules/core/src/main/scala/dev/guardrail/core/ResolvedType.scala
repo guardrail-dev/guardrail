@@ -24,12 +24,54 @@ case class Deferred[L <: LA](value: String)                                    e
 case class DeferredArray[L <: LA](value: String, containerTpe: Option[L#Type]) extends LazyResolvedType[L]
 case class DeferredMap[L <: LA](value: String, containerTpe: Option[L#Type])   extends LazyResolvedType[L]
 
+object LazyResolvedType {
+  def map[L <: LA, F[_]: Monad, Out](deferred: LazyResolvedType[L])(func: String => (L#Type => F[L#Type]) => (ReifiedRawType => ReifiedRawType) => Out)(implicit
+      Cl: CollectionsLibTerms[L, F]
+  ) =
+    deferred match {
+      case Deferred(name) =>
+        func(name)(_.pure[F])(identity _)
+      case DeferredArray(name, containerTpe) =>
+        func(name)(Cl.liftVectorType(_, containerTpe))(VectorRawType(_))
+      case DeferredMap(name, containerTpe) =>
+        func(name)(Cl.liftMapType(_, containerTpe))(MapRawType(_))
+    }
+
+  def lift[L <: LA, F[_]: Monad](deferred: LazyResolvedType[L], protocolElems: List[StrictProtocolElems[L]])(implicit
+      Sc: LanguageTerms[L, F],
+      Cl: CollectionsLibTerms[L, F],
+      Sw: OpenAPITerms[L, F]
+  ): F[Resolved[L]] =
+    map[L, F, F[Resolved[L]]](deferred)(name => liftType => liftRawType => branch(name, protocolElems)(liftType, liftRawType))
+
+  private[this] def branch[L <: LA, F[_]: Monad](name: String, protocolElems: List[StrictProtocolElems[L]])(
+      liftType: L#Type => F[L#Type],
+      liftRawType: ReifiedRawType => ReifiedRawType
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[Resolved[L]] = {
+    import Sc._
+    import Sw._
+    for {
+      formattedName <- formatTypeName(name)
+      resolved <- resolveType(formattedName, protocolElems)
+        .flatMap {
+          case RandomType(name, tpe) =>
+            liftType(tpe).map(Resolved[L](_, None, None, liftRawType(ReifiedRawType.unsafeEmpty)))
+          case ClassDefinition(name, _, fullType, cls, _, _) =>
+            liftType(fullType).map(Resolved[L](_, None, None, liftRawType(ReifiedRawType.unsafeEmpty)))
+          case EnumDefinition(name, _, fullType, _, cls, _) =>
+            liftType(fullType).map(Resolved[L](_, None, None, liftRawType(ReifiedRawType.of(Some("string"), None))))
+          case ADT(_, _, fullType, _, _) =>
+            liftType(fullType).map(Resolved[L](_, None, None, liftRawType(ReifiedRawType.unsafeEmpty)))
+        }
+    } yield resolved
+  }
+}
+
 object ResolvedType {
   def resolveReferences[L <: LA, F[_]: Monad](
       values: List[(String, Either[LazyResolvedType[L], Resolved[L]])]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[List[(String, Resolved[L])]] =
     Sw.log.function("resolveReferences") {
-      import Cl._
       import Sw._
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
         case (clsName, Right(x: Resolved[L]))        => Right((clsName, x))
@@ -54,19 +96,11 @@ object ResolvedType {
             (Right(resolvedTypes): Either[Continue, Stop]).pure[F]
           } else {
             lazyTypes
-              .partitionEitherM {
-                case x @ (clsName, Deferred(tpeName)) =>
-                  lookupTypeName(tpeName, resolvedTypes)(_.pure[F])
-                    .map(_.map((clsName, _)))
-                    .map(Either.fromOption(_, x))
-                case x @ (clsName, DeferredArray(tpeName, containerTpe)) =>
-                  lookupTypeName(tpeName, resolvedTypes)(liftVectorType(_, containerTpe))
-                    .map(_.map((clsName, _)))
-                    .map(Either.fromOption(_, x))
-                case x @ (clsName, DeferredMap(tpeName, containerTpe)) =>
-                  lookupTypeName(tpeName, resolvedTypes)(liftMapType(_, containerTpe))
-                    .map(_.map((clsName, _)))
-                    .map(Either.fromOption(_, x))
+              .partitionEitherM { case x @ (clsName, deferred) =>
+                LazyResolvedType
+                  .map[L, F, F[Option[Resolved[L]]]](deferred)(name => liftType => _ => lookupTypeName(name, resolvedTypes)(liftType))
+                  .map(_.map((clsName, _)))
+                  .map(Either.fromOption(_, x))
               }
               .map { case (newLazyTypes, newResolvedTypes) =>
                 Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
@@ -78,60 +112,11 @@ object ResolvedType {
   def resolve[L <: LA, F[_]: Monad](
       value: Either[LazyResolvedType[L], Resolved[L]],
       protocolElems: List[StrictProtocolElems[L]]
-  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[Resolved[L]] = {
-    import Sc._
-    import Cl._
-    import Sw._
+  )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[Resolved[L]] =
     for {
-      _ <- log.debug(s"value: ${value} in ${protocolElems.length} protocol elements")
-      res <- value match {
-        case Right(x @ Resolved(_, _, _, _)) => x.pure[F]
-        case Left(Deferred(name)) =>
-          for {
-            formattedName <- formatTypeName(name)
-            resolved <- resolveType(formattedName, protocolElems)
-              .flatMap {
-                case RandomType(name, tpe) =>
-                  Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty).pure[F]
-                case ClassDefinition(name, _, fullType, cls, _, _) =>
-                  Resolved[L](fullType, None, None, ReifiedRawType.unsafeEmpty).pure[F]
-                case EnumDefinition(name, _, fullType, _, cls, _) =>
-                  Resolved[L](fullType, None, None, ReifiedRawType.of(Some("string"), None)).pure[F]
-                case ADT(_, _, fullType, _, _) =>
-                  Resolved[L](fullType, None, None, ReifiedRawType.unsafeEmpty).pure[F]
-              }
-          } yield resolved
-        case Left(DeferredArray(name, containerTpe)) =>
-          for {
-            formattedName <- formatTypeName(name)
-            resolved <- resolveType(formattedName, protocolElems)
-              .flatMap {
-                case RandomType(name, tpe) =>
-                  liftVectorType(tpe, containerTpe).map(Resolved[L](_, None, None, VectorRawType(ReifiedRawType.unsafeEmpty)))
-                case ClassDefinition(name, _, fullType, cls, _, _) =>
-                  liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, VectorRawType(ReifiedRawType.unsafeEmpty)))
-                case EnumDefinition(name, _, fullType, _, cls, _) =>
-                  liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, VectorRawType(ReifiedRawType.unsafeEmpty)))
-                case ADT(_, _, fullType, _, _) =>
-                  liftVectorType(fullType, containerTpe).map(Resolved[L](_, None, None, VectorRawType(ReifiedRawType.unsafeEmpty)))
-              }
-          } yield resolved
-        case Left(DeferredMap(name, containerTpe)) =>
-          for {
-            formattedName <- formatTypeName(name)
-            resolved <- resolveType(formattedName, protocolElems)
-              .flatMap {
-                case RandomType(name, tpe) =>
-                  liftMapType(tpe, containerTpe).map(Resolved[L](_, None, None, MapRawType(ReifiedRawType.unsafeEmpty)))
-                case ClassDefinition(_, _, fullType, _, _, _) =>
-                  liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, MapRawType(ReifiedRawType.unsafeEmpty)))
-                case EnumDefinition(_, _, fullType, _, _, _) =>
-                  liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, MapRawType(ReifiedRawType.unsafeEmpty)))
-                case ADT(_, _, fullType, _, _) =>
-                  liftMapType(fullType, containerTpe).map(Resolved[L](_, None, None, MapRawType(ReifiedRawType.unsafeEmpty)))
-              }
-          } yield resolved
-      }
+      _ <- Sw.log.debug(s"value: ${value} in ${protocolElems.length} protocol elements")
+      res <- value
+        .bimap(LazyResolvedType.lift[L, F](_, protocolElems), _.pure[F])
+        .merge
     } yield res
-  }
 }
