@@ -6,6 +6,7 @@ import io.swagger.v3.oas.models._
 import io.swagger.v3.oas.models.media._
 
 import dev.guardrail.languages.LA
+import dev.guardrail.core
 import dev.guardrail.core.{ ReifiedRawType, Resolved, ResolvedType, Tracker }
 import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.terms.{ CollectionsLibTerms, LanguageTerms, OpenAPITerms }
@@ -20,14 +21,16 @@ object PropMeta {
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F], F: FrameworkTerms[L, F]): F[List[PropMeta[L]]] = {
     import Sc._
     for {
-      entries <- definitions.traverse[F, (String, ResolvedType[L])] { case (clsName, schema) =>
+      entries <- definitions.traverse[F, (String, Either[core.LazyResolvedType[L], Resolved[L]])] { case (clsName, schema) =>
         schema
-          .refine { case impl: Schema[_] if Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined => impl }(impl =>
+          .refine[F[(String, Either[core.LazyResolvedType[L], Resolved[L]])]] {
+            case impl: Schema[_] if Option(impl.getProperties()).isDefined || Option(impl.getEnum()).isDefined => impl
+          }(impl =>
             for {
               formattedClsName <- formatTypeName(clsName)
               typeName         <- pureTypeName(formattedClsName)
               widenedTypeName  <- widenTypeName(typeName)
-            } yield (clsName, Resolved[L](widenedTypeName, None, None, ReifiedRawType.unsafeEmpty): ResolvedType[L])
+            } yield (clsName, Right(Resolved[L](widenedTypeName, None, None, ReifiedRawType.unsafeEmpty)))
           )
           .orRefine { case comp: ComposedSchema => comp }(comp =>
             for {
@@ -41,8 +44,8 @@ object PropMeta {
                 .flatMap(_.downField("$ref", _.get$ref).indexedDistribute)
                 .map(_.unwrapTracker.split("/").last)
               parentTerm <- parentSimpleRef.traverse(n => pureTermName(n))
-              resolvedType = Resolved[L](widenedTypeName, parentTerm, None, ReifiedRawType.unsafeEmpty): ResolvedType[L]
-            } yield (clsName, resolvedType)
+              resolvedType = Resolved[L](widenedTypeName, parentTerm, None, ReifiedRawType.unsafeEmpty)
+            } yield (clsName, Right(resolvedType))
           )
           .getOrElse(
             for {

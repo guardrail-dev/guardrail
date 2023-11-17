@@ -7,7 +7,7 @@ import io.swagger.v3.oas.models.parameters._
 import io.swagger.v3.oas.models.Components
 
 import dev.guardrail._
-import dev.guardrail.core.{ ReifiedRawType, ResolvedType, Tracker }
+import dev.guardrail.core.{ ReifiedRawType, Tracker }
 import dev.guardrail.core.extract.{ CustomTypeName, Default, FileHashAlgorithm }
 import dev.guardrail.core.resolvers.ModelResolver
 import dev.guardrail.generators.syntax._
@@ -64,7 +64,7 @@ object LanguageParameter {
     import Cl._
     import Sw._
 
-    def paramMeta(param: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)] = {
+    def paramMeta(param: Tracker[Parameter]): F[(Either[core.LazyResolvedType[L], core.Resolved[L]], Boolean)] = {
       def getDefault[U <: Parameter: Default.GetDefault](schema: Tracker[media.Schema[_]]): F[Option[L#Term]] =
         for {
           res <- schema
@@ -77,7 +77,7 @@ object LanguageParameter {
             .orRefineFallback(_ => Option.empty[L#Term].pure[F])
         } yield res
 
-      def resolveParam(param: Tracker[Parameter]): F[(ResolvedType[L], Boolean)] =
+      def resolveParam(param: Tracker[Parameter]): F[(Either[core.LazyResolvedType[L], core.Resolved[L]], Boolean)] =
         for {
           schema <- getParameterSchema(param, components).map(_.map {
             case SchemaLiteral(schema)               => schema
@@ -91,22 +91,22 @@ object LanguageParameter {
           defaultValue        <- getDefault(schema)
           res      = core.Resolved[L](declType, None, defaultValue, rawType)
           required = param.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
-        } yield (res, required)
+        } yield (Right(res), required)
 
       def paramHasRefSchema(p: Parameter): Boolean = Option(p.getSchema).exists(s => Option(s.get$ref()).nonEmpty)
 
       param
-        .refine[F[(core.ResolvedType[L], Boolean)]] { case r: Parameter if r.isRef => r }(r =>
+        .refine[F[(Either[core.LazyResolvedType[L], core.Resolved[L]], Boolean)]] { case r: Parameter if r.isRef => r }(r =>
           for {
             name <- getRefParameterRef(r)
             required = r.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
-          } yield (core.Deferred(name.unwrapTracker), required)
+          } yield (Left(core.Deferred(name.unwrapTracker)), required)
         )
         .orRefine { case r: Parameter if paramHasRefSchema(r) => r }(r =>
           for {
             ref <- getSimpleRef(r.downField("schema", _.getSchema))
             required = r.downField("required", _.getRequired()).unwrapTracker.getOrElse(false)
-          } yield (core.Deferred(ref), required)
+          } yield (Left(core.Deferred(ref)), required)
         )
         .orRefine { case x: Parameter if x.isInBody => x }(param =>
           for {

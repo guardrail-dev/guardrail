@@ -13,7 +13,7 @@ class EscapeTreeSpec extends AnyFunSuite with Matchers {
   }
 
   List[(Tree, String)](
-    (Init(Type.Name("dashy-enum"), Name("what"), List()), "`dashy-enum`"),
+    (Init.After_4_6_0(Type.Name("dashy-enum"), Name("what"), List()), "`dashy-enum`"),
     (Term.Name("dashy-class"), "`dashy-class`"),
     (
       Term.Param(Nil, Term.Name("dashy-param"), Some(Type.Apply(Type.Name("Option"), Type.ArgClause(List(Type.Name("Long"))))), Some(Term.Name("None"))),

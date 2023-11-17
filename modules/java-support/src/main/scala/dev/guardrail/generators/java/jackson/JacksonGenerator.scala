@@ -1681,7 +1681,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       name: String,
       fieldName: String,
       property: Tracker[Schema[_]],
-      meta: core.ResolvedType[JavaLanguage],
+      meta: Either[core.LazyResolvedType[JavaLanguage], core.Resolved[JavaLanguage]],
       requirement: PropertyRequirement,
       isCustomType: Boolean,
       defaultValue: Option[com.github.javaparser.ast.Node]
@@ -1702,28 +1702,35 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
 
         dataRedaction = DataRedaction(property).getOrElse(DataVisible)
 
-        (tpe, classDep, rawType) <- meta match {
-          case core.Resolved(declType, classDep, _, rawType) =>
-            Target.pure((declType, classDep, rawType))
-          case core.Deferred(tpeName) =>
-            val tpe = concreteTypes.find(_.clsName == tpeName).map(x => Target.pure(x.tpe)).getOrElse {
-              println(s"Unable to find definition for ${tpeName}, just inlining")
-              safeParseType(tpeName)
+        (tpe, classDep, rawType) <- meta
+          .bimap(
+            {
+              case core.Deferred(tpeName) =>
+                concreteTypes
+                  .find(_.clsName == tpeName)
+                  .fold(
+                    for {
+                      _   <- Target.log.info(s"Unable to find definition for ${tpeName}, just inlining")
+                      res <- safeParseType(tpeName)
+                    } yield res
+                  )(x => Target.pure(x.tpe))
+                  .map((_, Option.empty, fallbackRawType))
+              case core.DeferredArray(tpeName, containerTpe) =>
+                for {
+                  innerType <- lookupTypeName(tpeName, concreteTypes).fold(safeParseType(tpeName))(Target.pure)
+                  tpe       <- Cl.liftVectorType(innerType, containerTpe)
+                } yield (tpe, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
+              case core.DeferredMap(tpeName, containerTpe) =>
+                for {
+                  innerType <- lookupTypeName(tpeName, concreteTypes).fold(safeParseType(tpeName))(Target.pure)
+                  tpe       <- Cl.liftMapType(innerType, containerTpe)
+                } yield (tpe, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
+            },
+            { case core.Resolved(declType, classDep, _, rawType) =>
+              Target.pure((declType, classDep, rawType))
             }
-            tpe.map((_, Option.empty, fallbackRawType))
-          case core.DeferredArray(tpeName, containerTpe) =>
-            val concreteType = lookupTypeName(tpeName, concreteTypes)
-            for {
-              innerType <- concreteType.fold(safeParseType(tpeName))(Target.pure)
-              tpe       <- Cl.liftVectorType(innerType, containerTpe)
-            } yield (tpe, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
-          case core.DeferredMap(tpeName, containerTpe) =>
-            val concreteType = lookupTypeName(tpeName, concreteTypes)
-            for {
-              innerType <- concreteType.fold(safeParseType(tpeName))(Target.pure)
-              tpe       <- Cl.liftMapType(innerType, containerTpe)
-            } yield (tpe, Option.empty, ReifiedRawType.ofVector(fallbackRawType))
-        }
+          )
+          .merge
 
         expressionDefaultValue <- (defaultValue match {
           case Some(e: Expression) => Target.pure(Some(e))
@@ -1788,18 +1795,18 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     Target.pure(StaticDefns[JavaLanguage](clsName, List.empty, List.empty))
 
   private def extractArrayType(
-      arr: core.ResolvedType[JavaLanguage],
+      arr: Either[core.LazyResolvedType[JavaLanguage], core.Resolved[JavaLanguage]],
       concreteTypes: List[PropMeta[JavaLanguage]]
   ): Target[Type] =
     for {
       result <- arr match {
-        case core.Resolved(tpe, dep, default, _) => Target.pure(tpe)
-        case core.Deferred(tpeName) =>
+        case Right(core.Resolved(tpe, dep, default, _)) => Target.pure(tpe)
+        case Left(core.Deferred(tpeName)) =>
           Target.fromOption(lookupTypeName(tpeName, concreteTypes), UserError(s"Unresolved reference ${tpeName}"))
-        case core.DeferredArray(tpeName, containerTpe) =>
+        case Left(core.DeferredArray(tpeName, containerTpe)) =>
           lookupTypeName(tpeName, concreteTypes)
             .fold[Target[Type]](Target.raiseUserError(s"Unresolved reference ${tpeName}"))(Cl.liftVectorType(_, containerTpe))
-        case core.DeferredMap(tpeName, containerTpe) =>
+        case Left(core.DeferredMap(tpeName, containerTpe)) =>
           lookupTypeName(tpeName, concreteTypes).fold[Target[Type]](
             Target.raiseUserError(s"Unresolved reference ${tpeName}")
           )(tpe => Cl.liftMapType(tpe, None).flatMap(mapTpe => Cl.liftVectorType(mapTpe, containerTpe)))

@@ -44,7 +44,7 @@ abstract class OpenAPITerms[L <: LA, F[_]] {
   def getParameterName(parameter: Tracker[Parameter]): F[String]
   def getParameterSchema(parameter: Tracker[Parameter], components: Tracker[Option[Components]]): F[Tracker[SchemaProjection]]
   def getRefParameterRef(parameter: Tracker[Parameter]): F[Tracker[String]]
-  def fallbackParameterHandler(parameter: Tracker[Parameter]): F[(core.ResolvedType[L], Boolean)]
+  def fallbackParameterHandler(parameter: Tracker[Parameter]): F[(Either[core.LazyResolvedType[L], core.Resolved[L]], Boolean)]
   def getOperationId(operation: Tracker[Operation]): F[String]
   def getResponses(operationId: String, operation: Tracker[Operation]): F[NonEmptyList[(String, Tracker[ApiResponse])]]
   def getSimpleRef(ref: Tracker[Option[Schema[_]]]): F[String]
