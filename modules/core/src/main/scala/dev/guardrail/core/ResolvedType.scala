@@ -1,6 +1,6 @@
 package dev.guardrail.core
 
-import cats.{ FlatMap, Foldable, Monad }
+import cats.{ FlatMap, Monad }
 import cats.syntax.all._
 
 import dev.guardrail.languages.LA
@@ -73,7 +73,7 @@ object ResolvedType {
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[List[(String, Resolved[L])]] =
     Sw.log.function("resolveReferences") {
       import Sw._
-      val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
+      val (lazyTypes, resolvedTypes) = values.partitionEither {
         case (clsName, Right(x: Resolved[L]))        => Right((clsName, x))
         case (clsName, Left(x: LazyResolvedType[L])) => Left((clsName, x))
       }
@@ -92,20 +92,19 @@ object ResolvedType {
         .tailRecM[Continue, Stop](
           (lazyTypes, resolvedTypes)
         ) { case (lazyTypes, resolvedTypes) =>
-          if (lazyTypes.isEmpty) {
-            (Right(resolvedTypes): Either[Continue, Stop]).pure[F]
-          } else {
-            lazyTypes
+          for {
+            (newLazyTypes, additionalResolvedTypes) <- lazyTypes
               .partitionEitherM { case x @ (clsName, deferred) =>
                 LazyResolvedType
                   .map[L, F, F[Option[Resolved[L]]]](deferred)(name => liftType => _ => lookupTypeName(name, resolvedTypes)(liftType))
-                  .map(_.map((clsName, _)))
-                  .map(Either.fromOption(_, x))
+                  .map(resolved => Either.fromOption(resolved, x).map((clsName, _)))
               }
-              .map { case (newLazyTypes, newResolvedTypes) =>
-                Left((newLazyTypes, resolvedTypes ++ newResolvedTypes))
-              }
-          }
+            newResolvedTypes = resolvedTypes ++ additionalResolvedTypes
+          } yield
+            if (lazyTypes.isEmpty || lazyTypes.forall(newLazyTypes.contains))
+              Right(newResolvedTypes)
+            else
+              Left((newLazyTypes, newResolvedTypes))
         }
     }
 
