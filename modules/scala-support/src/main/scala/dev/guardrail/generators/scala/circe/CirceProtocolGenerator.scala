@@ -102,8 +102,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 defaultPropertyRequirement = defaultPropertyRequirement,
                 components = components
               )
+              oneOf <- fromOneOf(
+                clsName = formattedClsName,
+                model = comp,
+                dtoPackage = dtoPackage,
+                concreteTypes = concreteTypes,
+                components = components
+              )
               alias <- modelTypeAlias(formattedClsName, comp, components)
-            } yield model.getOrElse(alias)
+            } yield model.orElse(oneOf).getOrElse(alias)
           )
           .orRefine { case a: ArraySchema => a }(arr =>
             for {
@@ -126,8 +133,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 defaultPropertyRequirement = defaultPropertyRequirement,
                 components = components
               )
+              oneOf <- fromOneOf(
+                clsName = formattedClsName,
+                model = m,
+                dtoPackage = dtoPackage,
+                concreteTypes = concreteTypes,
+                components = components
+              )
               alias <- modelTypeAlias(formattedClsName, m, components)
-            } yield enum_.orElse(model).getOrElse(alias)
+            } yield enum_.orElse(model).orElse(oneOf).getOrElse(alias)
           )
           .orRefine { case x: StringSchema => x }(x =>
             for {
@@ -165,8 +179,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 components
               )
               (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
-              alias         <- typeAlias(formattedClsName, declType)
-            } yield enum_.orElse(model).getOrElse(alias)
+              oneOf <- fromOneOf(
+                clsName = formattedClsName,
+                model = x,
+                dtoPackage = dtoPackage,
+                concreteTypes = concreteTypes,
+                components = components
+              )
+              alias <- typeAlias(formattedClsName, declType)
+            } yield enum_.orElse(model).orElse(oneOf).getOrElse(alias)
           )
           .valueOr(x =>
             for {
@@ -523,6 +544,67 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       else tpe.toRight("Empty entity name").map(ClassDefinition[ScalaLanguage](clsName.last, _, fullType, defn, finalStaticDefns, parents))
     }
   }
+
+  private[this] def fromOneOf(
+      clsName: String,
+      model: Tracker[Schema[_]],
+      dtoPackage: List[String],
+      concreteTypes: List[PropMeta[ScalaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Fw: FrameworkTerms[ScalaLanguage, Target],
+      Sw: OpenAPITerms[ScalaLanguage, Target]
+  ): Target[Either[String, StrictProtocolElems[ScalaLanguage]]] =
+    NonEmptyList
+      .fromList(model.downField("oneOf", _.getOneOf()).indexedDistribute)
+      .fold[Target[Either[String, StrictProtocolElems[ScalaLanguage]]]](Target.pure(Left("Does not have oneOf"))) { xs =>
+        xs.traverse(ModelResolver.propMeta[ScalaLanguage, Target](_, components))
+          .flatMap { oneOfs =>
+            val (deferred, resolved) = oneOfs.toList.partitionEither(identity _)
+            if (resolved.nonEmpty) Target.raiseUserError(s"Only $$ref is supported in oneOf at this time (${model.showHistory})") else Target.pure(deferred)
+          }
+          .flatMap(_.traverse(elem => Target.fromOption(concreteTypes.find(_.clsName == elem.value), UserError("Not supported"))))
+          .flatMap(rawTypes =>
+            NonEmptyList
+              .fromList(rawTypes)
+              .toRight("No oneOf specified")
+              .traverse(tpes => // Maintain the Either[String, A] at this point. Validation has completed, no failures expected after here.
+                for {
+                  fullType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
+
+                  (members, (decoders, encoders)) <- tpes
+                    .traverse {
+                      case tpe @ Type.Name(name) =>
+                        for {
+                          fullInstanceType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, name))
+                          member  = q"case class ${tpe}(value: ${fullInstanceType}) extends ${Init.After_4_6_0(Type.Name(clsName), Name.Anonymous(), Nil)}"
+                          decoder = q"_root_.io.circe.Decoder[${tpe}].map[${fullType}](members.${Term.Name(name)}.apply _)"
+                          encoder = p"case members.${Term.Name(name)}(member) => member.asJson"
+                        } yield (member, (decoder, encoder))
+                      case other =>
+                        Target.raiseUserError(s"Unsupported case in oneOf, ${other}. Somehow got a complex type, we expected a singular Type.Name.")
+                    }
+                    .map(_.unzip.map(_.unzip)) // NonEmptyList#unzip3 adapter :see_no_evil:
+
+                  encoder = q"""implicit def ${Term.Name(s"encode${clsName}")}: _root_.io.circe.Encoder[${Type
+                      .Name(clsName)}] = _root_.io.circe.Encoder.instance(${Term
+                      .PartialFunction(encoders.toList)}) """
+                  decoder = q"implicit def ${Term.Name(s"decode${clsName}")}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = ${decoders
+                      .reduceLeft((a, b) => q"$a.or($b)")}"
+                  statements = List(q"object members { ..${members.toList} }")
+                  defn       = q"""sealed abstract class ${Type.Name(clsName)} {}"""
+                  staticDefns = StaticDefns[ScalaLanguage](
+                    className = clsName,
+                    extraImports = List.empty,
+                    definitions = List(encoder, decoder),
+                    statements = statements
+                  )
+                } yield ClassDefinition[ScalaLanguage](clsName, Type.Name(clsName), fullType, defn, staticDefns, Nil)
+              )
+          )
+      }
 
   // NB: In OpenAPI 3.1 ObjectSchema was broadly replaced with JsonSchema.
   // This broke a lot of assumptions, but seems to indicate that we're moving
