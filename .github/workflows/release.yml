@@ -121,6 +121,15 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
+      - name: 'Publish artifacts [scala-zio-http]'
+        if: ${{ steps.set-project-from-tag.outputs.module == 'scala-zio-http' }}
+        run: sbt 'show version' "project guardrail-scala-zio-http" clean compile versionCheck test ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
       - name: 'Publish artifacts [scala-support]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-support' }}
         run: sbt 'show version' "project guardrail-scala-support" clean compile versionCheck test ci-release

@@ -79,6 +79,15 @@ jobs:
           config-name: release-drafter-scala-http4s.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  scala-zio-http:
+    name: '[scala-zio-http] Draft release'
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: blast-hardcheese/release-drafter@v5.16.42
+        with:
+          config-name: release-drafter-scala-zio-http.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   scala-support:
     name: '[scala-support] Draft release'
     runs-on: ubuntu-20.04

@@ -38,6 +38,11 @@ scala-http4s:
 - modules/scala-http4s/src/main/**/*
 - project/src/main/scala/modules/scalaHttp4s.scala
 
+scala-zio-http:
+- modules/scala-zio-http/*
+- modules/scala-zio-http/**/*
+- project/src/main/scala/modules/scalaZioHttp.scala
+
 scala-support:
 - modules/scala-support/src/main/*
 - modules/scala-support/src/main/**/*

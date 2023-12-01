@@ -30,7 +30,7 @@ echo "Bump: major=${major} minor=${minor} patch=${patch} bump=${bump}"
 
 if [ -n "$bump" ]; then
 
-  modules=( cli core guardrail java-async-http java-dropwizard java-spring-mvc java-support scala-akka-http scala-dropwizard scala-http4s scala-support )
+  modules=( cli core guardrail java-async-http java-dropwizard java-spring-mvc java-support scala-akka-http scala-dropwizard scala-http4s scala-zio-http scala-support )
 
   for module in "${modules[@]}"; do
     previous="$(git tag --sort=-taggerdate | grep "$(printf '^%s-v' "$module")" | tail -n 1)"

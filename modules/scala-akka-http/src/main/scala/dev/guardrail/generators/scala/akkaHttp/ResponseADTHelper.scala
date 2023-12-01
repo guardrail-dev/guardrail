@@ -1,5 +1,6 @@
-package dev.guardrail.generators.scala
+package dev.guardrail.generators.scala.akkaHttp
 
+import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.terms.{ AnyContentType, ApplicationJson, ContentType, Response, Responses }
 import dev.guardrail.terms.protocol._
 

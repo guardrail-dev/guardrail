@@ -17,7 +17,6 @@ import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.CirceRefinedModelGenerator
 import dev.guardrail.generators.scala.JacksonModelGenerator
 import dev.guardrail.generators.scala.ModelGeneratorType
-import dev.guardrail.generators.scala.ResponseADTHelper
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.spi.ClientGeneratorLoader

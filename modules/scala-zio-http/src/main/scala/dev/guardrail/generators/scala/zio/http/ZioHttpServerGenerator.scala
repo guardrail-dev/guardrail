@@ -1,4 +1,4 @@
-package dev.guardrail.generators.scala.http4s
+package dev.guardrail.generators.scala.zio.http
 
 import _root_.io.swagger.v3.oas.models.Components
 import _root_.io.swagger.v3.oas.models.Operation
@@ -11,6 +11,8 @@ import dev.guardrail.AuthImplementation.Custom
 import dev.guardrail.AuthImplementation.Disable
 import dev.guardrail.AuthImplementation.Native
 import dev.guardrail.AuthImplementation.Simple
+import dev.guardrail.Target
+import dev.guardrail.UserError
 import dev.guardrail._
 import dev.guardrail.core.Tracker
 import dev.guardrail.core.extract.ServerRawResponse
@@ -18,7 +20,6 @@ import dev.guardrail.core.extract.TracingLabel
 import dev.guardrail.generators.CustomExtractionField
 import dev.guardrail.generators.LanguageParameter
 import dev.guardrail.generators.LanguageParameters
-import dev.guardrail.generators.RenderedRoutes
 import dev.guardrail.generators.Server
 import dev.guardrail.generators.Servers
 import dev.guardrail.generators.TracingField
@@ -26,6 +27,7 @@ import dev.guardrail.generators.operations.TracingLabelFormatter
 import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.ModelGeneratorType
 import dev.guardrail.generators.scala.ScalaLanguage
+import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.scala.syntax._
 import dev.guardrail.generators.spi.ModuleLoadResult
 import dev.guardrail.generators.spi.ServerGeneratorLoader
@@ -35,12 +37,12 @@ import dev.guardrail.terms.CollectionsLibTerms
 import dev.guardrail.terms.ContentType
 import dev.guardrail.terms.Header
 import dev.guardrail.terms.LanguageTerms
+import dev.guardrail.terms.OpenAPITerms
 import dev.guardrail.terms.Response
 import dev.guardrail.terms.Responses
 import dev.guardrail.terms.RouteMeta
 import dev.guardrail.terms.SecurityRequirements
 import dev.guardrail.terms.SecurityScheme
-import dev.guardrail.terms.OpenAPITerms
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.StrictProtocolElems
 import dev.guardrail.terms.server._
@@ -48,35 +50,19 @@ import dev.guardrail.terms.server._
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
-class Http4sServerGeneratorLoader extends ServerGeneratorLoader {
+class ZioHttpServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
-  val apply = ModuleLoadResult.forProduct1(ServerGeneratorLoader.label -> Seq(Http4sVersion.mapping))(http4sVersion => Http4sServerGenerator(http4sVersion))
+  val apply = ModuleLoadResult.forProduct1(ServerGeneratorLoader.label -> Seq(ZioHttpVersion.mapping))(http4sVersion => ZioHttpServerGenerator(http4sVersion))
 }
 
-object Http4sServerGenerator {
-  def apply(version: Http4sVersion): ServerTerms[ScalaLanguage, Target] =
-    new Http4sServerGenerator(version)
+object ZioHttpServerGenerator {
+  def apply(version: ZioHttpVersion): ServerTerms[ScalaLanguage, Target] =
+    new ZioHttpServerGenerator(version)
 
-  def generateUrlPathExtractors(
-      path: Tracker[String],
-      pathArgs: List[LanguageParameter[ScalaLanguage]],
-      modelGeneratorType: ModelGeneratorType
-  ): Target[(Pat, Option[Pat])] =
-    for {
-      (parts, (trailingSlash, queryParams)) <- Http4sPathExtractor.runParse(path, pathArgs, modelGeneratorType)
-      (directive, bindings) = parts
-        .foldLeft[(Pat, List[Term.Name])]((p"${Term.Name("Root")}", List.empty)) { case ((acc, bindings), (termName, c)) =>
-          (p"$acc / ${c}", bindings ++ termName)
-        }
-      trailingSlashed =
-        if (trailingSlash) {
-          p"$directive / ${Lit.String("")}"
-        } else directive
-    } yield (trailingSlashed, queryParams)
 }
 
-class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms[ScalaLanguage, Target] {
+class ZioHttpServerGenerator private (version: ZioHttpVersion) extends ServerTerms[ScalaLanguage, Target] {
   val customExtractionTypeName: Type.Name = Type.Name("E")
   val authContextTypeName: Type.Name      = Type.Name("AuthContext")
   val authErrorTypeName: Type.Name        = Type.Name("AuthError")
@@ -177,10 +163,16 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     } yield Servers[ScalaLanguage](servers, supportDefinitions)
   }
 
-  private val bodyUtf8Decode = version match {
-    case Http4sVersion.V0_22 => q"utf8Decode"
-    case Http4sVersion.V0_23 => q"utf8.decode"
-  }
+  private val bodyUtf8Decode = q"utf8.decode"
+
+  case class RenderedRoutes(
+      routes: List[ScalaLanguage#Term],
+      classAnnotations: List[ScalaLanguage#Annotation],
+      methodSigs: List[ScalaLanguage#MethodDeclaration],
+      supportDefinitions: List[ScalaLanguage#Definition],
+      handlerDefinitions: List[ScalaLanguage#Statement],
+      securitySchemesDefinitions: List[ScalaLanguage#Definition]
+  )
 
   private def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
@@ -243,20 +235,19 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
       securityExposure: SecurityExposure,
       authImplementation: AuthImplementation
-  ): Target[RenderedRoutes[ScalaLanguage]] =
+  ): Target[RenderedRoutes] =
     for {
       renderedRoutes <- routes
         .traverse(generateRoute(resourceName, basePath, securityExposure, authImplementation))
         .map(_.flatten)
       routeTerms = renderedRoutes.map(_.route)
-      combinedRouteTerms <- combineRouteTerms(routeTerms)
       methodSigs = renderedRoutes.map(_.methodSig)
       securitySchemesDefinitions <-
         if (authImplementation == AuthImplementation.Disable || authImplementation == AuthImplementation.Native)
           Target.pure(List.empty)
         else generateSecuritySchemes(securitySchemes, routes.flatMap(_.routeMeta.securityRequirements), authImplementation)
-    } yield RenderedRoutes[ScalaLanguage](
-      List(combinedRouteTerms),
+    } yield RenderedRoutes(
+      routeTerms,
       List.empty,
       methodSigs,
       renderedRoutes
@@ -292,8 +283,8 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       )
 
       val authenticator = List(q"""
-      def authenticate[F[_]: _root_.cats.Monad, ${tparam"$authContextTypeName"}](
-        middleware: ($authSchemesTypeName, Set[String], Request[F]) => F[Either[$authErrorTypeName, $authContextTypeName]],
+      def authenticate[${tparam"$authContextTypeName"}](
+        middleware: ($authSchemesTypeName, Set[String], Request) => IO[$authErrorTypeName, $authContextTypeName],
         schemes: _root_.cats.data.NonEmptyList[_root_.cats.data.NonEmptyMap[$authSchemesTypeName, Set[String]]],
         req: Request[F]
       ): F[Either[$authErrorTypeName, $authContextTypeName]] = {
@@ -373,7 +364,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         if (authImplementation == Native || (authImplementation != Disable && securityExposure != SecurityExposure.Undefined)) {
           List(tparam"$authContextTypeName")
         } else List.empty
-      tParams = List(tparam"F[_]") ++ extractType ++ authType
+      tParams = Nil ++ extractType ++ authType
     } yield q"""
     trait ${Type.Name(handlerName)}[..$tParams] {
       ..${methodSigs ++ handlerDefinitions}
@@ -391,25 +382,25 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       _ <- Target.log.debug(s"getExtraRouteParams(${tracing}, ${authImplementation})")
       mapRoute = {
         val requestType = authImplementation match {
-          case Native => t"AuthedRequest[F, $authContextTypeName]"
-          case _      => t"Request[F]"
+          case Native => t"AuthedRequest[$authContextTypeName]"
+          case _      => t"Request"
         }
-        param"""mapRoute: (String, $requestType, F[Response[F]]) => F[Response[F]] = (_: String, _: $requestType, r: F[Response[F]]) => r"""
+        param"""mapRoute: (String, $requestType, UIO[Response]) => UIO[Response] = (_: String, _: $requestType, r: UIO[Response]) => r"""
       }
       customExtraction_ =
         if (customExtraction) {
-          Option(param"""customExtract: String => Request[F] => $customExtractionTypeName""")
+          Option(param"""customExtract: String => Request => $customExtractionTypeName""")
         } else Option.empty
       tracing_ =
         if (tracing) {
-          Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
+          Option(param"""trace: String => Request => TraceBuilder""")
         } else Option.empty
       resourceTerm = Term.Name(resourceName)
       authentication_ = authImplementation match {
         case Simple if securityExposure != SecurityExposure.Undefined =>
           val authType = Type.Select(resourceTerm, authSchemesTypeName)
           Option(
-            param"""authenticationMiddleware: ($authType, Set[String], Request[F]) => F[Either[${resourceTerm}.$authErrorTypeName, $authContextTypeName]]"""
+            param"""authenticationMiddleware: ($authType, Set[String], Request) => UIO[Either[${resourceTerm}.$authErrorTypeName, $authContextTypeName]]"""
           )
         case Custom if securityExposure == SecurityExposure.Required =>
           Option(
@@ -434,7 +425,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       resourceName: String,
       handlerName: String,
       annotations: List[scala.meta.Mod.Annot],
-      combinedRouteTerms: List[scala.meta.Stat],
+      combinedRouteTerms: List[scala.meta.Term],
       extraRouteParams: List[scala.meta.Term.Param],
       responseDefinitions: List[scala.meta.Defn],
       supportDefinitions: List[scala.meta.Defn],
@@ -447,11 +438,12 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         _ <- Target.log.debug(s"Args: ${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams}")
         extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
         authType        = List(tparam"$authContextTypeName").filter(_ => securitySchemesDefinitions.nonEmpty || authImplementation == AuthImplementation.Native)
-        resourceTParams = List(tparam"F[_]") ++ extractType ++ authType
-        handlerTParams = List(Type.Name("F")) ++
-          List(customExtractionTypeName).filter(_ => customExtraction) ++
+        resourceTParams = extractType ++ authType
+        handlerTParams = List(customExtractionTypeName).filter(_ => customExtraction) ++
           List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty || authImplementation == AuthImplementation.Native)
-        routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
+        routesParams =
+          if (handlerTParams.isEmpty) List(param"handler: ${Type.Name(handlerName)}")
+          else List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
         routesDefinition = authImplementation match {
           case Native => q"""
             def routes(..${routesParams}): AuthedRoutes[$authContextTypeName, F] = AuthedRoutes.of {
@@ -459,14 +451,14 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
               }
           """
           case _ => q"""
-            def routes(..${routesParams}): HttpRoutes[F] = HttpRoutes.of {
+            def routes(..${routesParams}): HttpApp[Any] = Routes(
                 ..${combinedRouteTerms}
-              }
+              ).toHttpApp
           """
         }
       } yield List(
         q"""
-          class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams)(implicit F: Async[F]) extends Http4sDsl[F] with CirceInstances {
+          class ${Type.Name(resourceName)}[..$resourceTParams](..$extraRouteParams) {
             import ${Term.Name(resourceName)}._
 
             ..${supportDefinitions};
@@ -481,31 +473,47 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       )
     )
 
-  private def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
-    Target.log.function("getExtraImports")(
-      for {
-        _ <- Target.log.debug(s"Args: ${tracing}")
-      } yield List(
-        q"import org.http4s.circe.CirceInstances",
-        q"import org.http4s.dsl.Http4sDsl",
-        q"import fs2.text._"
-      )
-    )
+  def getExtraImports(tracing: Boolean, supportPackage: NonEmptyList[String]) =
+    Target.log.function("getExtraImports")(Target.pure(List(q"import io.circe.Encoder")))
 
-  private def httpMethodToHttp4s(method: HttpMethod): Target[Term.Name] = method match {
-    case HttpMethod.DELETE => Target.pure(Term.Name("DELETE"))
-    case HttpMethod.GET    => Target.pure(Term.Name("GET"))
-    case HttpMethod.PATCH  => Target.pure(Term.Name("PATCH"))
-    case HttpMethod.POST   => Target.pure(Term.Name("POST"))
-    case HttpMethod.PUT    => Target.pure(Term.Name("PUT"))
-    case HttpMethod.HEAD   => Target.pure(Term.Name("HEAD"))
+  private def httpMethodToZioHttp(method: HttpMethod): Target[Term] = method match {
+    case HttpMethod.DELETE => Target.pure(q"Method.DELETE")
+    case HttpMethod.GET    => Target.pure(q"Method.GET")
+    case HttpMethod.PATCH  => Target.pure(q"Method.PATCH")
+    case HttpMethod.POST   => Target.pure(q"Method.POST")
+    case HttpMethod.PUT    => Target.pure(q"Method.PUT")
     case other             => Target.raiseUserError(s"Unknown method: ${other}")
   }
 
-  private def pathStrToHttp4s(basePath: Option[String], path: Tracker[String], pathArgs: List[LanguageParameter[ScalaLanguage]]): Target[(Pat, Option[Pat])] =
+  private case class UrlPath(routePattern: Term, segments: List[Term], queryParameters: Option[Term])
+
+  private def generateUrlPathExtractors(
+      httpMethod: Term,
+      path: Tracker[String],
+      pathArgs: List[LanguageParameter[ScalaLanguage]],
+      modelGeneratorType: ModelGeneratorType
+  ): Target[UrlPath] =
+    for {
+      (parts, (trailingSlash, queryParams)) <- ZioHttpPathExtractor.runParse(path, pathArgs, modelGeneratorType)
+      (directive, bindings) = parts
+        .foldLeft[(Term, List[Term.Name])]((httpMethod, List.empty)) { case ((acc, bindings), (termName, c)) =>
+          (q"$acc / ${c}", bindings ++ termName)
+        }
+      trailingSlashed =
+        if (trailingSlash) {
+          q"$directive / trailing"
+        } else directive
+    } yield UrlPath(trailingSlashed, segments = List.empty, queryParams)
+
+  private def pathStrToZioHttp(
+      httpMethod: Term,
+      basePath: Option[String],
+      path: Tracker[String],
+      pathArgs: List[LanguageParameter[ScalaLanguage]]
+  ): Target[UrlPath] =
     (basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
-      case ""        => Target.pure((p"${Term.Name("Root")}", None))
-      case finalPath => Http4sServerGenerator.generateUrlPathExtractors(Tracker.cloneHistory(path, finalPath), pathArgs, CirceModelGenerator.V012)
+      case ""        => Target.pure(UrlPath(httpMethod, List.empty, None))
+      case finalPath => generateUrlPathExtractors(httpMethod, Tracker.cloneHistory(path, finalPath), pathArgs, CirceModelGenerator.V012)
     }
 
   private def directivesFromParams[T](
@@ -544,7 +552,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     } yield directives
 
-  private def bodyToHttp4s(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
+  private def bodyToZioHttp(methodName: String, body: Option[LanguageParameter[ScalaLanguage]]): Target[Option[Term => Term]] =
     Target.pure(
       body.map { case LanguageParameter(_, _, paramName, _, _) =>
         content => q"""
@@ -609,17 +617,17 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       }
     )
 
-  private def qsToHttp4s(methodName: String): List[LanguageParameter[ScalaLanguage]] => Target[Option[Pat]] =
+  private def qsToZioHttp(methodName: String): List[LanguageParameter[ScalaLanguage]] => Target[Option[Term]] =
     params =>
       directivesFromParams(
-        arg => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-        arg => _ => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-        arg => _ => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
-        arg => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})")
+        arg => _ => Target.pure(q"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Lit.String(arg.paramName.value)})"),
+        arg => _ => _ => Target.pure(q"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Lit.String(arg.paramName.value)})"),
+        arg => _ => _ => Target.pure(q"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Lit.String(arg.paramName.value)})"),
+        arg => _ => Target.pure(q"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Lit.String(arg.paramName.value)})")
       )(params).map {
         case Nil => Option.empty
         case x :: xs =>
-          Some(xs.foldLeft[Pat](x) { case (a, n) => p"${a} +& ${n}" })
+          Some(xs.foldLeft[Term](x) { case (a, n) => q"${a} +& ${n}" })
       }
 
   private def formToHttp4s: List[LanguageParameter[ScalaLanguage]] => Target[List[Param]] =
@@ -827,7 +835,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
             }
     )
 
-  private case class RenderedRoute(methodName: String, route: Case, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
+  private case class RenderedRoute(methodName: String, route: Term, methodSig: Decl.Def, supportDefinitions: List[Defn], handlerDefinitions: List[Stat])
 
   private def generateRoute(
       resourceName: String,
@@ -856,11 +864,11 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         qsArgs     <- prepareParameters(parameters.queryStringParams)
         bodyArgs   <- prepareParameters(parameters.bodyParams)
 
-        http4sMethod <- httpMethodToHttp4s(method)
-        pathWithQs   <- pathStrToHttp4s(basePath, path, pathArgs)
-        (http4sPath, additionalQs) = pathWithQs
-        http4sQs   <- qsToHttp4s(methodName)(qsArgs)
-        http4sBody <- bodyToHttp4s(methodName, bodyArgs)
+        httpMethod <- httpMethodToZioHttp(method)
+        httpPath   <- pathStrToZioHttp(httpMethod, basePath, path, pathArgs)
+        zioHttpQs  <- qsToZioHttp(methodName)(qsArgs)
+        http4sBody <- bodyToZioHttp(methodName, bodyArgs)
+
         asyncFormProcessing = formArgs.exists(_.isFile)
         http4sForm         <- if (asyncFormProcessing) asyncFormToHttp4s(methodName)(formArgs) else formToHttp4s(formArgs)
         http4sHeaders      <- headersToHttp4s(headerArgs)
@@ -871,7 +879,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
           (Term.Name(responseClsName), Type.Name(responseClsName))
         val responseType = ServerRawResponse(operation)
           .filter(_ == true)
-          .fold[Type](t"${resourceTerm}.$responseCompanionType")(Function.const(t"Response[F]"))
+          .fold[Type](t"${resourceTerm}.$responseCompanionType")(Function.const(t"Response"))
         val authContext: Option[(LanguageParameter[ScalaLanguage], Term => Term)] = authImplementation match {
           case Disable => None
           case Native  => Some((LanguageParameter.fromParam(param"authContext: $authContextTypeName"), identity _))
@@ -914,7 +922,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
               val authTransformer: Term => Term = inner =>
                 if (sr.optional)
                   q"""
-                  authenticate[F, $authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
+                  authenticate[$authContextTypeName](authenticationMiddleware, $securityRequirements, req).flatMap {
                     authContextEither =>
                       val ${Pat.Var(Term.Name(authContextParam.name.value))} = authContextEither match {
                         case Right(success) => Right(Option(success))
@@ -949,18 +957,18 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         val entityProcessor = http4sBody
           .orElse(Some((content: Term) => q"req.decode[UrlForm] { urlForm => $content }").filter(_ => formArgs.nonEmpty && formArgs.forall(!_.isFile)))
           .orElse(Some((content: Term) => q"req.decode[Multipart[F]] { multipart => $content }").filter(_ => formArgs.nonEmpty))
-        val fullRouteMatcher = {
-          val base = NonEmptyList.fromList(List(additionalQs, http4sQs).flatten).fold(p"$http4sMethod -> $http4sPath") { qs =>
-            p"$http4sMethod -> $http4sPath :? ${qs.reduceLeft((a, n) => p"$a :& $n")}"
+        val fullRouteMatcher: Term = {
+          val base = NonEmptyList.fromList(List(httpPath.queryParameters, zioHttpQs).flatten).fold(httpPath.routePattern) { qs =>
+            q"${httpPath.routePattern} :? ${qs.reduceLeft((a, n) => q"$a :& $n")}"
           }
-          val fullRouteWithTracingMatcher = tracingFields
-            .map(_ => p"$base ${Term.Name(s"usingFor${methodName.capitalize}")}(traceBuilder)")
+          val fullRouteWithTracingMatcher: Term = tracingFields
+            .map(_ => q"$base ${Term.Name(s"usingFor${methodName.capitalize}")}(traceBuilder)")
             .getOrElse(base)
-          val fullRouteWithTracingAndExtraction = customExtractionFields
-            .map(_ => p"$fullRouteWithTracingMatcher ${Term.Name(s"extractorFor${methodName.capitalize}")}(extracted)")
+          val fullRouteWithTracingAndExtraction: Term = customExtractionFields
+            .map(_ => q"$fullRouteWithTracingMatcher ${Term.Name(s"extractorFor${methodName.capitalize}")}(extracted)")
             .getOrElse(fullRouteWithTracingMatcher)
           val fullRouteWithTracingAndExtractionAndAuth = authImplementation match {
-            case Native => p"$fullRouteWithTracingAndExtraction ${Term.Name(s"as")}(authContext)"
+            case Native => q"$fullRouteWithTracingAndExtraction ${Term.Name(s"as")}(authContext)"
             case _      => fullRouteWithTracingAndExtraction
           }
 
@@ -978,36 +986,42 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
           .filter(_ == true)
           .fold[Term] {
             val marshallers = responses.value.map { case Response(statusCodeName, valueType, headers) =>
-              val responseTerm  = Term.Name(s"${statusCodeName.value}")
-              val baseRespType  = Type.Select(responseCompanionTerm, Type.Name(statusCodeName.value))
-              val respType      = if (isGeneric) Type.Apply(baseRespType, Type.ArgClause(List(t"F"))) else baseRespType
-              val generatorName = Term.Name(s"$methodName${statusCodeName}EntityResponseGenerator")
-              val encoderName   = Term.Name(s"$methodName${statusCodeName}Encoder")
+              val responseTerm = Term.Name(s"${statusCodeName.value}")
+              val baseRespType = Type.Select(responseCompanionTerm, Type.Name(statusCodeName.value))
+              val respType     = baseRespType
+              val encoderName  = Term.Name(s"$methodName${statusCodeName}Encoder")
               (valueType, headers.value) match {
                 case (None, Nil) =>
                   if (isGeneric) {
-                    p"case $responseCompanionTerm.$responseTerm() => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
+                    p"case $responseCompanionTerm.$responseTerm() => Response.apply(Status.$statusCodeName)"
                   } else {
-                    p"case $responseCompanionTerm.$responseTerm => F.pure(Response[F](status = org.http4s.Status.${statusCodeName}))"
+                    p"case $responseCompanionTerm.$responseTerm => Response.apply(Status.$statusCodeName)"
                   }
                 case (Some(_), Nil) =>
-                  p"case resp: $respType => $generatorName(resp.value)(F,$encoderName)"
+                  p"""case resp: $respType => 
+                    Response.apply(
+                        status = Status.$statusCodeName,
+                        headers = Headers(Header.ContentType(MediaType.application.json).untyped),
+                        body = Body.fromCharSequence($encoderName(resp.value)),
+                    )"""
                 case (None, headersList) =>
-                  val (http4sHeaders, http4sHeadersDefinitions) = createHttp4sHeaders(headersList)
+                  val (http4sHeaders, http4sHeadersDefinitions) = createZioHttpHeaders(headersList)
                   p"""case resp: $respType =>
                           ..$http4sHeadersDefinitions
-                          F.pure(Response[F](status = org.http4s.Status.$statusCodeName, headers = Headers($http4sHeaders)))
+                          Response.apply(Status.$statusCodeName, headers = Headers($http4sHeaders))
                       """
                 case (Some(_), headersList) =>
-                  val (http4sHeaders, http4sHeadersDefinitions) = createHttp4sHeaders(headersList)
-                  val valueTerm                                 = q"resp.value"
-                  p"""case resp: $respType =>
+                  val (http4sHeaders, http4sHeadersDefinitions) = createZioHttpHeaders(headersList)
+                  p"""case resp: $respType => 
                           ..$http4sHeadersDefinitions
-                          $generatorName($valueTerm, $http4sHeaders:_*)(F,$encoderName)
-                      """
+                          Response.apply(
+                              status = Status.$statusCodeName,
+                              headers = Headers((List($http4sHeaders) :+ Header.ContentType(MediaType.application.json).untyped): _*),
+                              body = Body.fromCharSequence($encoderName(resp.value)),
+                          )"""
               }
             }
-            q"$handlerCall flatMap ${Term.PartialFunction(marshallers)}"
+            q"$handlerCall.map(${Term.PartialFunction(marshallers)})"
           }(_ => handlerCall)
         val matchers = (http4sForm ++ http4sHeaders).flatMap(_.matcher)
         val responseInMatch = NonEmptyList.fromList(matchers).fold(responseExpr) {
@@ -1046,17 +1060,27 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         val includeAuthContext: Term => Term =
           authContext.fold[Term => Term](identity _)(_._2)
 
-        val fullRoute: Case =
+        val handlerParameters: List[Term.Param] =
+          pathArgs.map(_.param) ++ List(
+            Term.Param(
+              mods = List.empty,
+              name = Term.Name("req"),
+              decltpe = Some(Type.Name("Request")),
+              default = None
+            )
+          )
+
+        val fullRoute: Term =
           authImplementation match {
-            case Native =>
-              p"""case authedReq @ $fullRouteMatcher =>
-                  val req = authedReq.req
-                  ${includeAuthContext(q"mapRoute($methodName, authedReq, { $routeBody })")}
-                """
+            // case Native =>
+            //   p"""case authedReq @ $fullRouteMatcher =>
+            //       val req = authedReq.req
+            //       ${includeAuthContext(q"mapRoute($methodName, authedReq, { $routeBody })")}
+            //     """
             case _ =>
-              p"""case req @ $fullRouteMatcher =>
+              q"""$fullRouteMatcher -> zio.http.handler { (..${handlerParameters}) =>
                   ${includeAuthContext(q"mapRoute($methodName, req, { $routeBody })")}
-                """
+                }"""
           }
 
         val respond: List[List[Term.Param]] = List(List(param"respond: ${Term.Name(resourceName)}.$responseCompanionTerm.type"))
@@ -1066,9 +1090,9 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
             scalaParam.param.copy(
               decltpe = if (scalaParam.isFile) {
                 if (scalaParam.required) {
-                  Some(t"Stream[F, Byte]")
+                  Some(t"ZStream[Any, Nothing, Byte]")
                 } else {
-                  Some(t"Option[Stream[F, Byte]]")
+                  Some(t"Option[ZStream[Any, Nothing, Byte]]")
                 }
               } else {
                 scalaParam.param.decltpe
@@ -1080,12 +1104,11 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         val consumes = operation.unwrapTracker.consumes.toList.flatMap(ContentType.unapply(_))
         val produces = operation.unwrapTracker.produces.toList.flatMap(ContentType.unapply(_))
         val codecs   = if (ServerRawResponse(operation).getOrElse(false)) Nil else generateCodecs(methodName, bodyArgs, responses, consumes, produces)
-        val respType = if (isGeneric) t"$responseType[F]" else responseType
         Some(
           RenderedRoute(
             methodName,
             fullRoute,
-            q"""def ${Term.Name(methodName)}(...${params}): F[$respType]""",
+            q"""def ${Term.Name(methodName)}(...${params}): UIO[$responseType]""",
             supportDefinitions ++ generateQueryParamMatchers(methodName, qsArgs) ++ codecs ++
               tracingFields
                 .map(_.term)
@@ -1110,7 +1133,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     q"""_root_.cats.data.NonEmptyList.of(..$orElements)"""
   }
 
-  private def createHttp4sHeaders(headers: List[Header[ScalaLanguage]]): (Term.Name, List[Defn.Val]) = {
+  private def createZioHttpHeaders(headers: List[Header[ScalaLanguage]]): (Term.Name, List[Defn.Val]) = {
     val (names, definitions) = headers.map { case Header(name, required, _, termName) =>
       val nameLiteral = Lit.String(name)
       val headerName  = Term.Name(s"${name.toCamelCase}Header")
@@ -1277,7 +1300,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       responses: Responses[ScalaLanguage],
       consumes: Seq[ContentType],
       produces: Seq[ContentType]
-  ): List[Defn.Val] =
+  ): List[Defn] =
     generateDecoders(methodName, bodyArgs, consumes) ++ generateEncoders(methodName, responses, produces) ++ generateResponseGenerators(
       methodName,
       responses
@@ -1291,13 +1314,15 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       )
     }
 
-  private def generateEncoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Val] =
+  private def generateEncoders(methodName: String, responses: Responses[ScalaLanguage], produces: Seq[ContentType]): List[Defn.Def] =
     for {
       response    <- responses.value
       (_, tpe, _) <- response.value
     } yield {
       val contentTypes = response.value.map(_._1).map(List(_)).getOrElse(produces) // for OpenAPI 3.x we should take ContentType from the response
-      q"protected[this] val ${Pat.Var(Term.Name(s"$methodName${response.statusCodeName}Encoder"))} = ${ResponseADTHelper.generateEncoder(tpe, contentTypes)}"
+      q"""protected[this] def ${Term.Name(s"$methodName${response.statusCodeName}Encoder")}(data: $tpe): CharSequence = 
+          Encoder[$tpe].apply(data).toString
+        """
     }
 
   private def generateResponseGenerators(methodName: String, responses: Responses[ScalaLanguage]): List[Defn.Val] =

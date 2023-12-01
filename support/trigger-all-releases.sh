@@ -101,6 +101,9 @@ while [ "${#todo[@]}" -gt 0 ]; do
   reverse_deps=( scala-support )
   trigger scala-http4s
 
+  reverse_deps=( scala-support )
+  trigger scala-zio-http
+
   reverse_deps=( core )
   trigger scala-support
 

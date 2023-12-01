@@ -1,9 +1,10 @@
-package dev.guardrail.generators.scala.http4s
+package dev.guardrail.generators.scala.zio.http
 
 import _root_.io.swagger.v3.oas.models.Components
 import _root_.io.swagger.v3.oas.models.PathItem.HttpMethod
 import cats.data.NonEmptyList
 import cats.syntax.all._
+import dev.guardrail.Target
 import dev.guardrail._
 import dev.guardrail.core.SupportDefinition
 import dev.guardrail.core.Tracker
@@ -19,6 +20,15 @@ import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.generators.spi.ModuleLoadResult
 import dev.guardrail.generators.syntax._
 import dev.guardrail.shims._
+import dev.guardrail.terms.ApplicationJson
+import dev.guardrail.terms.ContentType
+import dev.guardrail.terms.Header
+import dev.guardrail.terms.MultipartFormData
+import dev.guardrail.terms.OctetStream
+import dev.guardrail.terms.Responses
+import dev.guardrail.terms.RouteMeta
+import dev.guardrail.terms.SecurityScheme
+import dev.guardrail.terms.TextPlain
 import dev.guardrail.terms._
 import dev.guardrail.terms.client.ClientTerms
 import dev.guardrail.terms.framework.FrameworkTerms
@@ -30,18 +40,21 @@ import scala.collection.immutable.Seq
 import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
-class Http4sClientGeneratorLoader extends ClientGeneratorLoader {
+class ZioHttpClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply   = ModuleLoadResult.forProduct1(ClientGeneratorLoader.label -> Seq(Http4sVersion.mapping))(version => Http4sClientGenerator(version))
+  val apply   = ModuleLoadResult.forProduct1(ClientGeneratorLoader.label -> Seq(ZioHttpVersion.mapping))(version => ZioHttpClientGenerator(version))
 }
 
-object Http4sClientGenerator {
-  def apply(version: Http4sVersion): ClientTerms[ScalaLanguage, Target] =
-    new Http4sClientGenerator(version)
+object ZioHttpClientGenerator {
+  def apply(): ClientTerms[ScalaLanguage, Target] =
+    new ZioHttpClientGenerator(ZioHttpVersion)
+
+  def apply(version: ZioHttpVersion): ClientTerms[ScalaLanguage, Target] =
+    new ZioHttpClientGenerator(version)
 }
 
-class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLanguage, Target] {
+class ZioHttpClientGenerator(version: ZioHttpVersion) extends ClientTerms[ScalaLanguage, Target] {
   def splitOperationParts(operationId: String): (List[String], String) = {
     val parts = operationId.split('.')
     (parts.drop(1).toList, parts.last)
@@ -167,7 +180,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
                     .String(argName.value)}, ${paramName})"""
               }
             }
-        } yield q"Uri.unsafeFromString(${result})"
+        } yield q"URL.fromURI(java.net.URI.create(${result})).get"
       }
 
     def generateFormDataParams(parameters: List[LanguageParameter[ScalaLanguage]], consumes: List[ContentType]): Option[Term] =
@@ -247,22 +260,22 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       val args: List[Term] = parameters.map { case LanguageParameter(_, param, paramName, argName, _) =>
         lifter(param)(paramName, argName)
       }
-      q"List[Option[Header.ToRaw]](..$args).flatten"
+      q"Headers(List[Option[Header]](..$args).flatten)"
     }
 
     def contentTypeToMediaTypeTerm(ct: ContentType): Option[Term] = {
-      val toRawHeader: ContentType => Option[Term] = {
+      val rawHeader = ct match {
         case applicationJson: ApplicationJson =>
-          Some(q"org.http4s.MediaType.application.json")
+          Some(q"""MediaType("application", "json")""")
         case textPlain: TextPlain =>
-          Some(q"org.http4s.MediaType.text.plain")
+          Some(q"""MediaType("text", "plain")""")
         case octetStream: OctetStream =>
-          Some(q"org.http4s.MediaType.application.`octet-stream`")
+          Some(q"""MediaType("application", "octet-stream")""")
         case other =>
           None
       }
 
-      toRawHeader.andThen(_.map(term => q"${term}.withQValue(org.http4s.QValue.One)")).apply(ct)
+      rawHeader.map(h => q"Header.Accept.MediaTypeWithQFactor($h, Some(1.0))")
     }
 
     def build(
@@ -288,12 +301,12 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
     ): Target[RenderedClientOperation[ScalaLanguage]] =
       for {
         _ <- Target.pure(())
-        acceptHeader = NonEmptyList.fromList(produces.flatMap(contentTypeToMediaTypeTerm).toList).fold[Term](q"List.empty[Header.ToRaw]") {
-          case NonEmptyList(first, rest) =>
-            q"List[Header.ToRaw](org.http4s.headers.Accept(${first}, ..${rest}))"
-        }
+        acceptHeader =
+          NonEmptyList.fromList(produces.flatMap(contentTypeToMediaTypeTerm).toList).fold[Term](q"Headers.empty") { case NonEmptyList(first, rest) =>
+            q"Headers(Header.Accept(${first}, ..${rest}))"
+          }
         implicitParams                 = Option(extraImplicits).filter(_.nonEmpty)
-        defaultHeaders                 = param"headers: List[Header.ToRaw] = List.empty"
+        defaultHeaders                 = param"headers: Headers = Headers.empty"
         safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType))
 
         formDataNeedsMultipart = consumes.exists(ContentType.isSubtypeOf[MultipartFormData])
@@ -314,30 +327,30 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
           formDataParams
             .filter(_ => formDataNeedsMultipart)
             .map(formDataParams =>
-              if (version == Http4sVersion.V0_23) { (inner: List[Stat]) =>
-                q"""Multiparts.forSync[F].flatMap(_.multipart($formDataParams.flatten.toVector).flatMap { _multipart => ..${inner} })"""
-              } else { (inner: List[Stat]) =>
-                Term.Block(List(q"val _multipart = Multipart($formDataParams.flatten.toVector)") ++ inner)
-              }
+              (inner: List[Stat]) => q"""Multiparts.forSync[F].flatMap(_.multipart($formDataParams.flatten.toVector).flatMap { _multipart => ..${inner} })"""
             )
             .getOrElse[List[Stat] => Term](Term.Block(_))
         headersExpr =
           if (formDataNeedsMultipart) {
             List(
-              q"val allHeaders: List[org.http4s.Header.ToRaw] = $acceptHeader ++ headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)"
+              q"val allHeaders: Headers = $acceptHeader ++ headers ++ $headerParams ++ _multipart.headers.headers.map(Header.ToRaw.rawToRaw)"
             )
           } else {
-            List(q"val allHeaders: List[org.http4s.Header.ToRaw] = $acceptHeader ++ headers ++ $headerParams")
+            List(q"val allHeaders: Headers = $acceptHeader ++ headers ++ $headerParams")
           }
         methodExpr = q"Method.${Term.Name(httpMethod.toString.toUpperCase)}"
+
+        bodyBinding = q"_body"
+        _body = formEntity
+          .map(e => q"$e")
+          .orElse(safeBody.map { case (name, tpe) => q"Body.fromString(io.circe.Encoder[$tpe].apply($name).noSpaces)" })
+          .getOrElse(q"Body.empty")
         reqBinding = q"req"
-        req        = q"Request[F](method = ${methodExpr}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
-        reqWithBody = formEntity
-          .map(e => q"$req.withEntity($e)")
-          .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
-          .getOrElse(req)
+        req =
+          q"Request(body = ${bodyBinding}, headers = allHeaders, method = ${methodExpr}, url = ${urlWithParams}, version = Version.`HTTP/1.1`, remoteAddress = None)"
         reqExpr = List(
-          q"val ${Pat.Var(reqBinding)} = $reqWithBody"
+          q"val ${Pat.Var(bodyBinding)} = ${_body}",
+          q"val ${Pat.Var(reqBinding)} = $req"
         )
 
         buildHeaders = (_: List[Header[ScalaLanguage]])
@@ -354,13 +367,10 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
         baseResponseTypeRef   = Type.Name(responseClsName)
         cases <- responses.value.traverse[Target, Case] { resp =>
           val responseTerm = Term.Name(s"${resp.statusCodeName.value}")
-          val statusCode   = Term.Select(p"_root_.org.http4s.Status", resp.statusCodeName)
+          val statusCode   = Term.Select(p"_root_.zio.http.Status", resp.statusCodeName)
           (resp.value, resp.headers.value) match {
             case (None, Nil) =>
-              if (isGeneric)
-                Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm()): F[$baseResponseTypeRef[F]]")
-              else
-                Target.pure(p"case ${statusCode}(_) => F.pure($responseCompanionTerm.$responseTerm): F[$baseResponseTypeRef]")
+              Target.pure(p"case ${statusCode} => ZIO.succeed($responseCompanionTerm.$responseTerm): UIO[$baseResponseTypeRef]")
             case (maybeBody, headers) =>
               if (maybeBody.size + headers.size > 22) {
                 // we have hit case class limitation
@@ -377,21 +387,18 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
                 val mapTerm       = if (mapArgs.size == 1) q"map" else Term.Name(s"map${mapArgs.size}")
 
                 if (isGeneric)
-                  Target.pure(p"case $statusCode(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply): F[$baseResponseTypeRef[F]]")
+                  Target.pure(p"case $statusCode => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply): UIO[$baseResponseTypeRef[F]]")
                 else
-                  Target.pure(p"case $statusCode(resp) => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply): F[$baseResponseTypeRef]")
+                  Target.pure(p"case $statusCode => F.$mapTerm(..$mapArgs)($responseCompanionTerm.$responseTerm.apply): UIO[$baseResponseTypeRef]")
 
               }
           }
         }
         // Get the response type
-        unexpectedCase =
-          if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
-          else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
-        responseTypeRef = if (isGeneric) t"cats.effect.Resource[F, $baseResponseTypeRef[F]]" else t"F[$baseResponseTypeRef]"
-        executeReqExpr =
-          if (isGeneric) List(q"""$httpClientName.run(${reqBinding}).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
-          else List(q"""$httpClientName.run(${reqBinding}).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
+        unexpectedCase  = p"""case _ => ZIO.fail(new Exception("Unexpected response code"))"""
+        responseTypeRef = t"UIO[$baseResponseTypeRef]"
+        executeReqExpr  =
+          List(q"""$httpClientName.request(${reqBinding}).flatMap(resp => ${Term.Match(q"resp.status", cases :+ unexpectedCase, Nil)}).orDie""")
         methodBody: Term = embedMultipart(tracingExpr ++ headersExpr ++ reqExpr ++ executeReqExpr)
 
         formParams = formArgs.map(scalaParam =>
@@ -482,11 +489,10 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       )
     } yield renderedClientOperation)
   }
-  def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List(q"import org.http4s.circe._"))
+  def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List.empty)
   def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
   def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[Term.ParamClause]] = {
-    val ihc = param"httpClient: Http4sClient[F]"
-    val ief = param"F: Async[F]"
+    val ihc = param"httpClient: Client"
     Target.pure(
       List(
         Term.ParamClause(
@@ -495,7 +501,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
                                            else None),
           None
         ),
-        Term.ParamClause(List(ief, ihc), Some(Mod.Implicit()))
+        Term.ParamClause(List(ihc), Some(Mod.Implicit()))
       )
     )
   }
@@ -533,7 +539,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
 
       List(
         q"""
-            def httpClient[F[_]](httpClient: Http4sClient[F], ${formatHost(serverUrls)}, ..${tracingParams})(implicit F: Async[F]): ${tpe}[F] = ${ctorCall}
+            def httpClient(httpClient: Client, ${formatHost(serverUrls)}, ..${tracingParams}): ${tpe} = ${ctorCall}
           """
       )
     }
@@ -548,11 +554,10 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
         )
       }.toList
 
-    val ctorCall: Term.New = q"new ${Type.Apply(Type.Name(clientName), Type.ArgClause(List(Type.Name("F"))))}(...${paramsToArgs(ctorArgs)})"
+    val ctorCall: Term.New = q"""new ${Type.Name(clientName)}(...${paramsToArgs(ctorArgs)})"""
 
-    val decls: List[Defn] =
-      q"""def apply[F[_]](...${ctorArgs}): ${Type.Apply(Type.Name(clientName), Type.ArgClause(List(Type.Name("F"))))} = ${ctorCall}""" +:
-        extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
+    val decls: List[Defn] = q"""def apply(...${ctorArgs}): ${Type.Name(clientName)} = ${ctorCall}""" +:
+      extraConstructors(tracingName, serverUrls, Type.Name(clientName), ctorCall, tracing)
     Target.pure(
       StaticDefns[ScalaLanguage](
         className = clientName,
@@ -573,24 +578,24 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
   ): Target[NonEmptyList[Either[scala.meta.Defn.Trait, scala.meta.Defn.Class]]] = {
     val client =
       q"""
-          class ${Type.Name(clientName)}[F[_]](...${ctorArgs}) {
+          class ${Type.Name(clientName)}(...${ctorArgs}) {
             val basePath: String = ${Lit.String(basePath.getOrElse(""))}
 
-            private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
-              F.pure(response.headers.get(CIString(header)).map(_.head.value))
-
-            private def parseRequiredHeader(response: Response[F], header: String): F[String] =
-              response.headers
-                .get(CIString(header))
-                .map(_.head.value)
-                .fold[F[String]](
-                  F.raiseError(
-                    ParseFailure(
-                      "Missing required header.",
-                      s"HTTP header '$$header' is not present."
-                    )
-                  )
-                )(F.pure)
+            // private def parseOptionalHeader(response: Response[F], header: String): F[Option[String]] =
+            //   F.pure(response.headers.get(CIString(header)).map(_.head.value))
+            //
+            // private def parseRequiredHeader(response: Response[F], header: String): F[String] =
+            //   response.headers
+            //     .get(CIString(header))
+            //     .map(_.head.value)
+            //     .fold[F[String]](
+            //       F.raiseError(
+            //         ParseFailure(
+            //           "Missing required header.",
+            //           s"HTTP header '$$header' is not present."
+            //         )
+            //       )
+            //     )(F.pure)
 
             ..${supportDefinitions};
             ..$clientCalls
@@ -606,7 +611,8 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       produces: Seq[ContentType],
       consumes: Seq[ContentType]
   ): List[Defn.Val] =
-    generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
+    // generateEncoders(methodName, bodyArgs, consumes) ++ generateDecoders(methodName, responses, produces)
+    List.empty
 
   def generateEncoders(methodName: String, bodyArgs: Option[LanguageParameter[ScalaLanguage]], consumes: Seq[ContentType]): List[Defn.Val] =
     bodyArgs.toList.flatMap { case LanguageParameter(_, _, _, _, argType) =>
