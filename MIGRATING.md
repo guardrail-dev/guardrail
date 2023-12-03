@@ -1,3 +1,21 @@
+Migrating to guardrail-core 0.76.0-SNAPSHOT
+===========================================
+
+[#1785](https://github.com/guardrail-dev/guardrail/pull/1785) de-generalized Client/Server/Protocol generators. This should make it easier to write and maintain new modules, but it involves some pretty significant breaking changes. For those who need assistance upgrading internal or non-standard modules, please reach out to [![Matrix chat](https://img.shields.io/matrix/guardrail:matrix.org.svg?label=matrix&server_fqdn=matrix.org)](https://matrix.to/#/#guardrail:matrix.org) for community support, or [devon@guardrail.dev](mailto:devon@guardrail.dev) for corporate assistance.
+
+Please be warned if you intend to upgrade that you align your dependencies to avoid ABI incompatibilities, see the list below:
+
+```
+guardrail-core / version
+	0.75.3-SNAPSHOT
+guardrail-scala-support / version
+	0.75.3-SNAPSHOT
+guardrail-scala-http4s / version
+	0.76.1-SNAPSHOT
+guardrail-scala-akka-http / version
+	0.76.0-SNAPSHOT
+```
+
 Migrating to guardrail-core 0.71.0
 ==================================
 
