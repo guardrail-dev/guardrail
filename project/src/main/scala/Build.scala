@@ -127,7 +127,9 @@ object Build {
         // git.gitDescribedVersion := gitReader.value.withGit(_.describedVersion(gitDescribePatterns.value)).map(v => customTagToVersionNumber(moduleSegment)(v).getOrElse(v)),
         git.useGitDescribe := true,
         version := {
-          val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
+          val releaseModule = sys.env.get("GUARDRAIL_RELEASE_MODULE")
+          val isRelease = releaseModule.nonEmpty
+          val manualVersion = sys.env.get("GUARDRAIL_RELEASE_VERSION").filter(_.nonEmpty).filter(_ => releaseModule.contains(moduleSegment))
           val overrideVersion =
             git.overrideVersion(git.versionProperty.value)
           val uncommittedSuffix =
@@ -140,12 +142,27 @@ object Build {
           val datedVersion = git.formattedDateVersion.value
           val commitVersion = git.formattedShaVersion.value
           //Now we fall through the potential version numbers...
-          git.makeVersion(Seq(
-             overrideVersion,
-             releaseVersion,
-             describedVersion,
-             commitVersion
-          )) getOrElse datedVersion // For when git isn't there at all.
+          manualVersion
+            .orElse(
+              git.makeVersion(Seq(
+                 overrideVersion,
+                 releaseVersion,
+                 describedVersion,
+                 commitVersion
+              ))
+            ).getOrElse(datedVersion) // For when git isn't there at all.
+        },
+        isSnapshot := {
+          // sbt-git sets isSnapshot to `true` if there's no tag. If we're manually releasing,
+          // we should be able to control this as well.
+          val manualVersion = sys.env.get("GUARDRAIL_RELEASE_VERSION").filter(_.nonEmpty)
+          if (manualVersion.nonEmpty) {
+            // Important to have the nonEmpty _and_ exists/forall, since
+            // we want to be able to release both snapshots and real releases
+            manualVersion.exists(_.endsWith("-SNAPSHOT"))
+          } else {
+            isSnapshot.value
+          }
         },
         stableVersion := {
           // Pull the tag(s) matching the tag scheme, defaulting to 0.0.0
