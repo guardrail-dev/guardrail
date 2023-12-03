@@ -1,4 +1,5 @@
 name: Release
+run-name: "Release${{ inputs.module && (' (' + inputs.module + ')') || '' }}"
 
 on:
   release:
