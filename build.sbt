@@ -5,8 +5,7 @@ git.gitUncommittedChanges := git.gitCurrentTags.value.isEmpty
 
 import dev.guardrail.sbt.Build._
 import dev.guardrail.sbt.Dependencies
-import dev.guardrail.sbt.RegressionTests._
-import dev.guardrail.sbt.ExampleCase
+import dev.guardrail.sbt.RegressionTests.{ exampleArgs, javaFrameworks, scalaFrameworks }
 import dev.guardrail.sbt.modules
 
 onLoadMessage := WelcomeMessage.welcomeMessage((core / version).value)
