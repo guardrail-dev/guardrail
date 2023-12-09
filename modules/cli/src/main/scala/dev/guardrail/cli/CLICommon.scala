@@ -1,7 +1,6 @@
 package dev.guardrail.cli
 
 import cats.FlatMap
-import cats.data.NonEmptyList
 import cats.syntax.all._
 import java.nio.file.Path
 import scala.language.reflectiveCalls
@@ -20,7 +19,7 @@ object CommandLineResult {
 
 trait CLICommon extends GuardrailRunner {
   def putErrLn(string: String): Unit
-  def guardrailRunner(tasks: Map[String, NonEmptyList[Args]]): Target[List[java.nio.file.Path]]
+  def guardrailRunner(language: String, args: Array[Args]): Target[List[java.nio.file.Path]]
 
   def AnsiColor: {
     val BLUE: String
@@ -179,15 +178,13 @@ trait CLICommon extends GuardrailRunner {
 
     level.foreach(_ => Target.loggerEnabled.set(true))
 
-    val coreArgs = parseArgs(newArgs).map(NonEmptyList.fromList(_))
-
     implicit val logLevel: LogLevel = level
       .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
       .getOrElse(LogLevels.Warning)
 
-    val result = coreArgs
+    val result = parseArgs(newArgs)
       .flatMap { args =>
-        guardrailRunner(args.map(language -> _).toMap)
+        guardrailRunner(language, args.toArray)
       }
 
     val fallback = List.empty[Path]
