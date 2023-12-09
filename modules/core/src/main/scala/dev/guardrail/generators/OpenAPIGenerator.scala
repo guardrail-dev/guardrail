@@ -177,7 +177,7 @@ class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
   override def extractMutualTLSSecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]) =
     Target.pure(MutualTLSSecurityScheme[L](tpe))
 
-  override def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: Context.TagsBehaviour) =
+  override def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: TagsBehaviour) =
     Target.log.function("getClassName")(for {
       _ <- Target.log.debug(s"Args: ${operation.unwrapTracker.showNotNull}")
 
@@ -188,7 +188,7 @@ class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
             .map(_.split('.').toVector)
             .orElse(
               tagBehaviour match {
-                case Context.PackageFromTags =>
+                case TagsBehaviour.PackageFromTags =>
                   operation
                     .downField("tags", _.getTags)
                     .toNel
@@ -196,7 +196,7 @@ class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
                     .map { tags =>
                       tags.unwrapTracker.toList
                     }
-                case Context.TagsAreIgnored =>
+                case TagsBehaviour.TagsAreIgnored =>
                   None
               }
             )

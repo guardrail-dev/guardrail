@@ -40,7 +40,7 @@ abstract class OpenAPITerms[L <: LA, F[_]] {
   def extractOpenIdConnectSecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]): F[OpenIdConnectSecurityScheme[L]]
   def extractOAuth2SecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]): F[OAuth2SecurityScheme[L]]
   def extractMutualTLSSecurityScheme(schemeName: String, securityScheme: Tracker[SwSecurityScheme], tpe: Option[L#Type]): F[MutualTLSSecurityScheme[L]]
-  def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: Context.TagsBehaviour): F[List[String]]
+  def getClassName(operation: Tracker[Operation], vendorPrefixes: List[String], tagBehaviour: TagsBehaviour): F[List[String]]
   def getParameterName(parameter: Tracker[Parameter]): F[String]
   def getParameterSchema(parameter: Tracker[Parameter], components: Tracker[Option[Components]]): F[Tracker[SchemaProjection]]
   def getRefParameterRef(parameter: Tracker[Parameter]): F[Tracker[String]]

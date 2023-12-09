@@ -144,7 +144,7 @@ trait CLICommon extends GuardrailRunner {
             case (sofar :: already, "--custom-extraction" :: xs) =>
               Continue((sofar.copyContext(customExtraction = true) :: already, xs))
             case (sofar :: already, "--package-from-tags" :: xs) =>
-              Continue((sofar.copyContext(tagsBehaviour = Context.PackageFromTags) :: already, xs))
+              Continue((sofar.copyContext(tagsBehaviour = TagsBehaviour.PackageFromTags) :: already, xs))
             case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
               for {
                 propertyRequirement <- parseOptionalProperty(arg.drop(2), value)
