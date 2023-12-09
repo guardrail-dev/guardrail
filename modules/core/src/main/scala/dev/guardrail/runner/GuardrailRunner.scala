@@ -9,9 +9,14 @@ import dev.guardrail.{ Args, MissingDependency, ReadSpec, Target, WriteTree }
 import dev.guardrail.core.StructuredLogger
 import dev.guardrail.generators.spi.CoreTermsLoader
 
-trait GuardrailRunner {
-  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]] = { tasks =>
-    runLanguages(tasks)
+abstract class GuardrailRunner {
+  def guardrailRunner(tasks: Map[String, NonEmptyList[Args]]): Target[List[java.nio.file.Path]] =
+    tasks.toList
+      .flatTraverse { case (language, args) =>
+        CoreTermsLoader
+          .load(language, args, MissingDependency(s"${language}-support"))
+          .map(_.toList)
+      }
       .flatMap(
         _.flatTraverse(rs =>
           ReadSpec
@@ -24,12 +29,4 @@ trait GuardrailRunner {
         )
       )
       .map(_.distinct)
-  }
-
-  def runLanguages(tasks: Map[String, NonEmptyList[Args]]): Target[List[ReadSpec[Target[List[WriteTree]]]]] =
-    tasks.toList.flatTraverse { case (language, args) =>
-      CoreTermsLoader
-        .load(language, args, MissingDependency(s"${language}-support"))
-        .map(_.toList)
-    }
 }

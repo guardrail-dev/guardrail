@@ -20,7 +20,7 @@ object CommandLineResult {
 
 trait CLICommon extends GuardrailRunner {
   def putErrLn(string: String): Unit
-  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]]
+  def guardrailRunner(tasks: Map[String, NonEmptyList[Args]]): Target[List[java.nio.file.Path]]
 
   def AnsiColor: {
     val BLUE: String
