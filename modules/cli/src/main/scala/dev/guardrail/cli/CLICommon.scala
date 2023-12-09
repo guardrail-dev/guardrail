@@ -124,13 +124,13 @@ trait CLICommon extends GuardrailRunner {
             case (sofar :: already, "--models" :: xs) =>
               Continue((empty.withKind(CodegenTarget.Models) :: sofar :: already, xs))
             case (sofar :: already, "--framework" :: value :: xs) =>
-              Continue((sofar.copyContext(framework = Some(value)) :: already, xs))
+              Continue((sofar.modifyContext(_.withFramework(Some(value))) :: already, xs))
             case (sofar :: already, "--help" :: xs) =>
               Continue((sofar.withPrintHelp(true) :: already, List.empty))
             case (sofar :: already, "--specPath" :: value :: xs) =>
               Continue((sofar.withSpecPath(Option(expandTilde(value))) :: already, xs))
             case (sofar :: already, "--tracing" :: xs) =>
-              Continue((sofar.copyContext(tracing = true) :: already, xs))
+              Continue((sofar.modifyContext(_.withTracing(true)) :: already, xs))
             case (sofar :: already, "--outputPath" :: value :: xs) =>
               Continue((sofar.withOutputPath(Option(expandTilde(value))) :: already, xs))
             case (sofar :: already, "--packageName" :: value :: xs) =>
@@ -140,11 +140,11 @@ trait CLICommon extends GuardrailRunner {
             case (sofar :: already, "--import" :: value :: xs) =>
               Continue((sofar.withImports(sofar.imports :+ value) :: already, xs))
             case (sofar :: already, "--module" :: value :: xs) =>
-              Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
+              Continue((sofar.modifyContext(_.withModules(sofar.context.modules :+ value)) :: already, xs))
             case (sofar :: already, "--custom-extraction" :: xs) =>
-              Continue((sofar.copyContext(customExtraction = true) :: already, xs))
+              Continue((sofar.modifyContext(_.withCustomExtraction(true)) :: already, xs))
             case (sofar :: already, "--package-from-tags" :: xs) =>
-              Continue((sofar.copyContext(tagsBehaviour = TagsBehaviour.PackageFromTags) :: already, xs))
+              Continue((sofar.modifyContext(_.withTagsBehaviour(TagsBehaviour.PackageFromTags)) :: already, xs))
             case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
               for {
                 propertyRequirement <- parseOptionalProperty(arg.drop(2), value)
@@ -158,7 +158,7 @@ trait CLICommon extends GuardrailRunner {
             case (sofar :: already, (arg @ "--auth-implementation") :: value :: xs) =>
               for {
                 auth <- parseAuthImplementation(arg, value)
-                res  <- Continue((sofar.copyContext(authImplementation = auth) :: already, xs))
+                res  <- Continue((sofar.modifyContext(_.withAuthImplementation(auth)) :: already, xs))
               } yield res
             case (_, unknown) =>
               debug("Unknown argument") >> Bail(UnknownArguments(unknown))
