@@ -50,7 +50,7 @@ class Issue166 extends AnyFunSuite with Matchers with SwaggerSpecRunner with Sca
       val opts = new ParseOptions()
       opts.setResolve(true)
 
-      val http4sFramework = Target.unsafeExtract(scalaInterpreter.extractGenerator(Context.empty.copy(framework = Some("http4s")), None))
+      val http4sFramework = Target.unsafeExtract(scalaInterpreter.extractGenerator(Context.empty.withFramework(Some("http4s")), None))
       import http4sFramework._
 
       val (proto, codegen) = Target.unsafeExtract(

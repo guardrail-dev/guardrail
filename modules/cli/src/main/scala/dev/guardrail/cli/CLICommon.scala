@@ -93,7 +93,7 @@ trait CLICommon extends GuardrailRunner {
     def expandTilde(path: String): String =
       path.replaceFirst("^~", System.getProperty("user.home"))
     val defaultArgs =
-      Args.empty.copy(context = Args.empty.context, defaults = true)
+      Args.empty.withDefaults(true)
 
     type From = (List[Args], List[String])
     type To   = List[Args]
@@ -105,7 +105,7 @@ trait CLICommon extends GuardrailRunner {
           .filter(_.defaults)
           .lastOption
           .getOrElse(defaultArgs)
-          .copy(defaults = false)
+          .withDefaults(false)
         def Continue(x: From): Target[Either[From, To]] = Target.pure(Either.left(x))
         def Return(x: To): Target[Either[From, To]]     = Target.pure(Either.right(x))
         def Bail(x: Error): Target[Either[From, To]]    = Target.raiseError(x)
@@ -116,29 +116,29 @@ trait CLICommon extends GuardrailRunner {
               debug("Finished") >> Return(already)
             case (Nil, xs @ (_ :: _)) => Continue((empty :: Nil, xs))
             case (sofar :: already, "--defaults" :: xs) =>
-              Continue((empty.copy(defaults = true) :: sofar :: already, xs))
+              Continue((empty.withDefaults(true) :: sofar :: already, xs))
             case (sofar :: already, "--client" :: xs) =>
               Continue((empty :: sofar :: already, xs))
             case (sofar :: already, "--server" :: xs) =>
-              Continue((empty.copy(kind = CodegenTarget.Server) :: sofar :: already, xs))
+              Continue((empty.withKind(CodegenTarget.Server) :: sofar :: already, xs))
             case (sofar :: already, "--models" :: xs) =>
-              Continue((empty.copy(kind = CodegenTarget.Models) :: sofar :: already, xs))
+              Continue((empty.withKind(CodegenTarget.Models) :: sofar :: already, xs))
             case (sofar :: already, "--framework" :: value :: xs) =>
               Continue((sofar.copyContext(framework = Some(value)) :: already, xs))
             case (sofar :: already, "--help" :: xs) =>
-              Continue((sofar.copy(printHelp = true) :: already, List.empty))
+              Continue((sofar.withPrintHelp(true) :: already, List.empty))
             case (sofar :: already, "--specPath" :: value :: xs) =>
-              Continue((sofar.copy(specPath = Option(expandTilde(value))) :: already, xs))
+              Continue((sofar.withSpecPath(Option(expandTilde(value))) :: already, xs))
             case (sofar :: already, "--tracing" :: xs) =>
               Continue((sofar.copyContext(tracing = true) :: already, xs))
             case (sofar :: already, "--outputPath" :: value :: xs) =>
-              Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
+              Continue((sofar.withOutputPath(Option(expandTilde(value))) :: already, xs))
             case (sofar :: already, "--packageName" :: value :: xs) =>
-              Continue((sofar.copy(packageName = Option(value.trim.split('.').toList)) :: already, xs))
+              Continue((sofar.withPackageName(Option(value.trim.split('.').toList)) :: already, xs))
             case (sofar :: already, "--dtoPackage" :: value :: xs) =>
-              Continue((sofar.copy(dtoPackage = value.trim.split('.').toList) :: already, xs))
+              Continue((sofar.withDtoPackage(value.trim.split('.').toList) :: already, xs))
             case (sofar :: already, "--import" :: value :: xs) =>
-              Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
+              Continue((sofar.withImports(sofar.imports :+ value) :: already, xs))
             case (sofar :: already, "--module" :: value :: xs) =>
               Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
             case (sofar :: already, "--custom-extraction" :: xs) =>
