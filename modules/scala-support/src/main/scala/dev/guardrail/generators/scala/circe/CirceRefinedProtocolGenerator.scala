@@ -357,12 +357,9 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
               wrappedValues = RenderedLongEnum[ScalaLanguage](elems)
             } yield (pascalValues, wrappedValues)
         }
-        members <- renderMembers(clsName, wrappedValues)
-        encoder <- encodeEnum(clsName, tpe)
-        decoder <- decodeEnum(clsName, tpe)
-
+        members     <- renderMembers(clsName, wrappedValues)
         defn        <- renderClass(clsName, tpe, wrappedValues)
-        staticDefns <- renderStaticDefns(clsName, tpe, members, pascalValues, encoder, decoder)
+        staticDefns <- renderStaticDefns(clsName, tpe, members, pascalValues, encodeEnum(clsName, tpe), decodeEnum(clsName, tpe))
         classType   <- pureTypeName(clsName)
       } yield EnumDefinition[ScalaLanguage](clsName, classType, fullType, wrappedValues, defn, staticDefns)
 
@@ -452,16 +449,14 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
         } yield res
       }
       definition <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
-      encoder    <- encodeADT(hierarchy.name, hierarchy.discriminator, children)
-      decoder    <- decodeADT(hierarchy.name, hierarchy.discriminator, children)
       staticDefns = StaticDefns[ScalaLanguage](
         className = hierarchy.name,
         extraImports = List.empty[Import],
-        definitions = List[Option[Defn]](
-          Some(q"val discriminator: String = ${Lit.String(discriminator.propertyName)}"),
-          encoder,
-          decoder
-        ).flatten,
+        definitions = List[Defn](
+          q"val discriminator: String = ${Lit.String(discriminator.propertyName)}",
+          encodeADT(hierarchy.name, hierarchy.discriminator, children),
+          decodeADT(hierarchy.name, hierarchy.discriminator, children)
+        ),
         statements = List.empty
       )
       tpe      <- pureTypeName(hierarchy.name)
@@ -987,18 +982,18 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
           """))
   }
 
-  private def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
-    Target.pure(Some(q"""
+  private def encodeEnum(clsName: String, tpe: Type): Defn =
+    q"""
           implicit val ${suffixClsName("encode", clsName)}: _root_.io.circe.Encoder[${Type.Name(clsName)}] =
             _root_.io.circe.Encoder[${tpe}].contramap(_.value)
-        """))
+        """
 
-  private def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
-    Target.pure(Some(q"""
+  private def decodeEnum(clsName: String, tpe: Type): Defn =
+    q"""
       implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] =
         _root_.io.circe.Decoder[${tpe}].emap(value => from(value).toRight(${Term
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
-    """))
+    """
 
   private def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
     Target.pure(q"""
@@ -1012,8 +1007,8 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       tpe: scala.meta.Type,
       members: Option[scala.meta.Defn.Object],
       accessors: List[scala.meta.Term.Name],
-      encoder: Option[scala.meta.Defn],
-      decoder: Option[scala.meta.Defn]
+      encoder: scala.meta.Defn,
+      decoder: scala.meta.Defn
   ): Target[StaticDefns[ScalaLanguage]] = {
     val longType = Type.Name(clsName)
     val terms: List[Defn.Val] = accessors.map { pascalValue =>
@@ -1029,7 +1024,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
         extraImports = List.empty[Import],
         definitions = members.toList ++
           terms ++
-          List(Some(values), encoder, decoder).flatten ++
+          List(values, encoder, decoder) ++
           implicits ++
           List(
             q"def from(value: ${tpe}): _root_.scala.Option[${longType}] = values.find(_.value == value)",
@@ -1558,17 +1553,15 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
         discriminatorValue
       )
     }.unzip
-    val code =
-      q"""implicit val decoder: _root_.io.circe.Decoder[${Type.Name(clsName)}] = _root_.io.circe.Decoder.instance({ c =>
+    q"""implicit val decoder: _root_.io.circe.Decoder[${Type.Name(clsName)}] = _root_.io.circe.Decoder.instance({ c =>
                val discriminatorCursor = c.downField(discriminator)
                discriminatorCursor.as[String].flatMap {
                  ..case $childrenCases;
                  case tpe =>
                    _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ ${Lit
-          .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
+        .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
                }
           })"""
-    Target.pure(Some(code))
   }
 
   private def encodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
@@ -1578,11 +1571,9 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
         .getOrElse(child)
       p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString(${Lit.String(discriminatorValue)})).asJson"
     }
-    val code =
-      q"""implicit val encoder: _root_.io.circe.Encoder[${Type.Name(clsName)}] = _root_.io.circe.Encoder.instance {
+    q"""implicit val encoder: _root_.io.circe.Encoder[${Type.Name(clsName)}] = _root_.io.circe.Encoder.instance {
             ..case $childrenCases
         }"""
-    Target.pure(Some(code))
   }
 
   private def renderSealedTrait(

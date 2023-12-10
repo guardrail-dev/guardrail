@@ -364,16 +364,14 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         } yield res
       }
       definition <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
-      encoder    <- encodeADT(hierarchy.name, hierarchy.discriminator, children)
-      decoder    <- decodeADT(hierarchy.name, hierarchy.discriminator, children)
       staticDefns = StaticDefns[ScalaLanguage](
         className = hierarchy.name,
         extraImports = List.empty[Import],
-        definitions = List[Option[Defn]](
-          Some(q"val discriminator: String = ${Lit.String(discriminator.propertyName)}"),
-          encoder,
-          decoder
-        ).flatten,
+        definitions = List(
+          q"val discriminator: String = ${Lit.String(discriminator.propertyName)}",
+          encodeADT(hierarchy.name, hierarchy.discriminator, children),
+          decodeADT(hierarchy.name, hierarchy.discriminator, children)
+        ),
         statements = List.empty
       )
       tpe      <- pureTypeName(hierarchy.name)
@@ -1461,17 +1459,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         discriminatorValue
       )
     }.unzip
-    val code =
-      q"""implicit val decoder: _root_.io.circe.Decoder[${Type.Name(clsName)}] = _root_.io.circe.Decoder.instance({ c =>
-               val discriminatorCursor = c.downField(discriminator)
-               discriminatorCursor.as[String].flatMap {
-                 ..case $childrenCases;
-                 case tpe =>
-                   _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ ${Lit
-          .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
-               }
-          })"""
-    Target.pure(Some(code))
+    q"""implicit val decoder: _root_.io.circe.Decoder[${Type.Name(clsName)}] = _root_.io.circe.Decoder.instance({ c =>
+             val discriminatorCursor = c.downField(discriminator)
+             discriminatorCursor.as[String].flatMap {
+               ..case $childrenCases;
+               case tpe =>
+                 _root_.scala.Left(_root_.io.circe.DecodingFailure("Unknown value " ++ tpe ++ ${Lit
+        .String(s" (valid: ${childrenDiscriminators.mkString(", ")})")}, discriminatorCursor.history))
+             }
+        })"""
   }
 
   private def encodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
@@ -1481,11 +1477,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         .getOrElse(child)
       p"case e:${Type.Name(child)} => e.asJsonObject.add(discriminator, _root_.io.circe.Json.fromString(${Lit.String(discriminatorValue)})).asJson"
     }
-    val code =
-      q"""implicit val encoder: _root_.io.circe.Encoder[${Type.Name(clsName)}] = _root_.io.circe.Encoder.instance {
-            ..case $childrenCases
-        }"""
-    Target.pure(Some(code))
+    q"""implicit val encoder: _root_.io.circe.Encoder[${Type.Name(clsName)}] = _root_.io.circe.Encoder.instance {
+          ..case $childrenCases
+      }"""
   }
 
   private def renderSealedTrait(
@@ -1494,7 +1488,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       discriminator: Discriminator[ScalaLanguage],
       parents: List[SuperClass[ScalaLanguage]] = Nil,
       children: List[String] = Nil
-  ) =
+  ): Target[Defn.Trait] =
     for {
       testTerms <-
         params
