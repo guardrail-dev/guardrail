@@ -363,12 +363,21 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           )
         } yield res
       }
-      definition  <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
-      encoder     <- encodeADT(hierarchy.name, hierarchy.discriminator, children)
-      decoder     <- decodeADT(hierarchy.name, hierarchy.discriminator, children)
-      staticDefns <- renderADTStaticDefns(hierarchy.name, discriminator, encoder, decoder)
-      tpe         <- pureTypeName(hierarchy.name)
-      fullType    <- selectType(NonEmptyList.fromList(dtoPackage :+ hierarchy.name).getOrElse(NonEmptyList.of(hierarchy.name)))
+      definition <- renderSealedTrait(hierarchy.name, params, discriminator, parents, children)
+      encoder    <- encodeADT(hierarchy.name, hierarchy.discriminator, children)
+      decoder    <- decodeADT(hierarchy.name, hierarchy.discriminator, children)
+      staticDefns = StaticDefns[ScalaLanguage](
+        className = hierarchy.name,
+        extraImports = List.empty[Import],
+        definitions = List[Option[Defn]](
+          Some(q"val discriminator: String = ${Lit.String(discriminator.propertyName)}"),
+          encoder,
+          decoder
+        ).flatten,
+        statements = List.empty
+      )
+      tpe      <- pureTypeName(hierarchy.name)
+      fullType <- selectType(NonEmptyList.fromList(dtoPackage :+ hierarchy.name).getOrElse(NonEmptyList.of(hierarchy.name)))
     } yield ADT[ScalaLanguage](
       name = hierarchy.name,
       tpe = tpe,
@@ -1441,25 +1450,6 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       ).getOrElse(Target.pure(List.empty))
     allParents(spec)
   }
-
-  private def renderADTStaticDefns(
-      clsName: String,
-      discriminator: Discriminator[ScalaLanguage],
-      encoder: Option[scala.meta.Defn.Val],
-      decoder: Option[scala.meta.Defn.Val]
-  ) =
-    Target.pure(
-      StaticDefns[ScalaLanguage](
-        className = clsName,
-        extraImports = List.empty[Import],
-        definitions = List[Option[Defn]](
-          Some(q"val discriminator: String = ${Lit.String(discriminator.propertyName)}"),
-          encoder,
-          decoder
-        ).flatten,
-        statements = List.empty
-      )
-    )
 
   private def decodeADT(clsName: String, discriminator: Discriminator[ScalaLanguage], children: List[String] = Nil) = {
     val (childrenCases, childrenDiscriminators) = children.map { child =>
