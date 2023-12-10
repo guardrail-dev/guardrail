@@ -67,13 +67,13 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
 
   test("CLI should provide sane defaults for paths") {
     val args = NonEmptyList(
-      Args.empty.copy(
-        kind = CodegenTarget.Client,
-        specPath = Some("/tmp/foo.json"),
-        outputPath = Some("/tmp/foo"),
-        packageName = Some(List("com", "twilio", "example", "clients")),
-        context = Context.empty.copy(framework = Some("akka-http"))
-      ),
+      Args.empty
+        .withKind(CodegenTarget.Client)
+        .withSpecPath(Some("/tmp/foo.json"))
+        .withOutputPath(Some("/tmp/foo"))
+        .withPackageName(Some(List("com", "twilio", "example", "clients")))
+        .withContext(Context.empty.withFramework(Some("akka-http")))
+      ,
       List.empty
     )
 
@@ -121,13 +121,13 @@ class WritePackageSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers 
 
   test("CLI properly generates all WriteTrees") {
     val args = NonEmptyList(
-      Args.empty.copy(
-        kind = CodegenTarget.Client,
-        specPath = Some("/tmp/foo.json"),
-        outputPath = Some("/tmp/foo"),
-        packageName = Some(List("base")),
-        context = Context.empty.copy(framework = Some("akka-http"))
-      ),
+      Args.empty
+        .withKind(CodegenTarget.Client)
+        .withSpecPath(Some("/tmp/foo.json"))
+        .withOutputPath(Some("/tmp/foo"))
+        .withPackageName(Some(List("base")))
+        .withContext(Context.empty.withFramework(Some("akka-http")))
+      ,
       List.empty
     )
 

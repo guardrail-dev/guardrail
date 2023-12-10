@@ -1,7 +1,6 @@
 package dev.guardrail.cli
 
 import cats.FlatMap
-import cats.data.NonEmptyList
 import cats.syntax.all._
 import java.nio.file.Path
 import scala.language.reflectiveCalls
@@ -20,7 +19,7 @@ object CommandLineResult {
 
 trait CLICommon extends GuardrailRunner {
   def putErrLn(string: String): Unit
-  def guardrailRunner: Map[String, NonEmptyList[Args]] => Target[List[java.nio.file.Path]]
+  def guardrailRunner(language: String, args: Array[Args]): Target[List[java.nio.file.Path]]
 
   def AnsiColor: {
     val BLUE: String
@@ -94,7 +93,7 @@ trait CLICommon extends GuardrailRunner {
     def expandTilde(path: String): String =
       path.replaceFirst("^~", System.getProperty("user.home"))
     val defaultArgs =
-      Args.empty.copy(context = Args.empty.context, defaults = true)
+      Args.empty.withDefaults(true)
 
     type From = (List[Args], List[String])
     type To   = List[Args]
@@ -106,7 +105,7 @@ trait CLICommon extends GuardrailRunner {
           .filter(_.defaults)
           .lastOption
           .getOrElse(defaultArgs)
-          .copy(defaults = false)
+          .withDefaults(false)
         def Continue(x: From): Target[Either[From, To]] = Target.pure(Either.left(x))
         def Return(x: To): Target[Either[From, To]]     = Target.pure(Either.right(x))
         def Bail(x: Error): Target[Either[From, To]]    = Target.raiseError(x)
@@ -117,35 +116,35 @@ trait CLICommon extends GuardrailRunner {
               debug("Finished") >> Return(already)
             case (Nil, xs @ (_ :: _)) => Continue((empty :: Nil, xs))
             case (sofar :: already, "--defaults" :: xs) =>
-              Continue((empty.copy(defaults = true) :: sofar :: already, xs))
+              Continue((empty.withDefaults(true) :: sofar :: already, xs))
             case (sofar :: already, "--client" :: xs) =>
               Continue((empty :: sofar :: already, xs))
             case (sofar :: already, "--server" :: xs) =>
-              Continue((empty.copy(kind = CodegenTarget.Server) :: sofar :: already, xs))
+              Continue((empty.withKind(CodegenTarget.Server) :: sofar :: already, xs))
             case (sofar :: already, "--models" :: xs) =>
-              Continue((empty.copy(kind = CodegenTarget.Models) :: sofar :: already, xs))
+              Continue((empty.withKind(CodegenTarget.Models) :: sofar :: already, xs))
             case (sofar :: already, "--framework" :: value :: xs) =>
-              Continue((sofar.copyContext(framework = Some(value)) :: already, xs))
+              Continue((sofar.modifyContext(_.withFramework(Some(value))) :: already, xs))
             case (sofar :: already, "--help" :: xs) =>
-              Continue((sofar.copy(printHelp = true) :: already, List.empty))
+              Continue((sofar.withPrintHelp(true) :: already, List.empty))
             case (sofar :: already, "--specPath" :: value :: xs) =>
-              Continue((sofar.copy(specPath = Option(expandTilde(value))) :: already, xs))
+              Continue((sofar.withSpecPath(Option(expandTilde(value))) :: already, xs))
             case (sofar :: already, "--tracing" :: xs) =>
-              Continue((sofar.copyContext(tracing = true) :: already, xs))
+              Continue((sofar.modifyContext(_.withTracing(true)) :: already, xs))
             case (sofar :: already, "--outputPath" :: value :: xs) =>
-              Continue((sofar.copy(outputPath = Option(expandTilde(value))) :: already, xs))
+              Continue((sofar.withOutputPath(Option(expandTilde(value))) :: already, xs))
             case (sofar :: already, "--packageName" :: value :: xs) =>
-              Continue((sofar.copy(packageName = Option(value.trim.split('.').toList)) :: already, xs))
+              Continue((sofar.withPackageName(Option(value.trim.split('.').toList)) :: already, xs))
             case (sofar :: already, "--dtoPackage" :: value :: xs) =>
-              Continue((sofar.copy(dtoPackage = value.trim.split('.').toList) :: already, xs))
+              Continue((sofar.withDtoPackage(value.trim.split('.').toList) :: already, xs))
             case (sofar :: already, "--import" :: value :: xs) =>
-              Continue((sofar.copy(imports = sofar.imports :+ value) :: already, xs))
+              Continue((sofar.withImports(sofar.imports :+ value) :: already, xs))
             case (sofar :: already, "--module" :: value :: xs) =>
-              Continue((sofar.copyContext(modules = sofar.context.modules :+ value) :: already, xs))
+              Continue((sofar.modifyContext(_.withModules(sofar.context.modules :+ value)) :: already, xs))
             case (sofar :: already, "--custom-extraction" :: xs) =>
-              Continue((sofar.copyContext(customExtraction = true) :: already, xs))
+              Continue((sofar.modifyContext(_.withCustomExtraction(true)) :: already, xs))
             case (sofar :: already, "--package-from-tags" :: xs) =>
-              Continue((sofar.copyContext(tagsBehaviour = Context.PackageFromTags) :: already, xs))
+              Continue((sofar.modifyContext(_.withTagsBehaviour(TagsBehaviour.PackageFromTags)) :: already, xs))
             case (sofar :: already, (arg @ "--optional-encode-as") :: value :: xs) =>
               for {
                 propertyRequirement <- parseOptionalProperty(arg.drop(2), value)
@@ -159,7 +158,7 @@ trait CLICommon extends GuardrailRunner {
             case (sofar :: already, (arg @ "--auth-implementation") :: value :: xs) =>
               for {
                 auth <- parseAuthImplementation(arg, value)
-                res  <- Continue((sofar.copyContext(authImplementation = auth) :: already, xs))
+                res  <- Continue((sofar.modifyContext(_.withAuthImplementation(auth)) :: already, xs))
               } yield res
             case (_, unknown) =>
               debug("Unknown argument") >> Bail(UnknownArguments(unknown))
@@ -179,15 +178,13 @@ trait CLICommon extends GuardrailRunner {
 
     level.foreach(_ => Target.loggerEnabled.set(true))
 
-    val coreArgs = parseArgs(newArgs).map(NonEmptyList.fromList(_))
-
     implicit val logLevel: LogLevel = level
       .flatMap(level => LogLevels.members.find(_.level == level.toLowerCase))
       .getOrElse(LogLevels.Warning)
 
-    val result = coreArgs
+    val result = parseArgs(newArgs)
       .flatMap { args =>
-        guardrailRunner(args.map(language -> _).toMap)
+        guardrailRunner(language, args.toArray)
       }
 
     val fallback = List.empty[Path]

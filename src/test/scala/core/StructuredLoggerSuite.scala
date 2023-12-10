@@ -41,7 +41,9 @@ class StructuredLoggerSuite extends AnyFunSuite with Matchers {
       "--specPath", "modules/sample/src/main/resources/issues/issue3.yaml",
       ))
     val defaultArgs =
-      Args.empty.copy(context = Args.empty.context, defaults = true)
+      Args.empty
+        .withContext(Args.empty.context)
+        .withDefaults(true)
     type From = (List[Args], List[String])
     type To   = List[Args]
     import Target.log.debug
@@ -53,7 +55,7 @@ class StructuredLoggerSuite extends AnyFunSuite with Matchers {
             .filter(_.defaults)
             .lastOption
             .getOrElse(defaultArgs)
-            .copy(defaults = false)
+            .withDefaults(false)
 
           def Continue(x: From): Target[Either[From, To]] = Target.pure(Either.left(x))
           def Return(x: To): Target[Either[From, To]]     = Target.pure(Either.right(x))
@@ -62,9 +64,9 @@ class StructuredLoggerSuite extends AnyFunSuite with Matchers {
             _ <- debug(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
             step <- pair match {
               case (already, Nil) => debug("Finished") >> Return(already)
-              case (already, "--defaults" :: xs) => Continue((empty.copy(defaults = true) :: already, xs))
+              case (already, "--defaults" :: xs) => Continue((empty.withDefaults(true) :: already, xs))
               case (Nil, xs @ (_ :: _)) => Continue((empty :: Nil, xs))
-              case (sofar :: already, "--specPath" :: value :: xs) => Continue((sofar.copy(specPath = Option(value)) :: already, xs))
+              case (sofar :: already, "--specPath" :: value :: xs) => Continue((sofar.withSpecPath(Option(value)) :: already, xs))
               case (_, unknown) =>
                 debug(s"Unknown argument: ${unknown}") >> Bail(UnknownArguments(unknown))
             }

@@ -35,7 +35,7 @@ class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSp
       |""".stripMargin
 
     val (_, Clients(Client(_, _, _, _, cls, _) :: _, Nil), _) =
-      runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(tracing = true), "akka-http")
+      runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.withTracing(true), "akka-http")
 
     val client = q"""
       class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {
@@ -91,7 +91,7 @@ class AkkaHttpClientTracingTest extends AnyFunSuite with Matchers with SwaggerSp
       _,
       Clients(Client(tags, className, _, _, cls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(tracing = true), "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.withTracing(true), "akka-http")
 
     val client = q"""
       class BarBazClient(host: String = "http://localhost:1234", clientName: String = "foo-bar-baz")(implicit httpClient: HttpRequest => Future[HttpResponse], ec: ExecutionContext, mat: Materializer) {

@@ -267,7 +267,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(tracing = true), "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.withTracing(true), "akka-http")
 
     val handler = q"""
       trait StoreHandler {
@@ -404,7 +404,7 @@ class AkkaHttpServerTest extends AnyFunSuite with Matchers with SwaggerSpecRunne
       _,
       _,
       Servers(Server(pkg, extraImports, genHandler, genResource :: Nil) :: Nil, Nil)
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.copy(customExtraction = true), "akka-http")
+    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty.withCustomExtraction(true), "akka-http")
 
     val handler = q"""
       trait StoreHandler[-E] {

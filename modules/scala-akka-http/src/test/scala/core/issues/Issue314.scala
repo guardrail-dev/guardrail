@@ -2,7 +2,7 @@ package core.issues
 
 import dev.guardrail.generators.scala.ScalaGeneratorMappings.scalaInterpreter
 import dev.guardrail.generators.scala.syntax.companionForStaticDefns
-import dev.guardrail.Context
+import dev.guardrail.{ Context, TagsBehaviour }
 import dev.guardrail.generators.{ Client, Clients, Server, Servers }
 import org.scalactic.source
 import org.scalatest.funspec.AnyFunSpec
@@ -150,7 +150,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         _,
         Clients(Client(_, _, _, staticDefns, cls, _) :: _, Nil),
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger(config))(Context.empty.copy(tagsBehaviour = Context.PackageFromTags), "akka-http")
+      ) = runSwaggerSpec(scalaInterpreter)(swagger(config))(Context.empty.withTagsBehaviour(TagsBehaviour.PackageFromTags), "akka-http")
       val cmp = companionForStaticDefns(staticDefns)
 
       verifyTree(cls.head.value, client(expectedClassPrefix))
@@ -162,7 +162,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         _,
         _,
         Servers(Server(_, _, genHandler, genResource :: Nil) :: Nil, Nil)
-      ) = runSwaggerSpec(scalaInterpreter)(swagger(config))(Context.empty.copy(tagsBehaviour = Context.PackageFromTags), "akka-http")
+      ) = runSwaggerSpec(scalaInterpreter)(swagger(config))(Context.empty.withTagsBehaviour(TagsBehaviour.PackageFromTags), "akka-http")
 
       verifyTree(genHandler, handler(expectedClassPrefix))
       verifyTree(genResource, resource(expectedClassPrefix))
