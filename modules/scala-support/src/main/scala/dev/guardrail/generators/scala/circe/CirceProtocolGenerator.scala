@@ -269,12 +269,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               wrappedValues = RenderedLongEnum[ScalaLanguage](elems)
             } yield (pascalValues, wrappedValues)
         }
-        members <- renderMembers(clsName, wrappedValues)
-        encoder <- encodeEnum(clsName, tpe)
-        decoder <- decodeEnum(clsName, tpe)
-
+        members     <- renderMembers(clsName, wrappedValues)
         defn        <- renderClass(clsName, tpe, wrappedValues)
-        staticDefns <- renderStaticDefns(clsName, tpe, members, pascalValues, encoder, decoder)
+        staticDefns <- renderStaticDefns(clsName, tpe, members, pascalValues, encodeEnum(clsName, tpe), decodeEnum(clsName, tpe))
         classType   <- pureTypeName(clsName)
       } yield EnumDefinition[ScalaLanguage](clsName, classType, fullType, wrappedValues, defn, staticDefns)
 
@@ -915,18 +912,18 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           """))
   }
 
-  private def encodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
-    Target.pure(Some(q"""
-          implicit val ${suffixClsName("encode", clsName)}: _root_.io.circe.Encoder[${Type.Name(clsName)}] =
-            _root_.io.circe.Encoder[${tpe}].contramap(_.value)
-        """))
+  private def encodeEnum(clsName: String, tpe: Type): Defn =
+    q"""
+      implicit val ${suffixClsName("encode", clsName)}: _root_.io.circe.Encoder[${Type.Name(clsName)}] =
+        _root_.io.circe.Encoder[${tpe}].contramap(_.value)
+    """
 
-  private def decodeEnum(clsName: String, tpe: Type): Target[Option[Defn]] =
-    Target.pure(Some(q"""
+  private def decodeEnum(clsName: String, tpe: Type): Defn =
+    q"""
       implicit val ${suffixClsName("decode", clsName)}: _root_.io.circe.Decoder[${Type.Name(clsName)}] =
         _root_.io.circe.Decoder[${tpe}].emap(value => from(value).toRight(${Term
         .Interpolate(Term.Name("s"), List(Lit.String(""), Lit.String(s" not a member of ${clsName}")), List(Term.Name("value")))}))
-    """))
+    """
 
   private def renderClass(clsName: String, tpe: scala.meta.Type, elems: RenderedEnum[ScalaLanguage]) =
     Target.pure(q"""
@@ -940,8 +937,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       tpe: scala.meta.Type,
       members: Option[scala.meta.Defn.Object],
       accessors: List[scala.meta.Term.Name],
-      encoder: Option[scala.meta.Defn],
-      decoder: Option[scala.meta.Defn]
+      encoder: scala.meta.Defn,
+      decoder: scala.meta.Defn
   ): Target[StaticDefns[ScalaLanguage]] = {
     val longType = Type.Name(clsName)
     val terms: List[Defn.Val] = accessors.map { pascalValue =>
@@ -957,7 +954,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         extraImports = List.empty[Import],
         definitions = members.toList ++
           terms ++
-          List(Some(values), encoder, decoder).flatten ++
+          List(values, encoder, decoder) ++
           implicits ++
           List(
             q"def from(value: ${tpe}): _root_.scala.Option[${longType}] = values.find(_.value == value)",
