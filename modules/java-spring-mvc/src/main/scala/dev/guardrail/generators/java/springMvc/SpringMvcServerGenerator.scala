@@ -276,7 +276,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
               .flatMap {
                 case _: ClassDefinition[_]                                              => Some(ApplicationJson.empty)
                 case RandomType(_, tpe) if tpe.isPrimitiveType || tpe.isNamed("String") => Some(TextPlain.empty)
-                case _: ADT[_] | _: EnumDefinition[_]                                   => Some(TextPlain.empty)
+                case _: ADT[_] | _: EnumDefinition[_]                                   => Some(TextPlain.empty) // TODO: ADT is almost certainly not text/plain
                 case _                                                                  => None
               }
           }
