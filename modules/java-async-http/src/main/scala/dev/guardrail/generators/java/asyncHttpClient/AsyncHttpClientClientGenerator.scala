@@ -1134,7 +1134,8 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       StaticDefns[JavaLanguage](
         className = clientName,
         extraImports = List.empty,
-        definitions = List.empty
+        definitions = List.empty,
+        statements = List.empty
       )
     )
 

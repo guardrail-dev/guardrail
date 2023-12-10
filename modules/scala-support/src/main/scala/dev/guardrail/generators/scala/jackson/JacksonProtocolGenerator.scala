@@ -1081,7 +1081,8 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             q"implicit val ${Pat.Var(Term.Name(s"encode${className}"))}: GuardrailEncoder[$longType] = GuardrailEncoder.instance",
             q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$longType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$longType] {})",
             q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$longType] = GuardrailValidator.noop"
-          )
+          ),
+        statements = List.empty
       )
     )
   }
@@ -1342,7 +1343,8 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       StaticDefns[ScalaLanguage](
         className = className,
         extraImports = extraImports,
-        definitions = (encoder ++ decoder ++ List(encoderInstance, decoderInstance, validatorInstance)).toList
+        definitions = (encoder ++ decoder ++ List(encoderInstance, decoderInstance, validatorInstance)).toList,
+        statements = List.empty
       )
     )
   }
@@ -1811,7 +1813,8 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             q"implicit val ${Pat.Var(Term.Name(s"decode${className}"))}: GuardrailDecoder[$classType] = GuardrailDecoder.instance(new com.fasterxml.jackson.core.`type`.TypeReference[$classType] {})"
           ),
           Some(q"implicit val ${Pat.Var(Term.Name(s"validate${className}"))}: GuardrailValidator[$classType] = GuardrailValidator.instance")
-        ).flatten
+        ).flatten,
+        statements = List.empty
       )
     )
   }

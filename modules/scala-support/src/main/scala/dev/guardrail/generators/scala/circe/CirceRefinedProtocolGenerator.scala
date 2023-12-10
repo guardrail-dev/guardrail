@@ -1025,7 +1025,8 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
           List(
             q"def from(value: ${tpe}): _root_.scala.Option[${longType}] = values.find(_.value == value)",
             q"implicit val order: cats.Order[${longType}] = cats.Order.by[${longType}, Int](values.indexOf)"
-          )
+          ),
+        statements = List.empty
       )
     )
   }
@@ -1398,7 +1399,8 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       StaticDefns[ScalaLanguage](
         className = clsName,
         extraImports = extraImports,
-        definitions = (deduplicatedRegexHelperTypes ++ encoder ++ decoder).toList
+        definitions = (deduplicatedRegexHelperTypes ++ encoder ++ decoder).toList,
+        statements = List.empty
       )
     )
   }
@@ -1551,7 +1553,8 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
           Some(q"val discriminator: String = ${Lit.String(discriminator.propertyName)}"),
           encoder,
           decoder
-        ).flatten
+        ).flatten,
+        statements = List.empty
       )
     )
 
