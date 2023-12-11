@@ -574,25 +574,38 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 for {
                   fullType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
 
-                  discriminator = model.downField("discriminator", _.getDiscriminator()).indexedDistribute
-                  injectDiscriminator = discriminator.fold[(String, Term) => Term]((_, x) => q"$x.asJson") { discriminator => (name, member) =>
+                  discriminator_ = model.downField("discriminator", _.getDiscriminator()).indexedDistribute
+
+                  mapping <- discriminator_.map(_.downField("mapping", _.getMapping).indexedDistribute.value).getOrElse(Nil).traverse { case (alias, _ref) =>
+                    val ref    = _ref.unwrapTracker
+                    val prefix = "#/components/schemas/"
+                    if (ref.startsWith(prefix)) {
+                      Target.pure((alias, ref.replace(prefix, "")))
+                    } else {
+                      Target.raiseUserError(s"Unsupported mapping, '${ref}'. Expected format '${prefix}FooBarBaz' (${_ref.showHistory})")
+                    }
+                  }
+
+                  injectDiscriminator = discriminator_.fold[(String, Term) => Term]((_, x) => q"$x.asJson") { discriminator => (name, member) =>
                     val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
+                    val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
                     q"""
                       member
                         .asJsonObject
-                        .add(${Lit.String(propertyName)}, _root_.io.circe.Json.fromString(${Lit.String(name)}))
+                        .add(${Lit.String(propertyName)}, _root_.io.circe.Json.fromString(${Lit.String(aliasedName)}))
                         .asJson
                     """
                   }
-                  validateDecoder = discriminator.fold[(String, Term) => Term]((_, x) => x) { discriminator => (name, decoder) =>
+                  validateDecoder = discriminator_.fold[(String, Term) => Term]((_, x) => x) { discriminator => (name, decoder) =>
                     val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
+                    val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
                     q"""
                       ${decoder}
                         .validate(
                           _.get[String](${Lit.String(propertyName)})
                             .bimap(
                               _ => List(${Lit.String(s"Missing '${propertyName}' field")}),
-                              name => if (name == ${Lit.String(name)}) Nil else List(${Lit.String(s"'${propertyName}' did not match '${name}'")})
+                              name => if (name == ${Lit.String(aliasedName)}) Nil else List(${Lit.String(s"'${propertyName}' did not match '${aliasedName}'")})
                             )
                             .merge
                         )
