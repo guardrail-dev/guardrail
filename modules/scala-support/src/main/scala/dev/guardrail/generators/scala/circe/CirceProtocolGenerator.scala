@@ -599,19 +599,21 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                     """
                   }
 
-                  (members, (decoders, encoders)) <- tpes
+                  (members, (applyAdapters, (decoders, encoders))) <- tpes
                     .traverse {
                       case PropMeta(memberName, tpe @ Type.Name(name)) =>
                         for {
                           fullInstanceType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, name))
+                          termName = Term.Name(name)
+                          applyAdapter = q"implicit val ${Pat.Var(Term.Name(s"from${name}"))}: ${fullInstanceType} => ${Type.Name(clsName)} = members.${termName}.apply _"
                           member  = q"case class ${tpe}(value: ${fullInstanceType}) extends ${Init.After_4_6_0(Type.Name(clsName), Name.Anonymous(), Nil)}"
-                          decoder = validateDecoder(memberName, q"_root_.io.circe.Decoder[${tpe}].map[${fullType}](members.${Term.Name(name)}.apply _)")
-                          encoder = p"case members.${Term.Name(name)}(member) => ${injectDiscriminator(memberName, q"member")}"
-                        } yield (member, (decoder, encoder))
+                          decoder = validateDecoder(memberName, q"_root_.io.circe.Decoder[${tpe}].map(${Term.Name(s"from${name}")})")
+                          encoder = p"case members.${termName}(member) => ${injectDiscriminator(memberName, q"member")}"
+                        } yield (member, (applyAdapter, (decoder, encoder)))
                       case other =>
                         Target.raiseUserError(s"Unsupported case in oneOf, ${other}. Somehow got a complex type, we expected a singular Type.Name.")
                     }
-                    .map(_.unzip.map(_.unzip)) // NonEmptyList#unzip3 adapter :see_no_evil:
+                    .map(_.unzip.map(_.unzip.map(_.unzip))) // NonEmptyList#unzip4 adapter :see_no_evil:
 
                   encoder = q"""implicit def ${Term.Name(s"encode${clsName}")}: _root_.io.circe.Encoder[${Type
                       .Name(clsName)}] = _root_.io.circe.Encoder.instance(${Term
@@ -624,8 +626,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                       ${(1 until decoders.length).foldLeft[Term](q"dec0") { case (acc, idx) => q"$acc.or(${Term.Name(s"dec${idx}")})" }}
                     }
                     """
-                  statements = List(q"object members { ..${members.toList} }")
-                  defn       = q"""sealed abstract class ${Type.Name(clsName)} {}"""
+                  statements = List(
+                    q"object members { ..${members.toList} }",
+                    q"def apply[A](value: A)(implicit ev: A => ${Type.Name(clsName)}): ${Type.Name(clsName)} = ev(value)"
+                  ) ++ applyAdapters.toList
+                  defn = q"""sealed abstract class ${Type.Name(clsName)} {}"""
                   staticDefns = StaticDefns[ScalaLanguage](
                     className = clsName,
                     extraImports = List.empty,
