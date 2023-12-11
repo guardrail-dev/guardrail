@@ -574,14 +574,39 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 for {
                   fullType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
 
+                  discriminator = model.downField("discriminator", _.getDiscriminator()).indexedDistribute
+                  injectDiscriminator = discriminator.fold[(String, Term) => Term]((_, x) => q"$x.asJson") { discriminator => (name, member) =>
+                    val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
+                    q"""
+                      member
+                        .asJsonObject
+                        .add(${Lit.String(propertyName)}, _root_.io.circe.Json.fromString(${Lit.String(name)}))
+                        .asJson
+                    """
+                  }
+                  validateDecoder = discriminator.fold[(String, Term) => Term]((_, x) => x) { discriminator => (name, decoder) =>
+                    val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
+                    q"""
+                      ${decoder}
+                        .validate(
+                          _.get[String](${Lit.String(propertyName)})
+                            .bimap(
+                              _ => List(${Lit.String(s"Missing '${propertyName}' field")}),
+                              name => if (name == ${Lit.String(name)}) Nil else List(${Lit.String(s"'${propertyName}' did not match '${name}'")})
+                            )
+                            .merge
+                        )
+                    """
+                  }
+
                   (members, (decoders, encoders)) <- tpes
                     .traverse {
-                      case tpe @ Type.Name(name) =>
+                      case PropMeta(memberName, tpe @ Type.Name(name)) =>
                         for {
                           fullInstanceType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, name))
                           member  = q"case class ${tpe}(value: ${fullInstanceType}) extends ${Init.After_4_6_0(Type.Name(clsName), Name.Anonymous(), Nil)}"
-                          decoder = q"_root_.io.circe.Decoder[${tpe}].map[${fullType}](members.${Term.Name(name)}.apply _)"
-                          encoder = p"case members.${Term.Name(name)}(member) => member.asJson"
+                          decoder = validateDecoder(memberName, q"_root_.io.circe.Decoder[${tpe}].map[${fullType}](members.${Term.Name(name)}.apply _)")
+                          encoder = p"case members.${Term.Name(name)}(member) => ${injectDiscriminator(memberName, q"member")}"
                         } yield (member, (decoder, encoder))
                       case other =>
                         Target.raiseUserError(s"Unsupported case in oneOf, ${other}. Somehow got a complex type, we expected a singular Type.Name.")
@@ -591,8 +616,14 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                   encoder = q"""implicit def ${Term.Name(s"encode${clsName}")}: _root_.io.circe.Encoder[${Type
                       .Name(clsName)}] = _root_.io.circe.Encoder.instance(${Term
                       .PartialFunction(encoders.toList)}) """
-                  decoder = q"implicit def ${Term.Name(s"decode${clsName}")}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = ${decoders
-                      .reduceLeft((a, b) => q"$a.or($b)")}"
+                  decoder = q"""
+                    implicit def ${Term.Name(s"decode${clsName}")}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = {
+                      ..${decoders.zipWithIndex.toList.map { case (decoder, idx) =>
+                      q"val ${Pat.Var(Term.Name(s"dec${idx}"))} = ${decoder}"
+                    }};
+                      ${(1 until decoders.length).foldLeft[Term](q"dec0") { case (acc, idx) => q"$acc.or(${Term.Name(s"dec${idx}")})" }}
+                    }
+                    """
                   statements = List(q"object members { ..${members.toList} }")
                   defn       = q"""sealed abstract class ${Type.Name(clsName)} {}"""
                   staticDefns = StaticDefns[ScalaLanguage](
