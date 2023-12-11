@@ -558,7 +558,8 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       StaticDefns[ScalaLanguage](
         className = clientName,
         extraImports = List.empty,
-        definitions = decls
+        definitions = decls,
+        statements = List.empty
       )
     )
   }

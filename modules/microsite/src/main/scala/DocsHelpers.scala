@@ -54,8 +54,8 @@ object DocsHelpers {
         )
         codegenDefinitions.clients match {
           case g :: Nil =>
-            val StaticDefns(className, extraImports, definitions) = g.staticDefns
-            val o                                                 = q"object ${Term.Name(className)} { ..${definitions} }"
+            val StaticDefns(className, extraImports, definitions, statements) = g.staticDefns
+            val o                                                             = q"object ${Term.Name(className)} { ..${definitions} }"
             val Right(q"""class ${name}(...${args}) {
               ..${defns}
             }""") = g.client.head: @unchecked
@@ -119,8 +119,8 @@ object DocsHelpers {
         // codegenDefinitions.clients.map(x => Option(x.toString())).toList
         codegenDefinitions.clients match {
           case g :: Nil =>
-            val StaticDefns(className, extraImports, definitions) = g.staticDefns
-            val o                                                 = q"object ${Term.Name(className)} { ..${definitions} }"
+            val StaticDefns(className, extraImports, definitions, statements) = g.staticDefns
+            val o                                                             = q"object ${Term.Name(className)} { ..${definitions} }"
             val Right(q"""class ${name}[..${tparms}](...${args}) {
               ..${defns}
             }""") = g.client.head: @unchecked

@@ -578,7 +578,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
     } yield StaticDefns[ScalaLanguage](
       className = clientName,
       extraImports = List.empty,
-      definitions = decls
+      definitions = decls,
+      statements = List.empty
     )
   }
   private def buildClient(

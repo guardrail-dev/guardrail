@@ -1230,7 +1230,8 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     } yield StaticDefns[JavaLanguage](
       className = clsName,
       extraImports = extraImports,
-      definitions = List.empty
+      definitions = List.empty,
+      statements = List.empty
     )
 
   override def buildAccessor(clsName: String, termName: String) =
@@ -1792,7 +1793,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       decoder: Option[com.github.javaparser.ast.body.VariableDeclarator],
       protocolParameters: List[ProtocolParameter[JavaLanguage]]
   ) =
-    Target.pure(StaticDefns[JavaLanguage](clsName, List.empty, List.empty))
+    Target.pure(StaticDefns[JavaLanguage](clsName, List.empty, List.empty, List.empty))
 
   private def extractArrayType(
       arr: Either[core.LazyResolvedType[JavaLanguage], core.Resolved[JavaLanguage]],
@@ -1984,6 +1985,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     } yield StaticDefns[JavaLanguage](
       clsName,
       extraImports,
+      List.empty,
       List.empty
     )
 

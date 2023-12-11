@@ -69,6 +69,7 @@ package object syntax {
     object ${Term.Name(staticDefns.className)} {
       ..${staticDefns.extraImports}
       ..${staticDefns.definitions}
+      ..${staticDefns.statements}
     }
     """
 

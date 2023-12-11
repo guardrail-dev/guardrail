@@ -3,7 +3,7 @@ package dev.guardrail.terms.protocol
 import dev.guardrail.languages.LA
 import dev.guardrail.terms.RenderedEnum
 
-case class StaticDefns[L <: LA](className: String, extraImports: List[L#Import], definitions: List[L#Definition])
+case class StaticDefns[L <: LA](className: String, extraImports: List[L#Import], definitions: List[L#Definition], statements: List[L#Statement])
 
 sealed trait StrictProtocolElems[L <: LA] { def name: String }
 case class RandomType[L <: LA](name: String, tpe: L#Type) extends StrictProtocolElems[L]

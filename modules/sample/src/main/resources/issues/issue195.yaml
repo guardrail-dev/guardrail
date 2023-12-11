@@ -1,0 +1,51 @@
+openapi: 3.0.0
+info:
+  title: '---'
+  version: 0.1.0
+components:
+  schemas:
+    TypeA:
+      type: object
+      properties: { type: { type: string } }
+      required: [ type ]
+    TypeB:
+      type: object
+      properties: { type: { type: string } }
+      required: [ type ]
+    TypeC:
+      type: object
+      properties: { type: { type: string } }
+      required: [ type ]
+    typed:
+      type: object
+      properties: { type: { type: string } }
+      required: [ type ]
+    TypeE:
+      type: object
+      properties: { type: { type: string } }
+      required: [ type ]
+    Foo:
+      type: object
+      description: Foo
+      x-scala-type: Bogus
+      oneOf:
+        - $ref: '#/components/schemas/TypeA'
+        - $ref: '#/components/schemas/TypeB'
+        - $ref: '#/components/schemas/TypeC'
+        - $ref: '#/components/schemas/typed'
+        - $ref: '#/components/schemas/TypeE'
+      discriminator:
+        propertyName: beepBorp
+        mapping:
+          typea: '#/components/schemas/TypeA'
+paths:
+  /foobar:
+    get:
+      operationId: getFoo
+      responses:
+        '200':
+          description: 'Response 200: FOO'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Foo'
