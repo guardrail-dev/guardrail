@@ -1,5 +1,6 @@
 name: Release
-run-name: "Release${{ inputs.module && (' (' + inputs.module + ')') || '' }}"
+
+run-name: "Release${{ inputs.module && inputs.version && format(' ({0} {1})', inputs.module, inputs.version) || (inputs.module && format(' ({0})', inputs.module)) || format(' (auto: {0})', github.ref_name) }}"
 
 on:
   release:
