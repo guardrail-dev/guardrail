@@ -191,8 +191,15 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
                 defaultPropertyRequirement = defaultPropertyRequirement,
                 components = components
               )
+              oneOf <- fromOneOf(
+                clsName = formattedClsName,
+                model = comp,
+                dtoPackage = dtoPackage,
+                concreteTypes = concreteTypes,
+                components = components
+              )
               alias <- modelTypeAlias(formattedClsName, comp, components)
-            } yield model.getOrElse(alias)
+            } yield model.orElse(oneOf).getOrElse(alias)
           )
           .orRefine { case a: ArraySchema => a }(arr =>
             for {
@@ -215,8 +222,15 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
                 defaultPropertyRequirement,
                 components
               )
+              oneOf <- fromOneOf(
+                clsName = formattedClsName,
+                model = m,
+                dtoPackage = dtoPackage,
+                concreteTypes = concreteTypes,
+                components = components
+              )
               alias <- modelTypeAlias(formattedClsName, m, components)
-            } yield enum.orElse(model).getOrElse(alias)
+            } yield enum.orElse(model).orElse(oneOf).getOrElse(alias)
           )
           .orRefine { case x: StringSchema => x }(x =>
             for {
@@ -253,8 +267,15 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
                 components
               )
               (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
-              alias         <- typeAlias(formattedClsName, declType)
-            } yield enum.orElse(model).getOrElse(alias)
+              oneOf <- fromOneOf(
+                clsName = formattedClsName,
+                model = x,
+                dtoPackage = dtoPackage,
+                concreteTypes = concreteTypes,
+                components = components
+              )
+              alias <- typeAlias(formattedClsName, declType)
+            } yield enum.orElse(model).orElse(oneOf).getOrElse(alias)
           )
           .valueOr(x =>
             for {
@@ -612,6 +633,116 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
     }
 
   }
+
+  private[this] def fromOneOf(
+      clsName: String,
+      model: Tracker[Schema[_]],
+      dtoPackage: List[String],
+      concreteTypes: List[PropMeta[ScalaLanguage]],
+      components: Tracker[Option[Components]]
+  )(implicit
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Fw: FrameworkTerms[ScalaLanguage, Target],
+      Sw: OpenAPITerms[ScalaLanguage, Target]
+  ): Target[Either[String, StrictProtocolElems[ScalaLanguage]]] =
+    NonEmptyList
+      .fromList(model.downField("oneOf", _.getOneOf()).indexedDistribute)
+      .fold[Target[Either[String, StrictProtocolElems[ScalaLanguage]]]](Target.pure(Left("Does not have oneOf"))) { xs =>
+        xs.traverse(ModelResolver.propMeta[ScalaLanguage, Target](_, components))
+          .flatMap { oneOfs =>
+            val (deferred, resolved) = oneOfs.toList.partitionEither(identity _)
+            if (resolved.nonEmpty) Target.raiseUserError(s"Only $$ref is supported in oneOf at this time (${model.showHistory})") else Target.pure(deferred)
+          }
+          .flatMap(_.traverse(elem => Target.fromOption(concreteTypes.find(_.clsName == elem.value), UserError("Not supported"))))
+          .flatMap(rawTypes =>
+            NonEmptyList
+              .fromList(rawTypes)
+              .toRight("No oneOf specified")
+              .traverse(tpes => // Maintain the Either[String, A] at this point. Validation has completed, no failures expected after here.
+                for {
+                  fullType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
+
+                  discriminator_ = model.downField("discriminator", _.getDiscriminator()).indexedDistribute
+
+                  mapping <- discriminator_.map(_.downField("mapping", _.getMapping).indexedDistribute.value).getOrElse(Nil).traverse { case (alias, _ref) =>
+                    val ref    = _ref.unwrapTracker
+                    val prefix = "#/components/schemas/"
+                    if (ref.startsWith(prefix)) {
+                      Target.pure((alias, ref.replace(prefix, "")))
+                    } else {
+                      Target.raiseUserError(s"Unsupported mapping, '${ref}'. Expected format '${prefix}FooBarBaz' (${_ref.showHistory})")
+                    }
+                  }
+
+                  injectDiscriminator = discriminator_.fold[(String, Term) => Term]((_, x) => q"$x.asJson") { discriminator => (name, member) =>
+                    val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
+                    val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
+                    q"""
+                      member
+                        .asJsonObject
+                        .add(${Lit.String(propertyName)}, _root_.io.circe.Json.fromString(${Lit.String(aliasedName)}))
+                        .asJson
+                    """
+                  }
+                  validateDecoder = discriminator_.fold[(String, Term) => Term]((_, x) => x) { discriminator => (name, decoder) =>
+                    val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
+                    val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
+                    q"""
+                      ${decoder}
+                        .validate(
+                          _.get[String](${Lit.String(propertyName)})
+                            .bimap(
+                              _ => List(${Lit.String(s"Missing '${propertyName}' field")}),
+                              name => if (name == ${Lit.String(aliasedName)}) Nil else List(${Lit.String(s"'${propertyName}' did not match '${aliasedName}'")})
+                            )
+                            .merge
+                        )
+                    """
+                  }
+
+                  (members, (applyAdapters, (decoders, encoders))) <- tpes
+                    .traverse {
+                      case PropMeta(memberName, tpe @ Type.Name(name)) =>
+                        for {
+                          fullInstanceType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, name))
+                          termName = Term.Name(name)
+                          applyAdapter = q"implicit val ${Pat.Var(Term.Name(s"from${name}"))}: ${fullInstanceType} => ${Type.Name(clsName)} = members.${termName}.apply _"
+                          member  = q"case class ${tpe}(value: ${fullInstanceType}) extends ${Init.After_4_6_0(Type.Name(clsName), Name.Anonymous(), Nil)}"
+                          decoder = validateDecoder(memberName, q"_root_.io.circe.Decoder[${tpe}].map(${Term.Name(s"from${name}")})")
+                          encoder = p"case members.${termName}(member) => ${injectDiscriminator(memberName, q"member")}"
+                        } yield (member, (applyAdapter, (decoder, encoder)))
+                      case other =>
+                        Target.raiseUserError(s"Unsupported case in oneOf, ${other}. Somehow got a complex type, we expected a singular Type.Name.")
+                    }
+                    .map(_.unzip.map(_.unzip.map(_.unzip))) // NonEmptyList#unzip4 adapter :see_no_evil:
+
+                  encoder = q"""implicit def ${Term.Name(s"encode${clsName}")}: _root_.io.circe.Encoder[${Type
+                      .Name(clsName)}] = _root_.io.circe.Encoder.instance(${Term
+                      .PartialFunction(encoders.toList)}) """
+                  decoder = q"""
+                    implicit def ${Term.Name(s"decode${clsName}")}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = {
+                      ..${decoders.zipWithIndex.toList.map { case (decoder, idx) =>
+                      q"val ${Pat.Var(Term.Name(s"dec${idx}"))} = ${decoder}"
+                    }};
+                      ${(1 until decoders.length).foldLeft[Term](q"dec0") { case (acc, idx) => q"$acc.or(${Term.Name(s"dec${idx}")})" }}
+                    }
+                    """
+                  statements = List(
+                    q"object members { ..${members.toList} }",
+                    q"def apply[A](value: A)(implicit ev: A => ${Type.Name(clsName)}): ${Type.Name(clsName)} = ev(value)"
+                  ) ++ applyAdapters.toList
+                  defn = q"""sealed abstract class ${Type.Name(clsName)} {}"""
+                  staticDefns = StaticDefns[ScalaLanguage](
+                    className = clsName,
+                    extraImports = List.empty,
+                    definitions = List(encoder, decoder),
+                    statements = statements
+                  )
+                } yield ClassDefinition[ScalaLanguage](clsName, Type.Name(clsName), fullType, defn, staticDefns, Nil)
+              )
+          )
+      }
 
   private def prepareProperties(
       clsName: NonEmptyList[String],
