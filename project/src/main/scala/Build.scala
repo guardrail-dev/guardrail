@@ -116,6 +116,25 @@ object Build {
   def commonModule(moduleSegment: String) =
     baseModule(s"guardrail-${moduleSegment}", moduleSegment, file(s"modules/${moduleSegment}"))
 
+  def injectPRVersionPolicy(moduleSegment: String)(gitVersion: String): String = {
+    val labels = currentBuildLabels(moduleSegment)
+    val extractor = raw"^([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9]+-g[a-f0-9]+)?(-SNAPSHOT)?".r
+    val newVersion: String = gitVersion match {
+      case extractor(major, minor, patch, gitSlug, other) =>
+        if (labels.contains("major")) {
+          val newMajor = major.toInt + 1
+          List(Some(s"${newMajor}.0.0"), Option(gitSlug), Option(other)).flatten.mkString("")
+        } else if (labels.contains("minor")) {
+          val newMinor = minor.toInt + 1
+          List(Some(s"${major}.${newMinor}.0"), Option(gitSlug), Option(other)).flatten.mkString("")
+        } else {
+          gitVersion
+        }
+      case _ => gitVersion
+    }
+    newVersion
+  }
+
   def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
     Project(id=moduleName, base=path)
       .settings(versionWithGit)
@@ -141,14 +160,14 @@ object Build {
           val datedVersion = git.formattedDateVersion.value
           val commitVersion = git.formattedShaVersion.value
           //Now we fall through the potential version numbers...
-          manualVersion
+          manualVersion  // Importantly, do _not_ injectPRVersionPolicy into the env-set version
             .orElse(
               git.makeVersion(Seq(
                  overrideVersion,
                  releaseVersion,
                  describedVersion,
                  commitVersion
-              ))
+              )).map(injectPRVersionPolicy(moduleSegment) _)
             ).getOrElse(datedVersion) // For when git isn't there at all.
         },
         isSnapshot := {

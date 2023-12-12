@@ -28,7 +28,7 @@ labels_since_last_release() {
     echo '{"labels":[]}'
   else
     module_released_on="$(git show "${latest_tag}" --format=%cI)"
-    gh_api "search/issues?q=repo:guardrail-dev/guardrail+type:pr+is:merged+closed:>${module_released_on}" \
+    gh_api "search/issues?q=repo:guardrail-dev/guardrail+type:pr+is:merged+closed:>${module_released_on}+label:${module_name}" \
       | jq -cM '{labels: (.items | map(.labels) | flatten | map(.name) | unique | map({ name: . })) }'
   fi
 }
