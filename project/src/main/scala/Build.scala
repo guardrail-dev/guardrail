@@ -14,7 +14,12 @@ import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
 object Build {
   val stableVersion: SettingKey[String] = SettingKey("stable-version")
 
-  def useStableVersions(moduleName: String): Boolean = {
+  def currentBuildLabels(moduleSegment: String): Set[String] = {
+    import scala.sys.process._
+    Seq("support/current-pr-labels.sh", moduleSegment).lineStream_!.toSet
+  }
+
+  def useStableVersions(moduleSegment: String): Boolean = {
     // NB: Currently, any time any PR that breaks semver is merged, it breaks
     //     the build until the next release.
     //
@@ -26,13 +31,7 @@ object Build {
     val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
     val isCi = sys.env.contains("GUARDRAIL_CI")
     if (isCi || isRelease) {
-      val ignoreBincompat = {
-        import scala.sys.process._
-        Seq("support/current-pr-labels.sh", moduleName)
-          .lineStream_!
-          .exists(Set("major", "minor").contains)
-      }
-
+      val ignoreBincompat = currentBuildLabels(moduleSegment).intersect(Set("major", "minor")).nonEmpty
       val useStableVersions = !isMasterBranch && (isRelease || !ignoreBincompat)
       println(s"isMasterBranch=${isMasterBranch}, isRelease=${isRelease}, ignoreBincompat=${ignoreBincompat}: useStableVersions=${useStableVersions}")
       if (useStableVersions) {
@@ -117,6 +116,25 @@ object Build {
   def commonModule(moduleSegment: String) =
     baseModule(s"guardrail-${moduleSegment}", moduleSegment, file(s"modules/${moduleSegment}"))
 
+  def injectPRVersionPolicy(moduleSegment: String)(gitVersion: String): String = {
+    val labels = currentBuildLabels(moduleSegment)
+    val extractor = raw"^([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9]+-g[a-f0-9]+)?(-SNAPSHOT)?".r
+    val newVersion: String = gitVersion match {
+      case extractor(major, minor, patch, gitSlug, other) =>
+        if (labels.contains("major")) {
+          val newMajor = major.toInt + 1
+          List(Some(s"${newMajor}.0.0"), Option(gitSlug), Option(other)).flatten.mkString("")
+        } else if (labels.contains("minor")) {
+          val newMinor = minor.toInt + 1
+          List(Some(s"${major}.${newMinor}.0"), Option(gitSlug), Option(other)).flatten.mkString("")
+        } else {
+          gitVersion
+        }
+      case _ => gitVersion
+    }
+    newVersion
+  }
+
   def baseModule(moduleName: String, moduleSegment: String, path: File): Project =
     Project(id=moduleName, base=path)
       .settings(versionWithGit)
@@ -142,14 +160,14 @@ object Build {
           val datedVersion = git.formattedDateVersion.value
           val commitVersion = git.formattedShaVersion.value
           //Now we fall through the potential version numbers...
-          manualVersion
+          manualVersion  // Importantly, do _not_ injectPRVersionPolicy into the env-set version
             .orElse(
               git.makeVersion(Seq(
                  overrideVersion,
                  releaseVersion,
                  describedVersion,
                  commitVersion
-              ))
+              )).map(injectPRVersionPolicy(moduleSegment) _)
             ).getOrElse(datedVersion) // For when git isn't there at all.
         },
         isSnapshot := {
@@ -243,8 +261,8 @@ object Build {
           (current ++ fromOther).distinct
         })
 
-    def customDependsOn(moduleName: String, other: Project, useProvided: Boolean = false): Project = {
-      if (useStableVersions(moduleName)) {
+    def customDependsOn(moduleSegment: String, other: Project, useProvided: Boolean = false): Project = {
+      if (useStableVersions(moduleSegment)) {
         project
           .settings(libraryDependencySchemes += "dev.guardrail" % other.id % "early-semver")
           .settings(libraryDependencies += {
@@ -267,7 +285,7 @@ object Build {
       }
     }
 
-    def providedDependsOn(moduleName: String, other: Project): Project =
-      customDependsOn(moduleName, other, true)
+    def providedDependsOn(moduleSegment: String, other: Project): Project =
+      customDependsOn(moduleSegment, other, true)
   }
 }
