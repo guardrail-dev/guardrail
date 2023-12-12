@@ -64,6 +64,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [java-async-http]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-async-http' }}
         run: sbt 'show version' "project guardrail-java-async-http" clean compile versionCheck test ci-release
@@ -74,6 +75,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [java-dropwizard]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-dropwizard' }}
         run: sbt 'show version' "project guardrail-java-dropwizard" clean compile versionCheck test ci-release
@@ -84,6 +86,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [java-spring-mvc]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-spring-mvc' }}
         run: sbt 'show version' "project guardrail-java-spring-mvc" clean compile versionCheck test ci-release
@@ -94,6 +97,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [java-support]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'java-support' }}
         run: sbt 'show version' "project guardrail-java-support" clean compile versionCheck test ci-release
@@ -104,6 +108,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [scala-akka-http]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-akka-http' }}
         run: sbt 'show version' "project guardrail-scala-akka-http" clean compile versionCheck test ci-release
@@ -114,6 +119,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [scala-dropwizard]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-dropwizard' }}
         run: sbt 'show version' "project guardrail-scala-dropwizard" clean compile versionCheck test ci-release
@@ -124,6 +130,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [scala-http4s]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-http4s' }}
         run: sbt 'show version' "project guardrail-scala-http4s" clean compile versionCheck test ci-release
@@ -134,6 +141,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [scala-support]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'scala-support' }}
         run: sbt 'show version' "project guardrail-scala-support" clean compile versionCheck test ci-release
@@ -144,6 +152,7 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Publish artifacts [cli]'
         if: ${{ steps.set-project-from-tag.outputs.module == 'cli' }}
         run: sbt 'show version' "project guardrail-cli" clean compile versionCheck test ci-release
@@ -154,3 +163,4 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           GUARDRAIL_RELEASE_MODULE: ${{ steps.set-project-from-tag.outputs.module }}
           GUARDRAIL_RELEASE_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
