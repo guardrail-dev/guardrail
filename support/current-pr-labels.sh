@@ -42,8 +42,12 @@ cachedir=target/github
 mkdir -p "$cachedir"
 
 if [ -n "$GITHUB_EVENT_PATH" ]; then
-  pr_number="$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")"
-  cache="$cachedir/guardrail-ci-${pr_number}-${module_name}-labels-cache.json"
+  pr_number="$(jq --raw-output '.pull_request.number // ""' "$GITHUB_EVENT_PATH")"
+  if [ -n "$pr_number" ]; then
+    cache="$cachedir/guardrail-ci-${pr_number}-${module_name}-labels-cache.json"
+  else
+    cache="$cachedir/guardrail-ci-HEAD-${module_name}-labels-cache.json"
+  fi
 else
   rev="$(git rev-parse --short @)"
   cache="$cachedir/guardrail-ci-${rev}-${module_name}-labels-cache.json"
