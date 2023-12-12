@@ -14,6 +14,11 @@ import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
 object Build {
   val stableVersion: SettingKey[String] = SettingKey("stable-version")
 
+  def currentBuildLabels(moduleSegment: String): Set[String] = {
+    import scala.sys.process._
+    Seq("support/current-pr-labels.sh", moduleSegment).lineStream_!.toSet
+  }
+
   def useStableVersions(moduleSegment: String): Boolean = {
     // NB: Currently, any time any PR that breaks semver is merged, it breaks
     //     the build until the next release.
@@ -26,13 +31,7 @@ object Build {
     val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
     val isCi = sys.env.contains("GUARDRAIL_CI")
     if (isCi || isRelease) {
-      val ignoreBincompat = {
-        import scala.sys.process._
-        Seq("support/current-pr-labels.sh", moduleSegment)
-          .lineStream_!
-          .exists(Set("major", "minor").contains)
-      }
-
+      val ignoreBincompat = currentBuildLabels(moduleSegment).intersect(Set("major", "minor")).nonEmpty
       val useStableVersions = !isMasterBranch && (isRelease || !ignoreBincompat)
       println(s"isMasterBranch=${isMasterBranch}, isRelease=${isRelease}, ignoreBincompat=${ignoreBincompat}: useStableVersions=${useStableVersions}")
       if (useStableVersions) {
