@@ -49,6 +49,7 @@ object Common {
             server
               .downField("url", _.getUrl)
               .unwrapTracker
+              .filterNot(_.contains("{"))
               .map { x =>
                 val uri = new URI(x.iterateWhileM[Id](_.stripSuffix("/"))(_.endsWith("/")))
                 @SuppressWarnings(Array("org.wartremover.warts.Null"))
@@ -64,6 +65,7 @@ object Common {
       basePath = swagger
         .downField("servers", _.getServers)
         .cotraverse(_.downField("url", _.getUrl))
+        .filterNot(_.unwrapTracker.exists(_.contains("{")))
         .headOption
         .flatMap(_.unwrapTracker)
         .flatMap(url => Option(new URI(url).getPath))
