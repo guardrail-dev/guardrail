@@ -182,6 +182,7 @@ lazy val scalaDropwizard = modules.scalaDropwizard.project
   .customDependsOn("scala-support", scalaSupport)
 
 lazy val microsite = baseModule("microsite", "microsite", file("modules/microsite"))
+  .enablePlugins(MdocPlugin)
   .settings(
     publish / skip := true,
     mdocExtraArguments += "--no-link-hygiene",

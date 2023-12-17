@@ -9,3 +9,4 @@ vendor/
 .bundle/
 metals.sbt
 .sbtopts
+node_modules/

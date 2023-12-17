@@ -24,4 +24,7 @@ abstract class GuardrailRunner {
           .productL(Target.pushLogger(StructuredLogger.reset))
       )
     } yield result
+
+  def unsafeGuardrailRunner(language: String, args: Array[Args]): Array[Path] =
+    Target.unsafeExtract(guardrailRunner(language, args)).toArray
 }
