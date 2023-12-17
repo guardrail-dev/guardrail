@@ -2,8 +2,5 @@
 - [What is guardrail?](about.md)
 - [Sample API Specification](sample-spec.md)
 - [Scala](scala/README.md)
-  - [akka-http](scala/akkaHttp/README.md)
-  - [http4s](scala/http4s/README.md)
-  - [pekko-http](scala/pekkoHttp/README.md)
 - [Java](java/README.md)
 - [Extensions](extensions.md)

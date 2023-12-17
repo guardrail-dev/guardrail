@@ -154,7 +154,7 @@ val user: User = getUserResponse.map(_.fold(user => user)).value.futureValue.rig
 
 ## Generating clients
 
-As we've seen in [Generating a Server](generating-a-server), guardrail-generated servers establish a mapping between our business logic and a cordoned off subset of HTTP. This permits us to focus on our business logic, without getting overloaded with the complexities of managing such a large protocol. The same is true with guardrail generated HTTP Clients: from a consumer's standpoint, HTTP calls should look like regular function calls, accepting domain-specific arguments and producing domain-specific results.
+As we've seen in [Generating a Server](scala/akka-http/README.md#generating-a-server), guardrail-generated servers establish a mapping between our business logic and a cordoned off subset of HTTP. This permits us to focus on our business logic, without getting overloaded with the complexities of managing such a large protocol. The same is true with guardrail generated HTTP Clients: from a consumer's standpoint, HTTP calls should look like regular function calls, accepting domain-specific arguments and producing domain-specific results.
 
 By generating minimal clients that only have enough business knowledge to map domain types to and from HTTP, opportunities for logical errors are effectively removed. While this does not eliminate logical errors entirely, establishing a firm boundary between the underlying protocol and hand-written code drastically reduces the scope of possible bugs.
 

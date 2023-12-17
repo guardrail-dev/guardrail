@@ -1,7 +1,7 @@
 ## akka-http Jackson
 
 The `akka-http-jackson` framework generates the same server and client
-APIs as the [akka-http](../akka-http) framework, except that Jackson is
+APIs as the [akka-http](scala/akka-http/README.md) framework, except that Jackson is
 used for serialization and deserialization (instead of Circe).
 
 Usage-wise, it is very similar to `akka-http`.  Extra information

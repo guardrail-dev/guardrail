@@ -25,7 +25,7 @@ with Jersey in your application's `run()` method using
 ### Usage
 
 Server usage follows the same pattern as the Scala
-[akka-http](../akka-http) framework.  You must implement a `Handler`
+[akka-http](scala/akka-http/README.md) framework.  You must implement a `Handler`
 class for each resource.  Each handler method takes a `respond`
 parameter, which allows you to easily construct response instances, plus
 all parameters specified for the method's underlying operation.  The

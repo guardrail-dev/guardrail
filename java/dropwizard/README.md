@@ -2,7 +2,7 @@
 
 ## Setup
 
-As we saw in [Installation](installation), guardrail is run as part of maven. It hooks into the `generate-sources` goal. This means our generated server and client is always up-to-date with the specfificaion file.
+As we saw in [Installation](java/README.md#Installation), guardrail is run as part of maven. It hooks into the `generate-sources` goal. This means our generated server and client is always up-to-date with the specfificaion file.
 
 Lets take another look at the maven config for guardrail:
 

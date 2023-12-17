@@ -93,7 +93,7 @@ Frameworks
 Configuration for the following libraries is available:
 
 - [Dropwizard](java/dropwizard/README.md)
-- [spring-mvc](java/springMvc/README.md)
+- [spring-mvc](java/spring-mvc/README.md)
 
 Sample repositories
 ---

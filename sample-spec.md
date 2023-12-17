@@ -1,7 +1,7 @@
 Sample API specification
 ========================
 
-The following is a complete, annotated OpenAPI specification file: (guardrail extensions are documented in [guardrail Extensions](#guardrail-extensions))
+The following is a complete, annotated OpenAPI specification file: (guardrail extensions are documented in [guardrail Extensions](extensions.md))
 
 ```yaml
 swagger: "2.0"                              # Which version of the OpenAPI/Swagger specification we are following

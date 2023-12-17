@@ -55,7 +55,7 @@ Frameworks
 
 Configuration for the following libraries is available:
 
-- [Akka-Http](scala/akkaHttp/README.md)
+- [Akka-Http](scala/akka-http/README.md)
 - [Http4s](scala/http4s/README.md)
 - [Dropwizard](scala/dropwizard/README.md)
 
