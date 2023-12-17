@@ -11,23 +11,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: olafurpg/setup-scala@v14
         with:
-          distribution: zulu
-          java-version: 14
-      - uses: ruby/setup-ruby@v1.162.0
-        with:
-          bundler-cache: true
-      - name: Install microsite deps
-        run: |
-          bundle install --jobs 4 --retry 3 --system
+          java-version: zulu@1.14
       - name: Print versions
         run: |
           java -version
-          gpg --version
-          ruby --version
-          bundle exec jekyll --version
       - name: Update website
         env:
           MICROSITE_PUBLISH_TOKEN: ${{ secrets.MICROSITE_PUBLISH_TOKEN }}
-        run: bundle exec sbt microsite/makeMicrosite microsite/publishMicrosite
+        run: |
+          git clone "https://git:$MICROSITE_PUBLISH_TOKEN@github.com/guardrail-dev/guardrail.git" --branch=gh-pages gh-pages && \
+            pushd gh-pages && \
+            git rm -rf . && \
+            git config user.email "hello@guardrail.dev" && \
+            git config user.name "guardrail website builder" && \
+            popd && \
+            sbt microsite/mdoc && \
+            tar -cC modules/microsite/target/mdoc/ . | tar -vxC gh-pages && \
+            pushd gh-pages && \
+            git add . && \
+            git commit -m "Updating ${{ github.ref_name }}" && \
+            git push

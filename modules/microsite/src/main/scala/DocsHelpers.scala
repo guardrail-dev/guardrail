@@ -19,7 +19,7 @@ case object GeneratingClients extends SnippetComponent
 
 @SuppressWarnings(Array("org.wartremover.warts.EitherProjectionPartial", "org.wartremover.warts.TraversableOps"))
 object DocsHelpers {
-  def sampleSpec = "modules/microsite/docs/sample-user.json"
+  def sampleSpec = "modules/microsite/src/main/resources/sample-user.json"
   def renderScalaSnippet(framework: String, identifier: SnippetComponent)(prefix: String, suffix: String): Unit = {
     val generator: Framework[ScalaLanguage, Target] = Target.unsafeExtract(for {
       modules   <- ModuleMapperLoader.load[ScalaLanguage](framework)
