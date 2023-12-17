@@ -3,4 +3,6 @@
 - [Sample API Specification](sample-spec.md)
 - [Scala](scala/README.md)
 - [Java](java/README.md)
+  - [dropwizard](java/dropwizard/README.md)
+  - [spring-mvc](java/spring-mvc/README.md)
 - [Extensions](extensions.md)
