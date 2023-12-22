@@ -7,15 +7,15 @@ By putting the following in your `build.sbt`, generated classes for petstore and
 
 ```sbt
 Compile / guardrailTasks := List(
-  Client(file("petstore.yaml")),
-  Client(file("github.yaml"), pkg="com.example.clients.github"),
-  Server(file("myserver.yaml"), pkg="com.example.server", tracing=true)
+  ScalaClient(file("petstore.yaml")),
+  ScalaClient(file("github.yaml"), pkg="com.example.clients.github"),
+  ScalaServer(file("myserver.yaml"), pkg="com.example.server", tracing=true)
 )
 
 Test / guardrailTasks := List(
-  Server(file("petstore.yaml")),
-  Server(file("github.yaml"), pkg="com.example.tests.github"),
-  Client(file("myserver.yaml"), pkg="com.example.tests.server", tracing=true)
+  ScalaServer(file("petstore.yaml")),
+  ScalaServer(file("github.yaml"), pkg="com.example.tests.github"),
+  ScalaClient(file("myserver.yaml"), pkg="com.example.tests.server", tracing=true)
 )
 ```
 
