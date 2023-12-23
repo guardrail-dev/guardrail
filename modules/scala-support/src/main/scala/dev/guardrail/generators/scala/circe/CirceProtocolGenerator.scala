@@ -520,7 +520,6 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
       tpe         <- parseTypeName(clsName.last)
       fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
-      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
       nestedClasses <- nestedDefinitions.flatTraverse {
         case classDefinition: ClassDefinition[ScalaLanguage] =>
           for {
@@ -537,11 +536,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
           } yield List(widenClass) ++ widenCompanion.fold(enumDefinition.staticDefns.definitions)(List(_))
       }
+      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params, nestedClasses)
       defn <- renderDTOClass(clsName.last, supportPackage, params, parents)
     } yield {
-      val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ nestedClasses)
       if (parents.isEmpty && props.isEmpty) Left("Entity isn't model"): Either[String, ClassDefinition[ScalaLanguage]]
-      else tpe.toRight("Empty entity name").map(ClassDefinition[ScalaLanguage](clsName.last, _, fullType, defn, finalStaticDefns, parents))
+      else tpe.toRight("Empty entity name").map(ClassDefinition[ScalaLanguage](clsName.last, _, fullType, defn, staticDefns, parents))
     }
   }
 
@@ -1437,7 +1436,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       deps: List[scala.meta.Term.Name],
       encoder: Option[scala.meta.Defn.Val],
       decoder: Option[scala.meta.Defn.Val],
-      protocolParameters: List[ProtocolParameter[ScalaLanguage]]
+      protocolParameters: List[ProtocolParameter[ScalaLanguage]],
+      nestedClasses: List[ScalaLanguage#Definition]
   ) = {
     val extraImports: List[Import] = deps.map { term =>
       q"import ${term}._"
@@ -1447,7 +1447,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       StaticDefns[ScalaLanguage](
         className = clsName,
         extraImports = extraImports,
-        definitions = (encoder ++ decoder).toList,
+        definitions = (encoder ++ decoder).toList ++ nestedClasses,
         statements = List.empty
       )
     )
