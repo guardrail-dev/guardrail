@@ -559,13 +559,14 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     NonEmptyList
       .fromList(model.downField("oneOf", _.getOneOf()).indexedDistribute)
       .fold[Target[Either[String, StrictProtocolElems[ScalaLanguage]]]](Target.pure(Left("Does not have oneOf"))) { xs =>
-        xs.traverse(ModelResolver.propMeta[ScalaLanguage, Target](_, components))
-          .flatMap { oneOfs =>
+        for {
+          oneOfs <- xs.traverse(ModelResolver.propMeta[ScalaLanguage, Target](_, components))
+          deferred <- {
             val (deferred, resolved) = oneOfs.toList.partitionEither(identity _)
             if (resolved.nonEmpty) Target.raiseUserError(s"Only $$ref is supported in oneOf at this time (${model.showHistory})") else Target.pure(deferred)
           }
-          .flatMap(_.traverse(elem => Target.fromOption(concreteTypes.find(_.clsName == elem.value), UserError("Not supported"))))
-          .flatMap(rawTypes =>
+          rawTypes <- deferred.traverse(elem => Target.fromOption(concreteTypes.find(_.clsName == elem.value), UserError("Not supported")))
+          result <-
             NonEmptyList
               .fromList(rawTypes)
               .toRight("No oneOf specified")
@@ -589,26 +590,27 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                     val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
                     val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
                     q"""
-                      member
-                        .asJsonObject
-                        .add(${Lit.String(propertyName)}, _root_.io.circe.Json.fromString(${Lit.String(aliasedName)}))
-                        .asJson
-                    """
+                        member
+                          .asJsonObject
+                          .add(${Lit.String(propertyName)}, _root_.io.circe.Json.fromString(${Lit.String(aliasedName)}))
+                          .asJson
+                      """
                   }
                   validateDecoder = discriminator_.fold[(String, Term) => Term]((_, x) => x) { discriminator => (name, decoder) =>
                     val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
                     val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
                     q"""
-                      ${decoder}
-                        .validate(
-                          _.get[String](${Lit.String(propertyName)})
-                            .bimap(
-                              _ => List(${Lit.String(s"Missing '${propertyName}' field")}),
-                              name => if (name == ${Lit.String(aliasedName)}) Nil else List(${Lit.String(s"'${propertyName}' did not match '${aliasedName}'")})
-                            )
-                            .merge
-                        )
-                    """
+                        ${decoder}
+                          .validate(
+                            _.get[String](${Lit.String(propertyName)})
+                              .bimap(
+                                _ => List(${Lit.String(s"Missing '${propertyName}' field")}),
+                                name => if (name == ${Lit.String(aliasedName)}) Nil else List(${Lit
+                        .String(s"'${propertyName}' did not match '${aliasedName}'")})
+                              )
+                              .merge
+                          )
+                      """
                   }
 
                   (members, (applyAdapters, (decoders, encoders))) <- tpes
@@ -631,13 +633,13 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                       .Name(clsName)}] = _root_.io.circe.Encoder.instance(${Term
                       .PartialFunction(encoders.toList)}) """
                   decoder = q"""
-                    implicit def ${Term.Name(s"decode${clsName}")}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = {
-                      ..${decoders.zipWithIndex.toList.map { case (decoder, idx) =>
+                      implicit def ${Term.Name(s"decode${clsName}")}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = {
+                        ..${decoders.zipWithIndex.toList.map { case (decoder, idx) =>
                       q"val ${Pat.Var(Term.Name(s"dec${idx}"))} = ${decoder}"
                     }};
-                      ${(1 until decoders.length).foldLeft[Term](q"dec0") { case (acc, idx) => q"$acc.or(${Term.Name(s"dec${idx}")})" }}
-                    }
-                    """
+                        ${(1 until decoders.length).foldLeft[Term](q"dec0") { case (acc, idx) => q"$acc.or(${Term.Name(s"dec${idx}")})" }}
+                      }
+                      """
                   statements = List(
                     q"object members { ..${members.toList} }",
                     q"def apply[A](value: A)(implicit ev: A => ${Type.Name(clsName)}): ${Type.Name(clsName)} = ev(value)"
@@ -651,7 +653,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                   )
                 } yield ClassDefinition[ScalaLanguage](clsName, Type.Name(clsName), fullType, defn, staticDefns, Nil)
               )
-          )
+        } yield result
       }
 
   // NB: In OpenAPI 3.1 ObjectSchema was broadly replaced with JsonSchema.
