@@ -31,8 +31,17 @@ components:
       oneOf:
         - $ref: '#/components/schemas/TypeA'
         - $ref: '#/components/schemas/TypeB'
-        - $ref: '#/components/schemas/TypeC'
-        - $ref: '#/components/schemas/typed'
+        - type: object
+          x-scala-type: "WrappedC"
+          required: [C]
+          properties:
+            C:
+              $ref: '#/components/schemas/TypeC'
+        - type: object
+          required: [D]
+          properties:
+            D:
+              $ref: '#/components/schemas/typed'
         - $ref: '#/components/schemas/TypeE'
       discriminator:
         propertyName: beepBorp
