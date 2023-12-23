@@ -42,7 +42,11 @@ components:
           properties:
             D:
               $ref: '#/components/schemas/typed'
-        - $ref: '#/components/schemas/TypeE'
+        - type: object
+          required: [E]
+          properties:
+            E:
+              $ref: '#/components/schemas/TypeE'
       discriminator:
         propertyName: beepBorp
         mapping:

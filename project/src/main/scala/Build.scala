@@ -119,25 +119,19 @@ object Build {
   def injectPRVersionPolicy(moduleSegment: String)(gitVersion: String): String = {
     val labels = currentBuildLabels(moduleSegment)
     val extractor = raw"^([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9]+-g[a-f0-9]+)?(-SNAPSHOT)?".r
-    println(s"injectPRVersionPolicy($moduleSegment)($gitVersion):")
     val newVersion: String = gitVersion match {
       case extractor(major, minor, patch, gitSlug, other) =>
         if (labels.contains("major")) {
           val newMajor = major.toInt + 1
-          println(s"  major: ${major.toInt} -> ${newMajor}")
           List(Some(s"${newMajor}.0.0"), Option(gitSlug), Option(other)).flatten.mkString("")
         } else if (labels.contains("minor")) {
           val newMinor = minor.toInt + 1
-          println(s"  minor: ${minor.toInt} -> ${newMinor}")
           List(Some(s"${major}.${newMinor}.0"), Option(gitSlug), Option(other)).flatten.mkString("")
         } else {
           val newPatch = patch.toInt + 1
-          println(s"  patch: ${patch.toInt} -> ${newPatch}")
           List(Some(s"${major}.${minor}.${newPatch}"), Option(gitSlug), Option(other)).flatten.mkString("")
         }
-      case other =>
-        println(s"  other: ${gitVersion}")
-        gitVersion
+      case other => gitVersion
     }
     newVersion
   }
