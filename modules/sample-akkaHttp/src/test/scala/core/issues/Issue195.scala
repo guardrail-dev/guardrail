@@ -7,17 +7,26 @@ import io.circe._, io.circe.syntax._
 import issues.issue195.server.akkaHttp.definitions._
 
 class Issue195 extends AnyFunSpec with Matchers {
+  def emit[A](label: String, func: () => A, expected: Json)(implicit ev: A => Foo): Unit =
+    describe(label) {
+      it("should encode") {
+        Foo(func()).asJson shouldBe expected
+      }
+
+      it("should decode") {
+        expected.as[Foo] shouldBe Right(Foo(func()))
+      }
+
+      it("should round-trip") {
+        Foo(func()).asJson.as[Foo] shouldBe Right(Foo(func()))
+      }
+    }
+
   describe("oneOf mapping") {
-    it("should encode") {
-      Foo(TypeA("foo")).asJson shouldBe Json.obj("type" -> Json.fromString("foo"), "beepBorp" -> Json.fromString("typea"))
-    }
-
-    it("should decode") {
-      Json.obj("type" -> Json.fromString("foo"), "beepBorp" -> Json.fromString("typea")).as[Foo] shouldBe Right(Foo(TypeA("foo")))
-    }
-
-    it("should round-trip") {
-      Foo(TypeA("foo")).asJson.as[Foo] shouldBe Right(Foo(TypeA("foo")))
-    }
+    emit("TypeA", () => TypeA("foo"), Json.obj("type" -> Json.fromString("foo"), "beepBorp" -> Json.fromString("typea")))
+    emit("TypeB", () => TypeB("foo"), Json.obj("type" -> Json.fromString("foo"), "beepBorp" -> Json.fromString("TypeB")))
+    emit("TypeC", () => Foo.WrappedC(TypeC("foo")), Json.obj("C" -> Json.obj("type" -> Json.fromString("foo")), "beepBorp" -> Json.fromString("WrappedC")))
+    emit("typed", () => Foo.Nested1(Typed("foo")), Json.obj("D" -> Json.obj("type" -> Json.fromString("foo")), "beepBorp" -> Json.fromString("Nested1")))
+    emit("TypeE", () => TypeE("foo"), Json.obj("type" -> Json.fromString("foo"), "beepBorp" -> Json.fromString("TypeE")))
   }
 }

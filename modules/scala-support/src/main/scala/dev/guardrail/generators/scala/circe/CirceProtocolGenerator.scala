@@ -105,8 +105,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               oneOf <- fromOneOf(
                 clsName = formattedClsName,
                 model = comp,
+                definitions.value,
                 dtoPackage = dtoPackage,
+                supportPackage = supportPackage.toList,
                 concreteTypes = concreteTypes,
+                defaultPropertyRequirement = defaultPropertyRequirement,
                 components = components
               )
               alias <- modelTypeAlias(formattedClsName, comp, components)
@@ -136,8 +139,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               oneOf <- fromOneOf(
                 clsName = formattedClsName,
                 model = m,
+                definitions.value,
                 dtoPackage = dtoPackage,
+                supportPackage = supportPackage.toList,
                 concreteTypes = concreteTypes,
+                defaultPropertyRequirement = defaultPropertyRequirement,
                 components = components
               )
               alias <- modelTypeAlias(formattedClsName, m, components)
@@ -182,8 +188,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               oneOf <- fromOneOf(
                 clsName = formattedClsName,
                 model = x,
+                definitions.value,
                 dtoPackage = dtoPackage,
+                supportPackage = supportPackage.toList,
                 concreteTypes = concreteTypes,
+                defaultPropertyRequirement = defaultPropertyRequirement,
                 components = components
               )
               alias <- typeAlias(formattedClsName, declType)
@@ -482,6 +491,45 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     } yield supper
   }
 
+  private[this] def renderIntermediate(
+      model: Tracker[Schema[_]],
+      dtoName: String,
+      concreteTypes: List[PropMeta[ScalaLanguage]],
+      definitions: List[(String, Tracker[Schema[_]])],
+      dtoPackage: List[String],
+      supportPackage: List[String],
+      defaultPropertyRequirement: PropertyRequirement,
+      components: Tracker[Option[Components]]
+  )(implicit
+      Cl: CollectionsLibTerms[ScalaLanguage, Target],
+      Fw: FrameworkTerms[ScalaLanguage, Target],
+      P: ProtocolTerms[ScalaLanguage, Target],
+      Sc: LanguageTerms[ScalaLanguage, Target],
+      Sw: OpenAPITerms[ScalaLanguage, Target]
+  ): Target[(PropMeta[ScalaLanguage], (Option[Defn.Val], Option[Defn.Val], Defn.Class))] =
+    for {
+      prefixes <- Cl.vendorPrefixes()
+      customTpe = CustomTypeName(model, prefixes).getOrElse(dtoName)
+      tpe   <- Sc.pureTypeName(customTpe)
+      props <- extractProperties(model)
+      requiredFields = getRequiredFieldsRec(model)
+      (params, nestedDefinitions) <- prepareProperties(
+        NonEmptyList.of(customTpe),
+        propertyToTypeLookup = Map.empty,
+        props,
+        requiredFields,
+        concreteTypes,
+        definitions,
+        dtoPackage,
+        supportPackage,
+        defaultPropertyRequirement,
+        components
+      )
+      encoder <- encodeModel(customTpe, dtoPackage, params, parents = List.empty)
+      decoder <- decodeModel(customTpe, dtoPackage, supportPackage, params, parents = List.empty)
+      defn    <- renderDTOClass(customTpe, supportPackage, params, parents = List.empty)
+    } yield (PropMeta[ScalaLanguage](customTpe, tpe), (encoder, decoder, defn))
+
   private[this] def fromModel(
       clsName: NonEmptyList[String],
       model: Tracker[Schema[_]],
@@ -516,11 +564,10 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         defaultPropertyRequirement,
         components
       )
-      encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
-      decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
-      tpe         <- parseTypeName(clsName.last)
-      fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
-      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
+      encoder  <- encodeModel(clsName.last, dtoPackage, params, parents)
+      decoder  <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
+      tpe      <- parseTypeName(clsName.last)
+      fullType <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       nestedClasses <- nestedDefinitions.flatTraverse {
         case classDefinition: ClassDefinition[ScalaLanguage] =>
           for {
@@ -537,69 +584,94 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
           } yield List(widenClass) ++ widenCompanion.fold(enumDefinition.staticDefns.definitions)(List(_))
       }
-      defn <- renderDTOClass(clsName.last, supportPackage, params, parents)
-    } yield {
-      val finalStaticDefns = staticDefns.copy(definitions = staticDefns.definitions ++ nestedClasses)
+      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params, nestedClasses)
+      defn        <- renderDTOClass(clsName.last, supportPackage, params, parents)
+    } yield
       if (parents.isEmpty && props.isEmpty) Left("Entity isn't model"): Either[String, ClassDefinition[ScalaLanguage]]
-      else tpe.toRight("Empty entity name").map(ClassDefinition[ScalaLanguage](clsName.last, _, fullType, defn, finalStaticDefns, parents))
-    }
+      else tpe.toRight("Empty entity name").map(ClassDefinition[ScalaLanguage](clsName.last, _, fullType, defn, staticDefns, parents))
   }
 
   private[this] def fromOneOf(
       clsName: String,
       model: Tracker[Schema[_]],
+      definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String],
+      supportPackage: List[String],
       concreteTypes: List[PropMeta[ScalaLanguage]],
+      defaultPropertyRequirement: PropertyRequirement,
       components: Tracker[Option[Components]]
   )(implicit
       Sc: LanguageTerms[ScalaLanguage, Target],
       Cl: CollectionsLibTerms[ScalaLanguage, Target],
       Fw: FrameworkTerms[ScalaLanguage, Target],
-      Sw: OpenAPITerms[ScalaLanguage, Target]
+      Sw: OpenAPITerms[ScalaLanguage, Target],
+      P: ProtocolTerms[ScalaLanguage, Target]
   ): Target[Either[String, StrictProtocolElems[ScalaLanguage]]] =
     NonEmptyList
       .fromList(model.downField("oneOf", _.getOneOf()).indexedDistribute)
       .fold[Target[Either[String, StrictProtocolElems[ScalaLanguage]]]](Target.pure(Left("Does not have oneOf"))) { xs =>
-        xs.traverse(ModelResolver.propMeta[ScalaLanguage, Target](_, components))
-          .flatMap { oneOfs =>
-            val (deferred, resolved) = oneOfs.toList.partitionEither(identity _)
-            if (resolved.nonEmpty) Target.raiseUserError(s"Only $$ref is supported in oneOf at this time (${model.showHistory})") else Target.pure(deferred)
-          }
-          .flatMap(_.traverse(elem => Target.fromOption(concreteTypes.find(_.clsName == elem.value), UserError("Not supported"))))
-          .flatMap(rawTypes =>
-            NonEmptyList
-              .fromList(rawTypes)
-              .toRight("No oneOf specified")
-              .traverse(tpes => // Maintain the Either[String, A] at this point. Validation has completed, no failures expected after here.
-                for {
-                  fullType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
-
-                  discriminator_ = model.downField("discriminator", _.getDiscriminator()).indexedDistribute
-
-                  mapping <- discriminator_.map(_.downField("mapping", _.getMapping).indexedDistribute.value).getOrElse(Nil).traverse { case (alias, _ref) =>
-                    val ref    = _ref.unwrapTracker
-                    val prefix = "#/components/schemas/"
-                    if (ref.startsWith(prefix)) {
-                      Target.pure((alias, ref.replace(prefix, "")))
-                    } else {
-                      Target.raiseUserError(s"Unsupported mapping, '${ref}'. Expected format '${prefix}FooBarBaz' (${_ref.showHistory})")
+        for {
+          nameGenerator <- Target.pure(new java.util.concurrent.atomic.AtomicInteger(1))
+          getNewName = Target.pure(nameGenerator).map(ng => s"Nested${ng.getAndIncrement()}")
+          (rawTypes, nestedClasses) <- xs
+            .traverse { model =>
+              for {
+                resolved <- ModelResolver.propMetaWithName[ScalaLanguage, Target](getNewName.flatMap(Sc.pureTypeName), model, components)
+                (rawType, nestedClasses) <- resolved
+                  .bitraverse(
+                    deferred => Target.fromOption(concreteTypes.find(_.clsName == deferred.value), UserError("Not supported")),
+                    {
+                      case core.Resolved(Type.Name(dtoName), _, _, _) =>
+                        renderIntermediate(
+                          model,
+                          dtoName,
+                          concreteTypes,
+                          definitions,
+                          dtoPackage,
+                          supportPackage,
+                          defaultPropertyRequirement,
+                          components
+                        )
+                      case other => Target.raiseUserError(s"Unexpected case ${other}")
                     }
-                  }
+                  )
+                  .map(e => List(e).partitionEither(identity _))
+              } yield (rawType, nestedClasses)
+            }
+            .map(_.unzip)
+          (nestedPMs, (nestedEncoders, nestedDecoders, nestedDefns)) = nestedClasses.toList.flatten.unzip.map(_.unzip3)
+          rawTypes <- Target.fromOption(
+            NonEmptyList.fromList(rawTypes.toList.flatten.map((None, _)) ++ nestedPMs.map((Some(clsName), _))),
+            UserError("Expected at least some models")
+          )
+          fullType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
 
-                  injectDiscriminator = discriminator_.fold[(String, Term) => Term]((_, x) => q"$x.asJson") { discriminator => (name, member) =>
-                    val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
-                    val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
-                    q"""
+          discriminator_ = model.downField("discriminator", _.getDiscriminator()).indexedDistribute
+
+          mapping <- discriminator_.map(_.downField("mapping", _.getMapping).indexedDistribute.value).getOrElse(Nil).traverse { case (alias, _ref) =>
+            val ref    = _ref.unwrapTracker
+            val prefix = "#/components/schemas/"
+            if (ref.startsWith(prefix)) {
+              Target.pure((alias, ref.replace(prefix, "")))
+            } else {
+              Target.raiseUserError(s"Unsupported mapping, '${ref}'. Expected format '${prefix}FooBarBaz' (${_ref.showHistory})")
+            }
+          }
+
+          injectDiscriminator = discriminator_.fold[(String, Term) => Term]((_, x) => q"$x.asJson") { discriminator => (name, member) =>
+            val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
+            val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
+            q"""
                       member
                         .asJsonObject
                         .add(${Lit.String(propertyName)}, _root_.io.circe.Json.fromString(${Lit.String(aliasedName)}))
                         .asJson
                     """
-                  }
-                  validateDecoder = discriminator_.fold[(String, Term) => Term]((_, x) => x) { discriminator => (name, decoder) =>
-                    val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
-                    val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
-                    q"""
+          }
+          validateDecoder = discriminator_.fold[(String, Term) => Term]((_, x) => x) { discriminator => (name, decoder) =>
+            val propertyName = discriminator.map(_.getPropertyName).unwrapTracker
+            val aliasedName  = mapping.find(_._2 == name).map(_._1).getOrElse(name)
+            q"""
                       ${decoder}
                         .validate(
                           _.get[String](${Lit.String(propertyName)})
@@ -610,49 +682,47 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                             .merge
                         )
                     """
-                  }
+          }
 
-                  (members, (applyAdapters, (decoders, encoders))) <- tpes
-                    .traverse {
-                      case PropMeta(memberName, tpe @ Type.Name(name)) =>
-                        for {
-                          fullInstanceType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, name))
-                          termName = Term.Name(name)
-                          applyAdapter = q"implicit val ${Pat.Var(Term.Name(s"from${name}"))}: ${fullInstanceType} => ${Type.Name(clsName)} = members.${termName}.apply _"
-                          member  = q"case class ${tpe}(value: ${fullInstanceType}) extends ${Init.After_4_6_0(Type.Name(clsName), Name.Anonymous(), Nil)}"
-                          decoder = validateDecoder(memberName, q"_root_.io.circe.Decoder[${tpe}].map(${Term.Name(s"from${name}")})")
-                          encoder = p"case members.${termName}(member) => ${injectDiscriminator(memberName, q"member")}"
-                        } yield (member, (applyAdapter, (decoder, encoder)))
-                      case other =>
-                        Target.raiseUserError(s"Unsupported case in oneOf, ${other}. Somehow got a complex type, we expected a singular Type.Name.")
-                    }
-                    .map(_.unzip.map(_.unzip.map(_.unzip))) // NonEmptyList#unzip4 adapter :see_no_evil:
+          (members, (applyAdapters, (decoders, encoders))) <- rawTypes
+            .traverse {
+              case (outer, PropMeta(memberName, tpe @ Type.Name(name))) =>
+                for {
+                  fullInstanceType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage ++ outer, name))
+                  termName = Term.Name(name)
+                  applyAdapter = q"implicit val ${Pat.Var(Term.Name(s"from${name}"))}: ${fullInstanceType} => ${Type.Name(clsName)} = members.${termName}.apply _"
+                  member  = q"case class ${tpe}(value: ${fullInstanceType}) extends ${Init.After_4_6_0(Type.Name(clsName), Name.Anonymous(), Nil)}"
+                  decoder = validateDecoder(memberName, q"_root_.io.circe.Decoder[${tpe}].map(${Term.Name(s"from${name}")})")
+                  encoder = p"case members.${termName}(member) => ${injectDiscriminator(memberName, q"member")}"
+                } yield (member, (applyAdapter, (decoder, encoder)))
+              case (_, other) =>
+                Target.raiseUserError(s"Unsupported case in oneOf, ${other}. Somehow got a complex type, we expected a singular Type.Name.")
+            }
+            .map(_.unzip.map(_.unzip.map(_.unzip))) // NonEmptyList#unzip4 adapter :see_no_evil:
 
-                  encoder = q"""implicit def ${Term.Name(s"encode${clsName}")}: _root_.io.circe.Encoder[${Type
-                      .Name(clsName)}] = _root_.io.circe.Encoder.instance(${Term
-                      .PartialFunction(encoders.toList)}) """
-                  decoder = q"""
+          encoder = q"""implicit def ${Term.Name(s"encode${clsName}")}: _root_.io.circe.Encoder[${Type
+              .Name(clsName)}] = _root_.io.circe.Encoder.instance(${Term
+              .PartialFunction(encoders.toList)}) """
+          decoder = q"""
                     implicit def ${Term.Name(s"decode${clsName}")}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = {
                       ..${decoders.zipWithIndex.toList.map { case (decoder, idx) =>
-                      q"val ${Pat.Var(Term.Name(s"dec${idx}"))} = ${decoder}"
-                    }};
+              q"val ${Pat.Var(Term.Name(s"dec${idx}"))} = ${decoder}"
+            }};
                       ${(1 until decoders.length).foldLeft[Term](q"dec0") { case (acc, idx) => q"$acc.or(${Term.Name(s"dec${idx}")})" }}
                     }
                     """
-                  statements = List(
-                    q"object members { ..${members.toList} }",
-                    q"def apply[A](value: A)(implicit ev: A => ${Type.Name(clsName)}): ${Type.Name(clsName)} = ev(value)"
-                  ) ++ applyAdapters.toList
-                  defn = q"""sealed abstract class ${Type.Name(clsName)} {}"""
-                  staticDefns = StaticDefns[ScalaLanguage](
-                    className = clsName,
-                    extraImports = List.empty,
-                    definitions = List(encoder, decoder),
-                    statements = statements
-                  )
-                } yield ClassDefinition[ScalaLanguage](clsName, Type.Name(clsName), fullType, defn, staticDefns, Nil)
-              )
+          statements = List(
+            q"object members { ..${members.toList} }",
+            q"def apply[A](value: A)(implicit ev: A => ${Type.Name(clsName)}): ${Type.Name(clsName)} = ev(value)"
+          ) ++ applyAdapters.toList ++ nestedDefns ++ nestedEncoders.flatten ++ nestedDecoders.flatten
+          defn = q"""sealed abstract class ${Type.Name(clsName)} {}"""
+          staticDefns = StaticDefns[ScalaLanguage](
+            className = clsName,
+            extraImports = List.empty,
+            definitions = List(encoder, decoder),
+            statements = statements
           )
+        } yield Right(ClassDefinition[ScalaLanguage](clsName, Type.Name(clsName), fullType, defn, staticDefns, Nil))
       }
 
   // NB: In OpenAPI 3.1 ObjectSchema was broadly replaced with JsonSchema.
@@ -746,7 +816,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
-            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](tpe, schema, components)
+            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](Target.pure(tpe), schema, components)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
             fieldName <- formatFieldName(name)
@@ -1437,7 +1507,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       deps: List[scala.meta.Term.Name],
       encoder: Option[scala.meta.Defn.Val],
       decoder: Option[scala.meta.Defn.Val],
-      protocolParameters: List[ProtocolParameter[ScalaLanguage]]
+      protocolParameters: List[ProtocolParameter[ScalaLanguage]],
+      nestedClasses: List[ScalaLanguage#Definition]
   ) = {
     val extraImports: List[Import] = deps.map { term =>
       q"import ${term}._"
@@ -1447,7 +1518,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       StaticDefns[ScalaLanguage](
         className = clsName,
         extraImports = extraImports,
-        definitions = (encoder ++ decoder).toList,
+        definitions = (encoder ++ decoder).toList ++ nestedClasses,
         statements = List.empty
       )
     )
