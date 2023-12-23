@@ -6,9 +6,13 @@ module_name="$1"
 
 gh_api() {
   path="$1"; shift
+  token_args=()
+  if [ -n "${GITHUB_TOKEN}" ]; then
+    token_args=( -H "Authorization: Bearer ${GITHUB_TOKEN}" )
+  fi
   curl -s \
     -H "Accept: application/vnd.github.v3+json" \
-    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+    "${token_args[@]}" \
     "$@" \
     "https://api.github.com/$path"
 }
@@ -28,7 +32,7 @@ labels_since_last_release() {
     echo '{"labels":[]}'
   else
     module_released_on="$(git show "${latest_tag}" --format=%cI)"
-    gh_api "search/issues?q=repo:guardrail-dev/guardrail+type:pr+is:merged+closed:>${module_released_on}+label:${module_name}" \
+    gh_api "search/issues" -G --data-urlencode "q=repo:guardrail-dev/guardrail+type:pr+is:merged+closed:>${module_released_on}+label:${module_name}" \
       | jq -cM '{labels: ((.items // []) | map(.labels) | flatten | map(.name) | unique | map({ name: . })) }'
   fi
 }

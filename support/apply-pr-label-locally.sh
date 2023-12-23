@@ -1,3 +1,5 @@
+exit 0
+
 pr_number="$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")"
 labels=(
   $(curl \

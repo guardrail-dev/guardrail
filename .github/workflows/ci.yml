@@ -39,10 +39,6 @@ jobs:
         key: ${{ runner.os }}-scala-${{ matrix.scala.version }}-${{ hashFiles('**/*.sbt') }}
         restore-keys: |
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
-    - name: Bump version
-      run: support/apply-pr-label-locally.sh
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Run tests
       run:  sbt ++${{ matrix.scala.version }} 'show stableVersion' clean samples/clean checkFormatting coverage test coverageAggregate versionPolicyCheck microsite/compile
       env:
