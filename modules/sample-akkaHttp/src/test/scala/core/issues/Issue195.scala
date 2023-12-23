@@ -26,7 +26,7 @@ class Issue195 extends AnyFunSpec with Matchers {
     emit("TypeA", () => TypeA("foo"), Json.obj("type" -> Json.fromString("foo"), "beepBorp" -> Json.fromString("typea")))
     emit("TypeB", () => TypeB("foo"), Json.obj("type" -> Json.fromString("foo"), "beepBorp" -> Json.fromString("TypeB")))
     emit("TypeC", () => Foo.WrappedC(TypeC("foo")), Json.obj("C" -> Json.obj("type" -> Json.fromString("foo")), "beepBorp" -> Json.fromString("WrappedC")))
-    emit("typed", () => Foo.Nested1(Typed("foo")), Json.obj("D" -> Json.obj("type" -> Json.fromString("foo")), "beepBorp" -> Json.fromString("Nested1")))
-    emit("TypeE", () => TypeE("foo"), Json.obj("type" -> Json.fromString("foo"), "beepBorp" -> Json.fromString("TypeE")))
+    emit("typed", () => Foo.Nested2(Typed("foo")), Json.obj("D" -> Json.obj("type" -> Json.fromString("foo")), "beepBorp" -> Json.fromString("Nested2")))
+    emit("TypeE", () => Foo.Nested3(TypeE("foo")), Json.obj("E" -> Json.obj("type" -> Json.fromString("foo")), "beepBorp" -> Json.fromString("Nested3")))
   }
 }

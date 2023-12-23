@@ -703,11 +703,11 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
       .fold[Target[Either[String, StrictProtocolElems[ScalaLanguage]]]](Target.pure(Left("Does not have oneOf"))) { xs =>
         for {
           nameGenerator <- Target.pure(new java.util.concurrent.atomic.AtomicInteger(1))
-          getNewName = Target.pure(nameGenerator).map(ng => s"Nested${ng.getAndIncrement()}")
+          getNewName = () => Target.pure(nameGenerator).map(ng => s"Nested${ng.getAndIncrement()}")
           (rawTypes, nestedClasses) <- xs
             .traverse { model =>
               for {
-                resolved <- ModelResolver.propMetaWithName[ScalaLanguage, Target](getNewName.flatMap(Sc.pureTypeName), model, components)
+                resolved <- ModelResolver.propMetaWithName[ScalaLanguage, Target](() => getNewName().flatMap(Sc.pureTypeName), model, components)
                 (rawType, nestedClasses) <- resolved
                   .bitraverse(
                     deferred => Target.fromOption(concreteTypes.find(_.clsName == deferred.value), UserError("Not supported")),
@@ -888,7 +888,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
             typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
-            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](Target.pure(tpe), schema, components)
+            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](() => Target.pure(tpe), schema, components)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
             fieldName <- formatFieldName(name)
