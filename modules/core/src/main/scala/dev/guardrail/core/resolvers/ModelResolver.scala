@@ -40,20 +40,20 @@ object ModelResolver {
       Fw: FrameworkTerms[L, F]
   ): F[Either[core.LazyResolvedType[L], core.Resolved[L]]] = propMetaImpl[L, F](property, components)(Left(_))
 
-  def propMetaWithName[L <: LA, F[_]: Monad](tpe: L#Type, property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
+  def propMetaWithName[L <: LA, F[_]: Monad](tpe: F[L#Type], property: Tracker[Schema[_]], components: Tracker[Option[Components]])(implicit
       Sc: LanguageTerms[L, F],
       Cl: CollectionsLibTerms[L, F],
       Sw: OpenAPITerms[L, F],
       Fw: FrameworkTerms[L, F]
   ): F[Either[core.LazyResolvedType[L], core.Resolved[L]]] =
     propMetaImpl(property, components)(
-      _.refine[core.Resolved[L]] { case ObjectExtractor(schema) if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
-        core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty)
-      ).orRefine { case c: ComposedSchema => c }(_ => core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty))
+      _.refine[F[core.Resolved[L]]] { case ObjectExtractor(schema) if Option(schema.getProperties).exists(p => !p.isEmpty) => schema }(_ =>
+        tpe.map(core.Resolved[L](_, None, None, ReifiedRawType.unsafeEmpty))
+      ).orRefine { case c: ComposedSchema => c }(_ => tpe.map(core.Resolved[L](_, None, None, ReifiedRawType.unsafeEmpty)))
         .orRefine { case schema: StringSchema if Option(schema.getEnum).map(_.asScala).exists(_.nonEmpty) => schema }(_ =>
-          core.Resolved[L](tpe, None, None, ReifiedRawType.unsafeEmpty)
+          tpe.map(core.Resolved[L](_, None, None, ReifiedRawType.unsafeEmpty))
         )
-        .map(r => r.pure[Either[core.LazyResolvedType[L], *]].pure[F])
+        .map(_.map(r => r.pure[Either[core.LazyResolvedType[L], *]]))
     )
 
   def modelMetaType[L <: LA, F[_]: Monad](

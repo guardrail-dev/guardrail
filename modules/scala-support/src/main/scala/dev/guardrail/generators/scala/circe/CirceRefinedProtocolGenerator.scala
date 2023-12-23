@@ -816,7 +816,7 @@ class CirceRefinedProtocolGenerator private (circeVersion: CirceModelGenerator, 
             typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
-            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](tpe, schema, components)
+            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](Target.pure(tpe), schema, components)
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
             fieldName <- formatFieldName(name)

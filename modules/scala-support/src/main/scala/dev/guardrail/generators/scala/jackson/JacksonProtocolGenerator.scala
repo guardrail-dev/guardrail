@@ -700,7 +700,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             typeName              <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
             tpe                   <- selectType(typeName)
             maybeNestedDefinition <- processProperty(name, schema)
-            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](tpe, schema, components)
+            resolvedType          <- ModelResolver.propMetaWithName[ScalaLanguage, Target](Target.pure(tpe), schema, components)
             prefixes              <- vendorPrefixes()
             propertyRequirement = getPropertyRequirement(schema, requiredFields.contains(name), defaultPropertyRequirement)
             defValue  <- defaultValue(typeName, schema, propertyRequirement, definitions)
