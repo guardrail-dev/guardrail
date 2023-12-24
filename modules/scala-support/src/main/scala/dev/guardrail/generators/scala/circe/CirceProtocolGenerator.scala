@@ -606,10 +606,10 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       Fw: FrameworkTerms[ScalaLanguage, Target],
       Sw: OpenAPITerms[ScalaLanguage, Target],
       P: ProtocolTerms[ScalaLanguage, Target]
-  ): Target[Either[String, NestedProtocolElems[ScalaLanguage]]] =
+  ): Target[Either[String, ClassDefinition[ScalaLanguage]]] =
     NonEmptyList
       .fromList(model.downField("oneOf", _.getOneOf()).indexedDistribute)
-      .fold[Target[Either[String, NestedProtocolElems[ScalaLanguage]]]](Target.pure(Left("Does not have oneOf"))) { xs =>
+      .fold[Target[Either[String, ClassDefinition[ScalaLanguage]]]](Target.pure(Left("Does not have oneOf"))) { xs =>
         for {
           nameGenerator <- Target.pure(new java.util.concurrent.atomic.AtomicInteger(1))
           getNewName = () => Target.pure(nameGenerator).map(ng => s"Nested${ng.getAndIncrement()}")
