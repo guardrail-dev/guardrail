@@ -788,17 +788,29 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           .orRefine { case o: ComposedSchema => o }(o =>
             for {
               parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
-              maybeClassDefinition <- fromModel(
-                nestedClassName,
-                o,
-                parents,
-                concreteTypes,
-                definitions,
-                dtoPackage,
-                supportPackage,
-                defaultPropertyRequirement,
-                components
+              model <- fromModel(
+                clsName = nestedClassName,
+                model = o,
+                parents = parents,
+                concreteTypes = concreteTypes,
+                definitions = definitions,
+                dtoPackage = dtoPackage,
+                supportPackage = supportPackage,
+                defaultPropertyRequirement = defaultPropertyRequirement,
+                components = components
               )
+              oneOf <- fromOneOf(
+                clsName = nestedClassName,
+                model = o,
+                // parents,
+                definitions = definitions,
+                dtoPackage = dtoPackage,
+                supportPackage = supportPackage,
+                concreteTypes = concreteTypes,
+                defaultPropertyRequirement = defaultPropertyRequirement,
+                components = components
+              )
+              maybeClassDefinition = model.orElse(oneOf)
             } yield Option(maybeClassDefinition)
           )
           .orRefine { case a: ArraySchema => a }(_.downField("items", _.getItems()).indexedCosequence.flatTraverse(processProperty(name, _)))
