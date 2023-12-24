@@ -103,7 +103,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 components = components
               )
               oneOf <- fromOneOf(
-                clsName = formattedClsName,
+                clsName = NonEmptyList.of(formattedClsName),
                 model = comp,
                 definitions.value,
                 dtoPackage = dtoPackage,
@@ -137,7 +137,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 components = components
               )
               oneOf <- fromOneOf(
-                clsName = formattedClsName,
+                clsName = NonEmptyList.of(formattedClsName),
                 model = m,
                 definitions.value,
                 dtoPackage = dtoPackage,
@@ -186,7 +186,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               )
               (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
               oneOf <- fromOneOf(
-                clsName = formattedClsName,
+                clsName = NonEmptyList.of(formattedClsName),
                 model = x,
                 definitions.value,
                 dtoPackage = dtoPackage,
@@ -592,7 +592,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   }
 
   private[this] def fromOneOf(
-      clsName: String,
+      clsName: NonEmptyList[String],
       model: Tracker[Schema[_]],
       definitions: List[(String, Tracker[Schema[_]])],
       dtoPackage: List[String],
@@ -641,10 +641,10 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             .map(_.unzip)
           (nestedPMs, (nestedEncoders, nestedDecoders, nestedDefns)) = nestedClasses.toList.flatten.unzip.map(_.unzip3)
           rawTypes <- Target.fromOption(
-            NonEmptyList.fromList(rawTypes.toList.flatten.map((None, _)) ++ nestedPMs.map((Some(clsName), _))),
+            NonEmptyList.fromList(rawTypes.toList.flatten.map((None, _)) ++ nestedPMs.map((Some(clsName.last), _))),
             UserError("Expected at least some models")
           )
-          fullType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage, clsName))
+          fullType <- Sc.selectType(clsName.prependList(dtoPackage))
 
           discriminator_ = model.downField("discriminator", _.getDiscriminator()).indexedDistribute
 
@@ -690,8 +690,8 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 for {
                   fullInstanceType <- Sc.selectType(NonEmptyList.ofInitLast(dtoPackage ++ outer, name))
                   termName = Term.Name(name)
-                  applyAdapter = q"implicit val ${Pat.Var(Term.Name(s"from${name}"))}: ${fullInstanceType} => ${Type.Name(clsName)} = members.${termName}.apply _"
-                  member  = q"case class ${tpe}(value: ${fullInstanceType}) extends ${Init.After_4_6_0(Type.Name(clsName), Name.Anonymous(), Nil)}"
+                  applyAdapter = q"implicit val ${Pat.Var(Term.Name(s"from${name}"))}: ${fullInstanceType} => ${Type.Name(clsName.last)} = members.${termName}.apply _"
+                  member  = q"case class ${tpe}(value: ${fullInstanceType}) extends ${Init.After_4_6_0(Type.Name(clsName.last), Name.Anonymous(), Nil)}"
                   decoder = validateDecoder(memberName, q"_root_.io.circe.Decoder[${tpe}].map(${Term.Name(s"from${name}")})")
                   encoder = p"case members.${termName}(member) => ${injectDiscriminator(memberName, q"member")}"
                 } yield (member, (applyAdapter, (decoder, encoder)))
@@ -700,11 +700,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             }
             .map(_.unzip.map(_.unzip.map(_.unzip))) // NonEmptyList#unzip4 adapter :see_no_evil:
 
-          encoder = q"""implicit def ${Term.Name(s"encode${clsName}")}: _root_.io.circe.Encoder[${Type
-              .Name(clsName)}] = _root_.io.circe.Encoder.instance(${Term
+          encoder = q"""implicit def ${Term.Name(s"encode${clsName.last}")}: _root_.io.circe.Encoder[${Type
+              .Name(clsName.last)}] = _root_.io.circe.Encoder.instance(${Term
               .PartialFunction(encoders.toList)}) """
           decoder = q"""
-                    implicit def ${Term.Name(s"decode${clsName}")}: _root_.io.circe.Decoder[${Type.Name(clsName)}] = {
+                    implicit def ${Term.Name(s"decode${clsName.last}")}: _root_.io.circe.Decoder[${Type.Name(clsName.last)}] = {
                       ..${decoders.zipWithIndex.toList.map { case (decoder, idx) =>
               q"val ${Pat.Var(Term.Name(s"dec${idx}"))} = ${decoder}"
             }};
@@ -713,16 +713,16 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                     """
           statements = List(
             q"object members { ..${members.toList} }",
-            q"def apply[A](value: A)(implicit ev: A => ${Type.Name(clsName)}): ${Type.Name(clsName)} = ev(value)"
+            q"def apply[A](value: A)(implicit ev: A => ${Type.Name(clsName.last)}): ${Type.Name(clsName.last)} = ev(value)"
           ) ++ applyAdapters.toList ++ nestedDefns ++ nestedEncoders.flatten ++ nestedDecoders.flatten
-          defn = q"""sealed abstract class ${Type.Name(clsName)} {}"""
+          defn = q"""sealed abstract class ${Type.Name(clsName.last)} {}"""
           staticDefns = StaticDefns[ScalaLanguage](
-            className = clsName,
+            className = clsName.last,
             extraImports = List.empty,
             definitions = List(encoder, decoder),
             statements = statements
           )
-        } yield Right(ClassDefinition[ScalaLanguage](clsName, Type.Name(clsName), fullType, defn, staticDefns, Nil))
+        } yield Right(ClassDefinition[ScalaLanguage](clsName.last, Type.Name(clsName.last), fullType, defn, staticDefns, Nil))
       }
 
   // NB: In OpenAPI 3.1 ObjectSchema was broadly replaced with JsonSchema.
