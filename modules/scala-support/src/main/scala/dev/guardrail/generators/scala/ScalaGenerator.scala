@@ -510,12 +510,14 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
   override def wrapToObject(
       name: scala.meta.Term.Name,
       imports: List[scala.meta.Import],
-      definitions: List[scala.meta.Defn]
+      definitions: List[scala.meta.Defn],
+      statements: List[scala.meta.Stat]
   ): Target[Option[scala.meta.Defn.Object]] =
     Target.pure(Some(q"""
            object $name {
                ..$imports
                ..$definitions
+               ..$statements
            }
          """))
 }
