@@ -764,14 +764,14 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
           for {
             widenClass          <- widenClassDefinition(classDefinition.cls)
             companionTerm       <- pureTermName(classDefinition.name)
-            companionDefinition <- wrapToObject(companionTerm, classDefinition.staticDefns.extraImports, classDefinition.staticDefns.definitions)
+            companionDefinition <- wrapToObject(companionTerm, classDefinition.staticDefns.extraImports, classDefinition.staticDefns.definitions, Nil)
             widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
           } yield List(widenClass) ++ widenCompanion.fold(classDefinition.staticDefns.definitions)(List(_))
         case enumDefinition: EnumDefinition[JavaLanguage] =>
           for {
             widenClass          <- widenClassDefinition(enumDefinition.cls)
             companionTerm       <- pureTermName(enumDefinition.name)
-            companionDefinition <- wrapToObject(companionTerm, enumDefinition.staticDefns.extraImports, enumDefinition.staticDefns.definitions)
+            companionDefinition <- wrapToObject(companionTerm, enumDefinition.staticDefns.extraImports, enumDefinition.staticDefns.definitions, Nil)
             widenCompanion      <- companionDefinition.traverse(widenObjectDefinition)
           } yield List(widenClass) ++ widenCompanion.fold(enumDefinition.staticDefns.definitions)(List(_))
       }

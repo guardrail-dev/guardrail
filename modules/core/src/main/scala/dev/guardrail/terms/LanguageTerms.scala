@@ -125,7 +125,7 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
       server: Server[L]
   ): F[List[WriteTree]]
 
-  def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]): F[Option[L#ObjectDefinition]]
+  def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition], statements: List[L#Statement]): F[Option[L#ObjectDefinition]]
 
   def copy(
       litString: String => F[L#Term] = self.litString _,
@@ -209,7 +209,7 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
         self.writeClient _,
       writeServer: (Path, NonEmptyList[String], List[L#Import], List[L#TermName], Option[NonEmptyList[String]], Server[L]) => F[List[WriteTree]] =
         self.writeServer _,
-      wrapToObject: (L#TermName, List[L#Import], List[L#Definition]) => F[Option[L#ObjectDefinition]] = self.wrapToObject _
+      wrapToObject: (L#TermName, List[L#Import], List[L#Definition], List[L#Statement]) => F[Option[L#ObjectDefinition]] = self.wrapToObject _
   ) = {
     val newLitString                  = litString
     val newLitFloat                   = litFloat
@@ -383,7 +383,8 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
           dtoComponents: Option[NonEmptyList[String]],
           server: Server[L]
       ) = newWriteServer(pkgPath, pkgName, customImports, frameworkImplicitNames, dtoComponents, server)
-      def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition]) = newWrapToObject(name, imports, definitions)
+      def wrapToObject(name: L#TermName, imports: List[L#Import], definitions: List[L#Definition], statements: List[L#Statement]) =
+        newWrapToObject(name, imports, definitions, statements)
     }
   }
 }

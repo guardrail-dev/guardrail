@@ -427,7 +427,8 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
   override def wrapToObject(
       name: com.github.javaparser.ast.expr.Name,
       imports: List[com.github.javaparser.ast.ImportDeclaration],
-      definitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]]
+      definitions: List[com.github.javaparser.ast.body.BodyDeclaration[_ <: com.github.javaparser.ast.body.BodyDeclaration[_]]],
+      statements: List[com.github.javaparser.ast.Node]
   ): Target[Option[Nothing]] =
     Target.pure(Option.empty[Nothing])
 }

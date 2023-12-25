@@ -51,6 +51,16 @@ components:
         propertyName: beepBorp
         mapping:
           typea: '#/components/schemas/TypeA'
+    X:
+      type: object
+      required: [ links ]
+      properties:
+        links:
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: object
 paths:
   /foobar:
     get:
