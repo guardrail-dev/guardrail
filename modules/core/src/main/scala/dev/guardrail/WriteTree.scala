@@ -30,8 +30,10 @@ object WriteTree {
                   .zipWithIndex
                   .find { case ((a, b), _) => a != b }
                   .map(_._2)
-                  .orElse(Some(Math.max(exists.length, data.length)))
-                  .filterNot(Function.const(data.length == exists.length))
+                  .orElse(
+                    Some(Math.max(exists.length, data.length))
+                      .filterNot(Function.const(data.length == exists.length))
+                  )
 
               diffIdx.fold[Writer[List[String], WriteTreeState]](Writer.value(FileIdentical)) { diffIdx =>
                 val existSample = new String(exists, UTF_8)
