@@ -7,10 +7,7 @@ paths:
     get:
       operationId: getFoo
       parameters:
-        - in: query
-          name: FooEnum
-          $ref: "#/components/schemas/FooEnum"
-          required: true
+        - $ref: "#/components/parameters/FooEnum"
       responses:
         204:
           description: OK
@@ -22,3 +19,10 @@ components:
         - foo-bar-1
         - baz-quux-2-flurb
 #        - 3-moo-cow
+  parameters:
+    FooEnum:
+      in: query
+      name: FooEnum
+      required: true
+      schema:
+        $ref: '#/components/schemas/FooEnum'
