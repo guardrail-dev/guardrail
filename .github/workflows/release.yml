@@ -37,7 +37,7 @@ jobs:
         run: |
           module="${{ github.event.inputs.module }}"
           if [ -z "$module" ] || [ "$module" = "From Tag" ]; then
-            module="$(echo "$GITHUB_REF" | sed 's~^refs/tags/\(.*\)-v[0-9.]\+$~\1~')"
+            module="$(echo "$GITHUB_REF" | sed 's~^refs/tags/\(.*\)-v[0-9\.]\+\(-M[0-9]\+\|-RC[0-9]\+\)\?$~\1~')"
             echo "extract project: ${GITHUB_REF}, ${module}"
           else
             echo "Using supplied module: $module"
