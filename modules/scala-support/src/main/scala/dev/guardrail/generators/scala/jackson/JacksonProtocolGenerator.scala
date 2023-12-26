@@ -654,6 +654,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
 
     def processProperty(name: String, schema: Tracker[Schema[_]]): Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]] =
       for {
+        ()              <- Target.log.debug(s"processProperty: ${name} ${schema.unwrapTracker.showNotNull}")
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
         defn <- schema
           .refine[Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]]] { case ObjectExtractor(x) => x }(o =>
