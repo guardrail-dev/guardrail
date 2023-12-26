@@ -19,6 +19,7 @@ import dev.guardrail.generators.protocol.{ ClassChild, ClassHierarchy, ClassPare
 import dev.guardrail.generators.scala.circe.CirceProtocolGenerator.WithValidations
 import dev.guardrail.generators.scala.{ CirceModelGenerator, ScalaLanguage }
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
+import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.{ ProtocolDefinitions, RawParameterName }
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.PropertyRequirement
@@ -1353,7 +1354,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         } else {
           None
         }
-      params = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(param => discriminatorNames.contains(param.term.name.value))
+      params <- finalizeParams(parents.reverse.flatMap(_.params) ++ selfParams).map(_.filterNot(param => discriminatorNames.contains(param.term.name.value)))
 
       terms = params.map(_.term)
 
@@ -1382,6 +1383,28 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
     } yield code
 
+  private def finalizeParams(params: List[ProtocolParameter[ScalaLanguage]]): Target[List[ProtocolParameter[ScalaLanguage]]] =
+    for {
+      reduced <- params
+        .groupBy(_.name)
+        .toList
+        .traverse { case (k, xs) =>
+          implicit val ord: Ordering[PropertyRequirement] = {
+            case (PropertyRequirement.Required, _) => -1
+            case (_, PropertyRequirement.Required) => 1
+            case _                                 => 0
+          }
+          xs.distinctBy(_.term.syntax).sortBy(_.propertyRequirement) match {
+            case Nil                                                           => Target.raiseUserError(s"Unexpectedly empty parameter group: ${xs}")
+            case x :: Nil                                                      => Target.pure((k, x))
+            case xs @ (x :: _) if xs.distinctBy(_.baseType.syntax).length == 1 => Target.pure((k, x))
+            case xs @ (x :: rest) => Target.raiseUserError(s"Type conflicts for ${x.name.value}: ${xs.flatMap(_.term.decltpe.map(_.syntax)).mkString(", ")}")
+          }
+        }
+        .map(_.toMap)
+      names = params.map(_.name).distinct
+    } yield names.flatMap(n => reduced.get(n))
+
   private def encodeModel(
       clsName: String,
       dtoPackage: List[String],
@@ -1390,9 +1413,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   ) =
     for {
       () <- Target.pure(())
-      discriminators                = parents.flatMap(_.discriminators)
-      discriminatorNames            = discriminators.map(_.propertyName).toSet
-      allParams                     = parents.reverse.flatMap(_.params) ++ selfParams
+      discriminators     = parents.flatMap(_.discriminators)
+      discriminatorNames = discriminators.map(_.propertyName).toSet
+      allParams <- finalizeParams(parents.reverse.flatMap(_.params) ++ selfParams)
       (discriminatorParams, params) = allParams.partition(param => discriminatorNames.contains(param.name.value))
       readOnlyKeys: List[String]    = params.flatMap(_.readOnlyKey).toList
       typeName                      = Type.Name(clsName)
@@ -1457,9 +1480,9 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   )(implicit Lt: LanguageTerms[ScalaLanguage, Target]): Target[Option[Defn.Val]] = {
     for {
       () <- Target.pure(())
-      discriminators            = parents.flatMap(_.discriminators)
-      discriminatorNames        = discriminators.map(_.propertyName).toSet
-      allParams                 = parents.reverse.flatMap(_.params) ++ selfParams
+      discriminators     = parents.flatMap(_.discriminators)
+      discriminatorNames = discriminators.map(_.propertyName).toSet
+      allParams <- finalizeParams(parents.reverse.flatMap(_.params) ++ selfParams)
       params                    = allParams.filterNot(param => discriminatorNames.contains(param.name.value))
       needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
       paramCount                = params.length

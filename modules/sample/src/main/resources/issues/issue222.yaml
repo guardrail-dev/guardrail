@@ -15,6 +15,7 @@ definitions:
     allOf:
       - "$ref": "#/definitions/RequestFields"
       - type: object
+        required: [same]
         properties:
           id:
             type: string
