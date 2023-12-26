@@ -17,6 +17,7 @@ import dev.guardrail.generators.ProtocolGenerator.{ WrapEnumSchema, wrapNumberEn
 import dev.guardrail.generators.protocol.{ ClassChild, ClassHierarchy, ClassParent }
 import dev.guardrail.generators.scala.{ JacksonModelGenerator, ScalaLanguage }
 import dev.guardrail.generators.spi.{ ModuleLoadResult, ProtocolGeneratorLoader }
+import dev.guardrail.generators.syntax._
 import dev.guardrail.generators.{ ProtocolDefinitions, RawParameterName }
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.terms.protocol.PropertyRequirement.{ Optional, RequiredNullable }
@@ -653,6 +654,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
 
     def processProperty(name: String, schema: Tracker[Schema[_]]): Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]] =
       for {
+        ()              <- Target.log.debug(s"processProperty: ${name} ${schema.unwrapTracker.showNotNull}")
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
         defn <- schema
           .refine[Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]]] { case ObjectExtractor(x) => x }(o =>
@@ -1240,11 +1242,12 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
         NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonMissingDeserializer")
       )
       allTerms = selfParams ++ parents.flatMap(_.params)
+
+      discriminatorNames = parents.flatMap(_.discriminators).map(_.propertyName).toSet
+      params <- finalizeParams(parents.reverse.flatMap(_.params) ++ selfParams).map(_.filterNot(param => discriminatorNames.contains(param.term.name.value)))
       renderedClass = { // TODO: This logic should be reflowed. The scope and rebindings is due to a refactor where
         //       code from another dependent class was just copied in here wholesale.
-        val discriminatorNames = parents.flatMap(_.discriminators).map(_.propertyName).toSet
-        val params             = (parents.reverse.flatMap(_.params) ++ selfParams).filterNot(param => discriminatorNames.contains(param.term.name.value))
-        val terms              = params.map(_.term)
+        val terms = params.map(_.term)
 
         val toStringMethod = if (params.exists(_.dataRedaction != DataVisible)) {
           def mkToStringTerm(param: ProtocolParameter[ScalaLanguage]): Term = param match {
@@ -1308,6 +1311,28 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       }
     } yield renderedClass
   }
+
+  private def finalizeParams(params: List[ProtocolParameter[ScalaLanguage]]): Target[List[ProtocolParameter[ScalaLanguage]]] =
+    for {
+      reduced <- params
+        .groupBy(_.name)
+        .toList
+        .traverse { case (k, xs) =>
+          implicit val ord: Ordering[PropertyRequirement] = {
+            case (PropertyRequirement.Required, _) => -1
+            case (_, PropertyRequirement.Required) => 1
+            case _                                 => 0
+          }
+          xs.distinctBy(_.term.syntax).sortBy(_.propertyRequirement) match {
+            case Nil                                                           => Target.raiseUserError(s"Unexpectedly empty parameter group: ${xs}")
+            case x :: Nil                                                      => Target.pure((k, x))
+            case xs @ (x :: _) if xs.distinctBy(_.baseType.syntax).length == 1 => Target.pure((k, x))
+            case xs @ (x :: rest) => Target.raiseUserError(s"Type conflicts for ${x.name.value}: ${xs.flatMap(_.term.decltpe.map(_.syntax)).mkString(", ")}")
+          }
+        }
+        .map(_.toMap)
+      names = params.map(_.name).distinct
+    } yield names.flatMap(n => reduced.get(n))
 
   private def encodeModel(
       clsName: String,

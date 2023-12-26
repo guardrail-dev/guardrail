@@ -15,8 +15,11 @@ definitions:
     allOf:
       - "$ref": "#/definitions/RequestFields"
       - type: object
+        required: [same]
         properties:
           id:
+            type: string
+          same:
             type: string
   RequestFields:
     description: Request fields
@@ -24,3 +27,5 @@ definitions:
     properties:
       state:
         type: integer
+      same:
+        type: string
