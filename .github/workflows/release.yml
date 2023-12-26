@@ -5,8 +5,7 @@ run-name: "Release${{ inputs.module && inputs.version && format(' ({0} {1})', in
 on:
   release:
     types:
-      - released
-      - prereleased
+      - published
   workflow_dispatch:
     inputs:
       module:
