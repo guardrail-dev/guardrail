@@ -18,9 +18,13 @@ definitions:
         properties:
           id:
             type: string
+          same:
+            type: string
   RequestFields:
     description: Request fields
     type: object
     properties:
       state:
         type: integer
+      same:
+        type: string
