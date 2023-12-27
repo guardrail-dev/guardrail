@@ -4,20 +4,29 @@ Makefile
 A simple `Makefile` follows:
 
 ```
-GUARDRAIL_VERSION=0.62.0
-SWAGGER_TARGET=src/main/scala/swagger
-SWAGGER_TEST_TARGET=src/test/scala/swagger
+GUARDRAIL_CLI_VERSION=1.0.0-M1
+GUARDRAIL_AKKA_HTTP_VERSION=1.0.0-M1
+SLF4J_JDK14_VERSION=2.0.9
+
+CODEGEN_TARGET=src/main/scala/swagger
+CODEGEN_TEST_TARGET=src/test/scala/swagger
 
 clean-clients:
-	git clean -fdx $(SWAGGER_TARGET)
-	git clean -fdx $(SWAGGER_TEST_TARGET)
+	git clean -fdx $(CODEGEN_TARGET)
+	git clean -fdx $(CODEGEN_TEST_TARGET)
 
 clients: clean-clients
-	java -jar guardrail-$(SWAGGER_CODEGEN_VERSION).jar \
-		--client --specPath external/swagger/account-service.yaml --outputPath $(SWAGGER_TARGET)      --packageName dev.guardrail.test.clients.account --tracing \
-		--server --specPath external/swagger/account-service.yaml --outputPath $(SWAGGER_TEST_TARGET) --packageName dev.guardrail.test.clients.account \
-		--client --specPath external/swagger/billing-service.yaml --outputPath $(SWAGGER_TARGET)      --packageName dev.guardrail.test.clients.billing --tracing \
-		--server --specPath external/swagger/billing-service.yaml --outputPath $(SWAGGER_TEST_TARGET) --packageName dev.guardrail.test.clients.billing
+	cs launch --repository https://s01.oss.sonatype.org/content/repositories/releases \
+		dev.guardrail:guardrail-cli_2.13:$(GUARDRAIL_CLI_VERSION) \
+			dev.guardrail:guardrail-scala-akka-http_2.13:$(GUARDRAIL_AKKA_HTTP_VERSION) \
+			org.slf4j:slf4j-jdk14:$(SLF4J_JDK14_VERSION) \
+		-- \
+			java \
+			--default --framework akka-http --packageName boop \
+			--client --packageName example.clients.account      --specPath external/swagger/account-service.yaml --outputPath $(CODEGEN_TARGET) \
+			--server --packageName example.test.servers.account --specPath external/swagger/account-service.yaml --outputPath $(CODEGEN_TEST_TARGET) \
+			--client --packageName example.clients.account      --specPath external/swagger/billing-service.yaml --outputPath $(CODEGEN_TARGET) \
+			--server --packageName example.test.servers.account --specPath external/swagger/billing-service.yaml --outputPath $(CODEGEN_TEST_TARGET)
 ```
 
 An important thing to note is that you don't want to modfy generated code. The CLI adapter is only intended to provide a baseline for environments that are not supported by other build tool plugins, providing a low barrier to entry before attempting to write a plugin for your environment.
