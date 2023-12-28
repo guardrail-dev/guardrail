@@ -13,7 +13,7 @@ Build tool plugins
 |---|---|---|
 | [`guardrail-dev/sbt-guardrail`](https://github.com/guardrail-dev/sbt-guardrail) | [![sbt-guardrail](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/sbt-guardrail/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:sbt-guardrail) | [docs](docs/plugins/sbt.md) |
 | [`guardrail-dev/guardrail-maven-plugin`](https://github.com/guardrail-dev/guardrail-maven-plugin) | [![guardrail-maven-plugin](https://maven-badges.herokuapp.com/maven-central/dev.guardrail/guardrail-maven-plugin/badge.svg)](https://search.maven.org/search?q=g:dev.guardrail%20a:guardrail-maven-plugin) | [docs](docs/plugins/maven.md) |
-| [`guardrail-dev/guardrail-gradle-plugin`](https://github.com/guardrail-dev/guardrail-gradle-plugin) | `guardrail-gradle-plugin` | [Plugin Portal](https://plugins.gradle.org/plugin/com.twilio.guardrail) | [docs](docs/plugins/gradle.md) |
+| [`guardrail-dev/guardrail-gradle-plugin`](https://github.com/guardrail-dev/guardrail-gradle-plugin) | `guardrail-gradle-plugin` | [Plugin Portal](https://plugins.gradle.org/plugin/dev.guardrail) | [docs](docs/plugins/gradle.md) |
 | [CLI support](./modules/cli) | Latest | [`cs install guardrail`](https://get-coursier.io/docs/cli-install), [docs](docs/plugins/make.md) |
 
 New to guardrail?
