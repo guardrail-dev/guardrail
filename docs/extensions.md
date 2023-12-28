@@ -1,7 +1,7 @@
 guardrail Extensions
 ====================
 
-guardrail has [a number of vendor extensions](https://github.com/guardrail-dev/guardrail/blob/master/modules/codegen/src/main/scala/dev/guardrail/extract/package.scala) designed to enhance safety and provide more idiomatic generated code. The following table lists all vendor extensions, contexts where they are applicable, and a short description of how to use them effectively.
+guardrail has [a number of vendor extensions](https://github.com/guardrail-dev/guardrail/blob/master/modules/core/src/main/scala/dev/guardrail/core/extract/package.scala) designed to enhance safety and provide more idiomatic generated code. The following table lists all vendor extensions, contexts where they are applicable, and a short description of how to use them effectively.
 
 <table>
   <thead>
