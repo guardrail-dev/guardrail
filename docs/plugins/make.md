@@ -1,7 +1,7 @@
 Makefile
 ========
 
-A simple `Makefile` follows:
+A simple `Makefile` using [coursier](https://get-coursier.io/) (`cs`) could be as follows:
 
 ```
 GUARDRAIL_CLI_VERSION=1.0.0-M1
