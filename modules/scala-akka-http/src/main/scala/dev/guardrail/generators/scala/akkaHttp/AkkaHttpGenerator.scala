@@ -4,6 +4,7 @@ import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.{ RuntimeFailure, Target }
+import dev.guardrail.core.Tracker
 import dev.guardrail.generators.scala.{ CirceModelGenerator, CirceRefinedModelGenerator, JacksonModelGenerator, ModelGeneratorType, ScalaLanguage }
 import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult, ProtocolGeneratorLoader }
 import dev.guardrail.terms.framework._
@@ -383,8 +384,8 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
   override def getFrameworkDefinitions(tracing: Boolean) =
     Target.pure(List.empty)
 
-  override def lookupStatusCode(key: String) =
-    key match {
+  override def lookupStatusCode(key: Tracker[String]) =
+    key.unwrapTracker match {
       case "100" => Target.pure((100, q"Continue"))
       case "101" => Target.pure((101, q"SwitchingProtocols"))
       case "102" => Target.pure((102, q"Processing"))
@@ -464,6 +465,6 @@ class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGenerato
       case "511" => Target.pure((511, q"NetworkAuthenticationRequired"))
       case "598" => Target.pure((598, q"NetworkReadTimeout"))
       case "599" => Target.pure((599, q"NetworkConnectTimeout"))
-      case _     => Target.raiseUserError(s"Unknown HTTP status code: ${key}")
+      case code  => Target.raiseUserError(s"Unknown HTTP status code: ${code} (${key.showHistory})")
     }
 }

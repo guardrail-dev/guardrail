@@ -47,7 +47,7 @@ object Responses {
       instances <- responses
         .traverse { case (key, resp) =>
           for {
-            httpCode <- lookupStatusCode(key)
+            httpCode <- lookupStatusCode(Tracker.cloneHistory(resp, key))
             (statusCode, statusCodeName) = httpCode
             valueTypes <- (for {
               (rawContentType, content) <- resp.downField("content", _.getContent()).indexedDistribute.value

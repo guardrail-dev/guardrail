@@ -139,9 +139,9 @@ class BigObjectSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner wit
       def getFrameworkImplicits(): dev.guardrail.Target[Option[
         (dev.guardrail.generators.scala.ScalaLanguage#TermName, dev.guardrail.generators.scala.ScalaLanguage#ObjectDefinition)
       ]] = ???
-      def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]] = ???
-      def lookupStatusCode(key: String): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)]      = ???
-      def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type]            = Target.pure(t"io.circe.Json")
+      def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]]     = ???
+      def lookupStatusCode(key: Tracker[String]): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)] = ???
+      def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"io.circe.Json")
     }
     implicit val circeProtocolGenerator = CirceProtocolGenerator(CirceModelGenerator.V012)
     implicit val scalaGenerator         = ScalaGenerator()
