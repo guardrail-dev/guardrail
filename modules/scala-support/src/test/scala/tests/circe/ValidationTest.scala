@@ -59,8 +59,8 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner wi
         def getFrameworkImplicits(): dev.guardrail.Target[Option[
           (dev.guardrail.generators.scala.ScalaLanguage#TermName, dev.guardrail.generators.scala.ScalaLanguage#ObjectDefinition)
         ]] = ???
-        def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]] = ???
-        def lookupStatusCode(key: String): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)]      = ???
+        def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]]     = ???
+        def lookupStatusCode(key: Tracker[String]): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)] = ???
         def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"io.circe.Json")
       }
       implicit val circeProtocolGenerator: ProtocolTerms[ScalaLanguage, Target] = CirceRefinedProtocolGenerator(CirceRefinedModelGenerator.V012)

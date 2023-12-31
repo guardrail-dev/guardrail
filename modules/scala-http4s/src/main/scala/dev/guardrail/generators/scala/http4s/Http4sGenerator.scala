@@ -4,6 +4,7 @@ import scala.meta._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Target
+import dev.guardrail.core.Tracker
 import dev.guardrail.generators.scala._
 import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult }
 import dev.guardrail.terms.framework._
@@ -89,8 +90,8 @@ class Http4sGenerator private extends FrameworkTerms[ScalaLanguage, Target] {
   def getFrameworkDefinitions(tracing: Boolean) =
     Target.pure(List.empty)
 
-  def lookupStatusCode(key: String): Target[(Int, scala.meta.Term.Name)] =
-    key match {
+  def lookupStatusCode(key: Tracker[String]): Target[(Int, scala.meta.Term.Name)] =
+    key.unwrapTracker match {
       case "100" => Target.pure((100, q"Continue"))
       case "101" => Target.pure((101, q"SwitchingProtocols"))
       case "102" => Target.pure((102, q"Processing"))
@@ -149,6 +150,6 @@ class Http4sGenerator private extends FrameworkTerms[ScalaLanguage, Target] {
       case "508" => Target.pure((508, q"LoopDetected"))
       case "510" => Target.pure((510, q"NotExtended"))
       case "511" => Target.pure((511, q"NetworkAuthenticationRequired"))
-      case _     => Target.raiseUserError(s"Unknown HTTP status code: ${key}")
+      case code  => Target.raiseUserError(s"Unknown HTTP status code: ${code} (${key.showHistory})")
     }
 }

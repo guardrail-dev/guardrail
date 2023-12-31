@@ -1,6 +1,7 @@
 package dev.guardrail.generators.scala.dropwizard
 
 import dev.guardrail.{ Target, UserError }
+import dev.guardrail.core.Tracker
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.terms.framework.FrameworkTerms
 import dev.guardrail.generators.spi.{ FrameworkGeneratorLoader, ModuleLoadResult }
@@ -30,8 +31,8 @@ class DropwizardGenerator private extends FrameworkTerms[ScalaLanguage, Target] 
 
   // jaxrs has a Status enum, but it is missing a _lot_ of codes,
   // so we'll make our own here and use ints in the generated code
-  override def lookupStatusCode(key: String): Target[(Int, Term.Name)] =
-    key match {
+  override def lookupStatusCode(key: Tracker[String]): Target[(Int, Term.Name)] =
+    key.unwrapTracker match {
       case "100" => Target.pure((100, q"Continue"))
       case "101" => Target.pure((101, q"SwitchingProtocols"))
       case "102" => Target.pure((102, q"Processing"))
@@ -108,6 +109,6 @@ class DropwizardGenerator private extends FrameworkTerms[ScalaLanguage, Target] 
           .filter(code => code >= 100 && code <= 599)
           .map((_, Term.Name(s"StatusCode$custom")))
           .toOption
-        Target.fromOption(customCode, UserError(s"'$custom' is not a valid HTTP status code"))
+        Target.fromOption(customCode, UserError(s"'$custom' is not a valid HTTP status code (${key.showHistory})"))
     }
 }

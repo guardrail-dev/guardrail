@@ -7,7 +7,7 @@ import com.github.javaparser.ast.expr._
 import scala.reflect.runtime.universe.typeTag
 
 import dev.guardrail.Target
-import dev.guardrail.core.SupportDefinition
+import dev.guardrail.core.{ SupportDefinition, Tracker }
 import dev.guardrail.generators.java.JavaCollectionsGenerator
 import dev.guardrail.generators.java.JavaLanguage
 import dev.guardrail.generators.java.JavaVavrCollectionsGenerator
@@ -58,10 +58,10 @@ class DropwizardGenerator private extends FrameworkTerms[JavaLanguage, Target] {
       )
     )
 
-  def lookupStatusCode(key: String) = {
+  def lookupStatusCode(key: Tracker[String]) = {
     def parseStatusCode(code: Int, termName: String): Target[(Int, Name)] =
       safeParseName(termName).map(name => (code, name))
-    key match {
+    key.unwrapTracker match {
       case "100" => parseStatusCode(100, "Continue")
       case "101" => parseStatusCode(101, "SwitchingProtocols")
       case "102" => parseStatusCode(102, "Processing")
@@ -128,7 +128,7 @@ class DropwizardGenerator private extends FrameworkTerms[JavaLanguage, Target] {
       case "511" => parseStatusCode(511, "NetworkAuthenticationRequired")
       case "598" => parseStatusCode(598, "NetworkReadTimeout")
       case "599" => parseStatusCode(599, "NetworkConnectTimeout")
-      case _     => Target.raiseUserError(s"Unknown HTTP status code: ${key}")
+      case code  => Target.raiseUserError(s"Unknown HTTP status code: ${code} (${key.showHistory})")
     }
   }
 }
