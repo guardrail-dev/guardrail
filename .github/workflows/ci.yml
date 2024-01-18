@@ -33,7 +33,7 @@ jobs:
       run: echo "scala_versions=$(sbt 'print githubMatrixSettings' | grep '^\[{' | grep 'bincompat' | tail -n 1)" >> $GITHUB_OUTPUT
     - name: print Java version
       run: java -version
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ~/.cache/coursier
         key: ${{ runner.os }}-scala-${{ matrix.scala.version }}-${{ hashFiles('**/*.sbt') }}
@@ -73,7 +73,7 @@ jobs:
         java-version: zulu@${{ matrix.java }}
     - name: print Java version
       run: java -version
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ~/.cache/coursier
         key: ${{ runner.os }}-scala-${{ matrix.scala.version }}-${{ hashFiles('**/*.sbt') }}
@@ -114,7 +114,7 @@ jobs:
         java-version: zulu@${{ matrix.java }}
     - name: print Java version
       run: java -version
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: ~/.cache/coursier
         key: ${{ runner.os }}-scala-${{ matrix.scala.version }}-${{ hashFiles('**/*.sbt') }}
