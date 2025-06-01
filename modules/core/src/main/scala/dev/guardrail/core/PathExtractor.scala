@@ -69,9 +69,9 @@ class PathExtractor[L <: LA, T, TN <: T, ModelGeneratorType](
   type P  = Parser[(Option[TN], T)]
   type LP = Parser[List[(Option[TN], T)]]
 
-  val plainString: Parser[String]   = many(noneOf("{}/?")).map(_.mkString)
-  val plainNEString: Parser[String] = many1(noneOf("{}/?")).map(_.toList.mkString)
-  val stringSegment: P              = plainNEString.map(s => (None, stringPath(s)))
+  val plainString: Parser[String]                                                                            = many(noneOf("{}/?")).map(_.mkString)
+  val plainNEString: Parser[String]                                                                          = many1(noneOf("{}/?")).map(_.toList.mkString)
+  val stringSegment: P                                                                                       = plainNEString.map(s => (None, stringPath(s)))
   def regexSegment(implicit pathArgs: List[LanguageParameter[L]], modelGeneratorType: ModelGeneratorType): P =
     (plainString ~ PathExtractor.variable ~ plainString).flatMap { case ((before, binding), after) =>
       PathExtractor.lookupName[L, (Option[TN], T)](binding, pathArgs) { case param @ LanguageParameter(_, _, paramName, argName, _) =>

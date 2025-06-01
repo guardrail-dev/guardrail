@@ -6,7 +6,7 @@ import scala.reflect.runtime.universe.typeTag
 
 class ScalaModuleMapper extends ModuleMapperLoader {
   type L = ScalaLanguage
-  def reified = typeTag[Target[ScalaLanguage]]
+  def reified                                           = typeTag[Target[ScalaLanguage]]
   def apply(frameworkName: String): Option[Set[String]] = frameworkName match {
     case "akka-http"         => Some(Set("akka-http", "circe"))
     case "http4s"            => Some(Set("circe", "http4s"))

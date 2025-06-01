@@ -195,7 +195,7 @@ object LanguageParameter {
     for {
       parameters <- params.traverse(fromParameter(protocolElems, components))
       counts     <- parameters.traverse(param => extractTermName(param.paramName)).map(_.groupBy(identity).view.mapValues(_.length).toMap)
-      result <- parameters.traverse { param =>
+      result     <- parameters.traverse { param =>
         extractTermName(param.paramName).flatMap { name =>
           if (counts.getOrElse(name, 0) > 1) {
             pureTermName(param.argName.value).flatMap { escapedName =>

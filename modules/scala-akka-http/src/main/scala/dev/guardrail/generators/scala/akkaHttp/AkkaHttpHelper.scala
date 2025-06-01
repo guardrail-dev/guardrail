@@ -28,7 +28,7 @@ object AkkaHttpHelper {
       }
       decode <- Target.fromOption(
         modelGeneratorType match {
-          case _: CirceModelGenerator => Some(q"""io.circe.Decoder[${baseType}].decodeJson(json).fold(FastFuture.failed, FastFuture.successful)""")
+          case _: CirceModelGenerator   => Some(q"""io.circe.Decoder[${baseType}].decodeJson(json).fold(FastFuture.failed, FastFuture.successful)""")
           case _: JacksonModelGenerator =>
             Some(q"""FastFuture(implicitly[GuardrailDecoder[$baseType]].decode(json))""")
           case _ => None
@@ -48,7 +48,7 @@ object AkkaHttpHelper {
   }
 
   def protocolImplicits(modelGeneratorType: ModelGeneratorType): Target[Term.ParamClause] = modelGeneratorType match {
-    case _: CirceModelGenerator => Target.pure(Term.ParamClause(Nil))
+    case _: CirceModelGenerator   => Target.pure(Term.ParamClause(Nil))
     case _: JacksonModelGenerator =>
       Target.pure(
         Term.ParamClause(

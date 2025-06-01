@@ -52,7 +52,7 @@ object LazyResolvedType {
     import Sw._
     for {
       formattedName <- formatTypeName(name)
-      resolved <- resolveType(formattedName, protocolElems)
+      resolved      <- resolveType(formattedName, protocolElems)
         .flatMap {
           case RandomType(name, tpe) =>
             liftType(tpe).map(Resolved[L](_, None, None, liftRawType(ReifiedRawType.unsafeEmpty)))
@@ -113,7 +113,7 @@ object ResolvedType {
       protocolElems: List[StrictProtocolElems[L]]
   )(implicit Sc: LanguageTerms[L, F], Cl: CollectionsLibTerms[L, F], Sw: OpenAPITerms[L, F]): F[Resolved[L]] =
     for {
-      _ <- Sw.log.debug(s"value: ${value} in ${protocolElems.length} protocol elements")
+      _   <- Sw.log.debug(s"value: ${value} in ${protocolElems.length} protocol elements")
       res <- value
         .bimap(LazyResolvedType.lift[L, F](_, protocolElems), _.pure[F])
         .merge

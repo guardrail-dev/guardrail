@@ -44,8 +44,8 @@ class Http4sDebugBodyTest extends AnyFunSuite with Matchers with EitherValues wi
       "invalidSomething1" -> Json.fromInt(1),
       "something2"        -> Json.fromString("something")
     )
-    val request        = sendRequest(server, invalidJson)
-    val actualResponse = request.use(_.pure[IO]).unsafeRunSync()
+    val request             = sendRequest(server, invalidJson)
+    val actualResponse      = request.use(_.pure[IO]).unsafeRunSync()
     val actualErrorMessages =
       Stream
         .resource(request)
