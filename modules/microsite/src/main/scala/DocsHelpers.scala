@@ -72,7 +72,7 @@ object DocsHelpers {
               case q"def ${name}(...${args}): $tpe = $_" if !firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
             }
             val matched = (basePath ++ firstDefn ++ rest).toList
-            val c = q"""class ${name}(...${args}) {
+            val c       = q"""class ${name}(...${args}) {
               ..${matched}
             }"""
 
@@ -137,7 +137,7 @@ object DocsHelpers {
               case q"def ${name}(...${args}): $tpe = $_" if !firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
             }
             val matched = (basePath ++ firstDefn ++ rest).toList
-            val c = q"""class ${name}[..${tparms}](...${args}) {
+            val c       = q"""class ${name}[..${tparms}](...${args}) {
               ..${matched}
             }"""
 

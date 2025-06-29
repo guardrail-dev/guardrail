@@ -75,7 +75,7 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
   }
 
   override implicit val listInstances: ListF[JavaLanguage] = new ListF[JavaLanguage] {
-    override def liftType(tpe: Type): Type = StaticJavaParser.parseClassOrInterfaceType("java.util.List").setTypeArguments(tpe)
+    override def liftType(tpe: Type): Type  = StaticJavaParser.parseClassOrInterfaceType("java.util.List").setTypeArguments(tpe)
     override def isType(tpe: Type): Boolean =
       isContainerOfType(tpe, "java.util", "List") ||
         isContainerOfType(tpe, "java.util", "List")
@@ -179,7 +179,7 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
   }
 
   override implicit val futureInstances: FutureF[JavaLanguage] = new FutureF[JavaLanguage] {
-    override def liftType(tpe: Type): Type = StaticJavaParser.parseClassOrInterfaceType("java.util.concurrent.CompletionStage").setTypeArguments(tpe)
+    override def liftType(tpe: Type): Type  = StaticJavaParser.parseClassOrInterfaceType("java.util.concurrent.CompletionStage").setTypeArguments(tpe)
     override def isType(tpe: Type): Boolean =
       isContainerOfType(tpe, "java.util.concurrent", "CompletionStage") ||
         isContainerOfType(tpe, "java.util.concurrent", "CompletableFuture")
@@ -274,8 +274,8 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
     override def failedFuture[From <: Expression, A, X <: Throwable](
         fx: TermHolder[JavaLanguage, From, X]
     )(implicit clsA: ClassTag[A]): TermHolder[JavaLanguage, Expression, Future[A]] = {
-      val resultType                = typeFromClass(clsA.runtimeClass)
-      val completionStageResultType = StaticJavaParser.parseClassOrInterfaceType("java.util.concurrent.CompletionStage").setTypeArguments(resultType)
+      val resultType                        = typeFromClass(clsA.runtimeClass)
+      val completionStageResultType         = StaticJavaParser.parseClassOrInterfaceType("java.util.concurrent.CompletionStage").setTypeArguments(resultType)
       val supplierCompletionStageResultType =
         StaticJavaParser.parseClassOrInterfaceType("java.util.function.Supplier").setTypeArguments(completionStageResultType)
       val completableFutureType       = StaticJavaParser.parseClassOrInterfaceType("java.util.concurrent.CompletableFuture")
@@ -359,7 +359,7 @@ trait JavaStdLibCollections extends CollectionsAbstraction[JavaLanguage] {
             lambda.getBody match {
               case bs: BlockStmt      => bs
               case es: ExpressionStmt => new BlockStmt(new NodeList(es))
-              case other =>
+              case other              =>
                 throw new IllegalStateException(
                   s"This shouldn't be possible: LambdaExpr contains a ${other.getClass}, but only BlockStmt and ExpressionStmt are valid"
                 )

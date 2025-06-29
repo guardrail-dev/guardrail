@@ -50,7 +50,7 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner wi
     "should work" in {
 
       implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
-      implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
+      implicit val mockFW               = new FrameworkTerms[ScalaLanguage, Target] {
         def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"String")
         def getFrameworkDefinitions(
             tracing: Boolean
@@ -63,9 +63,9 @@ class ValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunner wi
         def lookupStatusCode(key: Tracker[String]): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)] = ???
         def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"io.circe.Json")
       }
-      implicit val circeProtocolGenerator: ProtocolTerms[ScalaLanguage, Target] = CirceRefinedProtocolGenerator(CirceRefinedModelGenerator.V012)
-      implicit val scalaGenerator                                               = ScalaGenerator()
-      implicit val swaggerGenerator                                             = OpenAPIGenerator[ScalaLanguage]()
+      implicit val circeProtocolGenerator: ProtocolTerms[ScalaLanguage, Target]                 = CirceRefinedProtocolGenerator(CirceRefinedModelGenerator.V012)
+      implicit val scalaGenerator                                                               = ScalaGenerator()
+      implicit val swaggerGenerator                                                             = OpenAPIGenerator[ScalaLanguage]()
       val ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: Nil, _, _, _, _) = circeProtocolGenerator
         .fromSpec(
           Tracker(swaggerFromString(spec)),

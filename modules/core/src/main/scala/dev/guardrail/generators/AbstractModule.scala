@@ -17,7 +17,7 @@ abstract class AbstractModule[L <: LA] {
       } match {
         case (_, Nil)             => Target.raiseError(MissingModule(section, (first :: rest.toList).map(_._1)))
         case (rest, value :: Nil) => value.map((rest, _))
-        case (rest, a :: b :: _) =>
+        case (rest, a :: b :: _)  =>
           Target.raiseError(ModuleConflict(section))
       }
     }

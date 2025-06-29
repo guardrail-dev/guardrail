@@ -169,7 +169,7 @@ class Issue538 extends AnyFunSuite with Matchers with SwaggerSpecRunner {
       ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
 
       val companion = companionForStaticDefns(foo.staticDefns)
-      val expected =
+      val expected  =
         q"""
         object Foo {
           implicit val encodeFoo: _root_.io.circe.Encoder.AsObject[Foo] = {

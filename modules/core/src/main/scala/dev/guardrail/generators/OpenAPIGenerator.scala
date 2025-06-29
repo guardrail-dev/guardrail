@@ -99,7 +99,7 @@ class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
       globalSecurityRequirements: Option[SecurityRequirements]
   ): Target[List[RouteMeta]] =
     Target.log.function("extractOperations")(for {
-      _ <- Target.log.debug(s"Args: ${paths.unwrapTracker.value.map { case (a, b) => (a, b.showNotNull) }} (${paths.showHistory})")
+      _      <- Target.log.debug(s"Args: ${paths.unwrapTracker.value.map { case (a, b) => (a, b.showNotNull) }} (${paths.showHistory})")
       routes <- paths.indexedCosequence.value.flatTraverse { case (pathStr, path) =>
         for {
           operationMap <- path
@@ -183,7 +183,7 @@ class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
 
       className = ClassPrefix(operation, vendorPrefixes) match {
         case cls @ Some(_) => cls.toList
-        case None =>
+        case None          =>
           val pkg = PackageName(operation, vendorPrefixes)
             .map(_.split('.').toVector)
             .orElse(
@@ -284,7 +284,7 @@ class OpenAPIGenerator[L <: LA] extends OpenAPITerms[L, Target] {
       .refine[Target[Tracker[A]]] { case extract(name) => name }(name =>
         for {
           components <- components.raiseErrorIfEmpty("Attempting to dereference a $ref, but no components defined")
-          result <- components
+          result     <- components
             .downField(label, proj)
             .map(_.value.toMap.get(name.unwrapTracker))
             .raiseErrorIfEmpty(s"Attempting to dereference a $$ref, but no object found at the specified pointer")
