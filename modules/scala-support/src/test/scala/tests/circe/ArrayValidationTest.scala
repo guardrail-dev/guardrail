@@ -47,7 +47,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
   "Array Validation" - {
 
     implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
-    implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
+    implicit val mockFW               = new FrameworkTerms[ScalaLanguage, Target] {
       def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"String")
       def getFrameworkDefinitions(
           tracing: Boolean

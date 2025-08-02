@@ -39,7 +39,7 @@ object Common {
       .flatTraverse { case (schemeName, scheme) =>
         val typeName = CustomTypeName(scheme, prefixes)
         for {
-          tpe <- typeName.fold(Option.empty[L#Type].pure[F])(x => parseType(Tracker.cloneHistory(scheme, x)))
+          tpe          <- typeName.fold(Option.empty[L#Type].pure[F])(x => parseType(Tracker.cloneHistory(scheme, x)))
           parsedScheme <- scheme.downField("type", _.getType).unwrapTracker.traverse {
             case SwSecurityScheme.Type.APIKEY        => extractApiKeySecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
             case SwSecurityScheme.Type.HTTP          => extractHttpSecurityScheme(schemeName, scheme, tpe).widen[SecurityScheme[L]]
@@ -105,7 +105,7 @@ object Common {
         .flatMap(url => Option(new URI(url).getPath))
         .filter(_ != "/")
 
-      paths = spec.downField("paths", _.getPaths)
+      paths                      = spec.downField("paths", _.getPaths)
       globalSecurityRequirements = NonEmptyList
         .fromList(spec.downField("security", _.getSecurity).indexedDistribute)
         .flatMap(SecurityRequirements(_, SecurityRequirements.Global))
@@ -196,7 +196,7 @@ object Common {
         servers.flatTraverse(writeServer(pkgPath, formattedPkgName, customImports, frameworkImplicitNames, filteredDtoComponents, _))
       ).mapN(_ ++ _)
 
-      implicits <- renderImplicits(pkgPath, formattedPkgName, frameworkImports, protocolImports, customImports)
+      implicits              <- renderImplicits(pkgPath, formattedPkgName, frameworkImports, protocolImports, customImports)
       frameworkImplicitsFile <- frameworkImplicits.fold(Option.empty[WriteTree].pure[F]) { case (name, defn) =>
         renderFrameworkImplicits(pkgPath, formattedPkgName, frameworkImports, frameworkImplicitNames.filterNot(_ == name), protocolImports, defn, name)
           .map(Option.apply)
