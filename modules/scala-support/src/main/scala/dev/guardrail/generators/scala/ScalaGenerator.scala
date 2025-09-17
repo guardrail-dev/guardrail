@@ -100,7 +100,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
         )
     )
   override def parseTypeName(tpe: String): Target[Option[scala.meta.Type.Name]] = Target.pure(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)))
-  override def pureTermName(tpe: String): Target[scala.meta.Term.Name] =
+  override def pureTermName(tpe: String): Target[scala.meta.Term.Name]          =
     Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Term.Name(_)), UserError("A structure's name is empty"))
   override def pureTypeName(tpe: String): Target[scala.meta.Type.Name] =
     Target.fromOption(Option(tpe.trim).filterNot(_.isEmpty).map(Type.Name(_)), UserError("A structure's name is empty"))
@@ -109,7 +109,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
     Target.pure(param"$name: $tpe".copy(default = default))
   override def typeNamesEqual(a: scala.meta.Type.Name, b: scala.meta.Type.Name): Target[Boolean] = Target.pure(a.value == b.value)
   override def typesEqual(a: scala.meta.Type, b: scala.meta.Type): Target[Boolean]               = Target.pure(a.structure == b.structure)
-  override def extractTypeName(tpe: scala.meta.Type): Target[Option[scala.meta.Type.Name]] =
+  override def extractTypeName(tpe: scala.meta.Type): Target[Option[scala.meta.Type.Name]]       =
     Target.pure(tpe match {
       case x: Type.Name =>
         Option(x)
@@ -122,9 +122,9 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       case _               => Target.raiseException("Impossible 2.13.4+ excitement, see https://github.com/scala/bug/issues/12232")
     }
   override def extractTermNameFromParam(param: scala.meta.Term.Param): Target[String] = Target.pure(param.name.value)
-  override def selectType(typeNames: NonEmptyList[String]): Target[scala.meta.Type] = {
-    val tpe   = Type.Name(typeNames.last)
-    val names = typeNames.init.map(Term.Name.apply _)
+  override def selectType(typeNames: NonEmptyList[String]): Target[scala.meta.Type]   = {
+    val tpe    = Type.Name(typeNames.last)
+    val names  = typeNames.init.map(Term.Name.apply _)
     val result = names match {
       case Nil =>
         tpe
@@ -143,18 +143,18 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
   override def alterMethodParameterName(param: scala.meta.Term.Param, name: scala.meta.Term.Name): Target[scala.meta.Term.Param] =
     Target.pure(param.copy(name = name))
 
-  override def bytesType(): Target[scala.meta.Type]                         = Target.pure(t"Base64String")
-  override def uuidType(): Target[scala.meta.Type]                          = Target.pure(t"java.util.UUID")
-  override def dateType(): Target[scala.meta.Type]                          = Target.pure(t"java.time.LocalDate")
-  override def dateTimeType(): Target[scala.meta.Type]                      = Target.pure(t"java.time.OffsetDateTime")
-  override def stringType(format: Option[String]): Target[scala.meta.Type]  = Target.pure(format.fold(t"String")(Type.Name(_)))
-  override def floatType(): Target[scala.meta.Type]                         = Target.pure(t"Float")
-  override def doubleType(): Target[scala.meta.Type]                        = Target.pure(t"Double")
-  override def numberType(format: Option[String]): Target[scala.meta.Type]  = Target.pure(t"BigDecimal")
-  override def intType(): Target[scala.meta.Type]                           = Target.pure(t"Int")
-  override def longType(): Target[scala.meta.Type]                          = Target.pure(t"Long")
-  override def integerType(format: Option[String]): Target[scala.meta.Type] = Target.pure(t"BigInt")
-  override def booleanType(format: Option[String]): Target[scala.meta.Type] = Target.pure(t"Boolean")
+  override def bytesType(): Target[scala.meta.Type]                                               = Target.pure(t"Base64String")
+  override def uuidType(): Target[scala.meta.Type]                                                = Target.pure(t"java.util.UUID")
+  override def dateType(): Target[scala.meta.Type]                                                = Target.pure(t"java.time.LocalDate")
+  override def dateTimeType(): Target[scala.meta.Type]                                            = Target.pure(t"java.time.OffsetDateTime")
+  override def stringType(format: Option[String]): Target[scala.meta.Type]                        = Target.pure(format.fold(t"String")(Type.Name(_)))
+  override def floatType(): Target[scala.meta.Type]                                               = Target.pure(t"Float")
+  override def doubleType(): Target[scala.meta.Type]                                              = Target.pure(t"Double")
+  override def numberType(format: Option[String]): Target[scala.meta.Type]                        = Target.pure(t"BigDecimal")
+  override def intType(): Target[scala.meta.Type]                                                 = Target.pure(t"Int")
+  override def longType(): Target[scala.meta.Type]                                                = Target.pure(t"Long")
+  override def integerType(format: Option[String]): Target[scala.meta.Type]                       = Target.pure(t"BigInt")
+  override def booleanType(format: Option[String]): Target[scala.meta.Type]                       = Target.pure(t"Boolean")
   override def fallbackType(tpe: Option[String], format: Option[String]): Target[scala.meta.Type] =
     Target.fromOption(tpe, UserError("Missing type")).map(Type.Name(_))
 
@@ -193,7 +193,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       customImports: List[scala.meta.Import]
   ): Target[Option[WriteTree]] = {
     val pkg: Term.Ref = buildTermSelect(pkgName)
-    val implicits = source"""
+    val implicits     = source"""
           package $pkg
 
           ..$jsonImports
@@ -295,7 +295,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
     val pkg: Term.Ref            = buildTermSelect(pkgName)
     val implicitsRef: Term.Ref   = (pkgName.map(Term.Name.apply _) ++ List(q"Implicits")).foldLeft[Term.Ref](q"_root_")(Term.Select.apply _)
     val frameworkImplicitImports = frameworkImplicitImportNames.map(name => q"import ${buildTermSelect(("_root_" :: pkgName) :+ name.value)}._")
-    val frameworkImplicitsFile = source"""
+    val frameworkImplicitsFile   = source"""
           package $pkg
 
           ..$jsonImports
@@ -320,7 +320,7 @@ class ScalaGenerator private extends LanguageTerms[ScalaLanguage, Target] {
       frameworkDefinitions: List[scala.meta.Defn],
       frameworkDefinitionsName: scala.meta.Term.Name
   ): Target[WriteTree] = {
-    val pkg: Term.Ref = buildTermSelect(pkgName)
+    val pkg: Term.Ref            = buildTermSelect(pkgName)
     val frameworkDefinitionsFile = source"""
           package $pkg
 

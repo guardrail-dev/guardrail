@@ -20,7 +20,7 @@ import dev.guardrail.terms.framework._
 class DropwizardGeneratorLoader extends FrameworkGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  val apply =
+  val apply   =
     ModuleLoadResult.forProduct3(
       FrameworkGeneratorLoader.label   -> Seq(DropwizardVersion.mapping),
       CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),

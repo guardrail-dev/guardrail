@@ -68,7 +68,7 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("Plain text should be emitted for present optional parameters") {
     val route: HttpRoutes[IO] = new FooResource[IO]().routes(new FooHandler[IO] {
-      def doFoo(respond: DoFooResponse.type)(body: String): IO[DoFooResponse] = ???
+      def doFoo(respond: DoFooResponse.type)(body: String): IO[DoFooResponse]         = ???
       def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[DoBarResponse] =
         if (body.contains("sample")) {
           IO.pure(respond.Created("response"))
@@ -85,7 +85,7 @@ class Http4sTextPlainTest extends AnyFunSuite with Matchers with EitherValues {
 
   test("Plain text should be emitted for missing optional parameters") {
     val route: HttpRoutes[IO] = new FooResource[IO]().routes(new FooHandler[IO] {
-      def doFoo(respond: DoFooResponse.type)(body: String): IO[DoFooResponse] = ???
+      def doFoo(respond: DoFooResponse.type)(body: String): IO[DoFooResponse]         = ???
       def doBar(respond: DoBarResponse.type)(body: Option[String]): IO[DoBarResponse] =
         if (body.isEmpty) {
           IO.pure(respond.Created("response"))

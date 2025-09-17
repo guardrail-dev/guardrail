@@ -198,7 +198,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   test("round-trip: Raw type parameters") {
     val petId: Long    = 123L
     val apiKey: String = "foobar"
-    val httpService = new PetResource().routes(new PetHandler[IO] {
+    val httpService    = new PetResource().routes(new PetHandler[IO] {
       def deletePet(respond: DeletePetResponse.type)(
           _petId: Long,
           includeChildren: Option[Boolean],
@@ -243,7 +243,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   test("round-trip: File uploads") {
     val petId: Long    = 123L
     val apiKey: String = "foobar"
-    val httpService = new PetResource().routes(new PetHandler[IO] {
+    val httpService    = new PetResource().routes(new PetHandler[IO] {
       def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
       def deletePet(
           respond: DeletePetResponse.type

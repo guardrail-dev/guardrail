@@ -57,9 +57,9 @@ import scala.reflect.runtime.universe.typeTag
 class AkkaHttpServerGeneratorLoader extends ServerGeneratorLoader {
   type L = ScalaLanguage
   override def reified = typeTag[Target[ScalaLanguage]]
-  val apply =
+  val apply            =
     ModuleLoadResult.forProduct2(
-      ServerGeneratorLoader.label -> Seq(AkkaHttpVersion.mapping),
+      ServerGeneratorLoader.label   -> Seq(AkkaHttpVersion.mapping),
       ProtocolGeneratorLoader.label -> Seq(
         CirceModelGenerator.mapping,
         CirceRefinedModelGenerator.mapping.view.mapValues(_.toCirce).toMap,
@@ -81,7 +81,7 @@ object AkkaHttpServerGenerator {
   ): Target[NonEmptyList[(Term, List[Term.Name])]] =
     for {
       (parts, (trailingSlash, queryParams)) <- AkkaHttpPathExtractor.runParse(path, pathArgs, modelGeneratorType)
-      allPairs <- parts
+      allPairs                              <- parts
         .foldLeft[Target[NonEmptyList[(Term, List[Term.Name])]]](Target.pure(NonEmptyList.one((q"pathEnd", List.empty)))) { case (acc, (termName, b)) =>
           acc.flatMap {
             case NonEmptyList((q"pathEnd   ", bindings), xs) =>
@@ -133,7 +133,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
     for {
       extraImports       <- getExtraImports(context.tracing, supportPackage)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+      servers            <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
         val routes = unsortedRoutes
           .groupBy(_.path.unwrapTracker.indexOf('{'))
           .view
@@ -161,7 +161,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
             )
           }
           (responseDefinitions, serverOperations) = responseServerPair.unzip
-          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+          securityExposure                        = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
             case Nil => SecurityExposure.Undefined
             case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
           }
@@ -223,7 +223,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       _ <- Target.pure(())
       responseSuperType = Type.Name(responseClsName)
       responseSuperTerm = Term.Name(responseClsName)
-      instances = responses.value.map { case resp @ Response(statusCodeName, _, headers) =>
+      instances         = responses.value.map { case resp @ Response(statusCodeName, _, headers) =>
         val statusCode       = q"StatusCodes.${statusCodeName}"
         val responseTerm     = Term.Name(s"${responseClsName}${statusCodeName.value}")
         val responseName     = Type.Name(s"${responseClsName}${statusCodeName.value}")
@@ -268,7 +268,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       }
       (terms, aliases, marshallers) = instances.unzip3
-      convenienceConstructors = aliases.flatMap {
+      convenienceConstructors       = aliases.flatMap {
         case q"def $name(value: $tpe): $_ = $_" => tpe.map((_, name))
         case _                                  => None
       }
@@ -287,7 +287,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
       toResponseImplicits = List(param"ec: scala.concurrent.ExecutionContext") ++ protocolImplicits
-      companion = q"""
+      companion           = q"""
           object ${responseSuperTerm} {
           ${Defn.Def(
           List(mod"implicit"),
@@ -325,7 +325,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
 
   private def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
     for {
-      _ <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
+      _   <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
       res <-
         if (customExtraction) {
           for {
@@ -345,7 +345,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
 
   private def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
     for {
-      _ <- Target.log.debug(s"buildTracingFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${tracing})")
+      _   <- Target.log.debug(s"buildTracingFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${tracing})")
       res <-
         if (tracing) {
           for {
@@ -413,7 +413,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       securityExposure: SecurityExposure
   ) =
     for {
-      _ <- Target.log.debug(s"getExtraRouteParams(${tracing})")
+      _            <- Target.log.debug(s"getExtraRouteParams(${tracing})")
       extractParam <-
         if (customExtraction) {
           Target.pure(List(param"""customExtract: String => Directive1[$customExtractionTypeName]"""))
@@ -448,7 +448,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       }
       val typeParams = if (customExtraction) List(tparam"$customExtractionTypeName") else List()
-      val params = List(
+      val params     = List(
         Term.ParamClause(
           List(param"handler: $handlerType") ++ extraRouteParams,
           None
@@ -503,7 +503,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       else term
 
     (basePath.getOrElse("") + path.unwrapTracker).stripPrefix("/") match {
-      case "" => Target.pure(NonEmptyList.one((q"pathEndOrSingleSlash", List.empty)))
+      case ""       => Target.pure(NonEmptyList.one((q"pathEndOrSingleSlash", List.empty)))
       case fullPath =>
         AkkaHttpServerGenerator.generateUrlPathExtractors(Tracker.cloneHistory(path, fullPath), pathArgs, modelGeneratorType)
     }
@@ -560,7 +560,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       }
     } yield directives match {
-      case Nil => Option.empty
+      case Nil     => Option.empty
       case x :: xs =>
         Some((xs.foldLeft[Term](x) { case (a, n) => q"${a} & ${n}" }, params.map(_.paramName)))
     }
@@ -620,7 +620,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
   private def qsToAkka: List[LanguageParameter[ScalaLanguage]] => Target[Option[(Term, List[Term.Name])]] = {
     type Unmarshaller = Term
     type Arg          = Term
-    val nameReceptacle: Arg => Type => Term = arg => tpe => q"Symbol(${arg}).as[${tpe}]"
+    val nameReceptacle: Arg => Type => Term                = arg => tpe => q"Symbol(${arg}).as[${tpe}]"
     val param: Option[Unmarshaller] => Arg => Type => Term =
       _.fold[Arg => Type => Term](nameReceptacle)(um => nameReceptacle.map(_.map(term => q"${term}(${um})")))
     directivesFromParams(
@@ -667,7 +667,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               val binding          = new Binding(paramName.value)
               val collected        = new Binding(s"${paramName.value}O")
 
-              val isFile: Boolean = rawParameter.isFile
+              val isFile: Boolean                         = rawParameter.isFile
               val (isOptional, realType): (Boolean, Type) = argType match {
                 case t"Option[$x]" => (true, x)
                 case x             => (!rawParameter.required, x)
@@ -760,8 +760,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
             case xs             => p"(..${xs.map(_.toPat)})"
           }
 
-          val _trait      = q"sealed trait Part"
-          val ignoredPart = q"case class IgnoredPart(unit: Unit) extends Part"
+          val _trait              = q"sealed trait Part"
+          val ignoredPart         = q"case class IgnoredPart(unit: Unit) extends Part"
           val ignoredUnmarshaller = p"""
         case _ =>
           SafeUnmarshaller(
@@ -770,7 +770,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         ).apply(part)
       """
 
-          val fieldNames = q"""Set[String](..${params.toList.map(_.argName.toLit)})"""
+          val fieldNames    = q"""Set[String](..${params.toList.map(_.argName.toLit)})"""
           val optionalTypes = termTypes.map {
             case x @ t"Option[$_]" => x
             case x                 => t"Option[$x]"
@@ -865,7 +865,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               .traverse[Target, (List[Stat], NonEmptyList[Term.Name])] {
                 case Tracker(_, _: MultipartFormData) =>
                   val unmarshallerTerm = q"MultipartFormDataUnmarshaller"
-                  val fru = q"""
+                  val fru              = q"""
                 object ${partsTerm} {
                   ..${List(
                       _trait,
@@ -911,7 +911,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
                     unmarshalFieldTypeParam        <- AkkaHttpHelper.unmarshalFieldTypeParam(modelGeneratorType)
                     unmarshalFieldUnmarshallerType <- AkkaHttpHelper.unmarshalFieldUnmarshallerType(modelGeneratorType)
                     unmarshallerTerm = q"FormDataUnmarshaller"
-                    fru = q"""
+                    fru              = q"""
                 implicit val ${Pat.Var(unmarshallerTerm)}: FromRequestUnmarshaller[Either[Throwable, ${optionalTypes}]] =
                   implicitly[FromRequestUnmarshaller[FormData]].flatMap { implicit executionContext => implicit mat => formData =>
                     def unmarshalField[${unmarshalFieldTypeParam}](name: String, value: String, unmarshaller: Unmarshaller[String, ${unmarshalFieldUnmarshallerType}]): Future[A] =
@@ -1009,7 +1009,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       for {
         _ <- Target.log.debug(s"generateRoute(${resourceName}, ${basePath}, ${route}, ${customExtractionFields}, ${tracingFields})")
         RouteMeta(path, method, operation, securityRequirements) = route
-        consumes = operation
+        consumes                                                 = operation
           .downField("consumes", _.consumes)
           .map(xs =>
             NonEmptyList
@@ -1045,7 +1045,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         akkaHeaders                    <- headerArgs.grouped(22).toList.flatTraverse(args => headersToAkka(args).map(_.toList))
         // We aren't capitalizing the response names in order to keep back compat
         (responseCompanionTerm, responseCompanionType) = (Term.Name(responseClsName), Type.Name(responseClsName))
-        responseType =
+        responseType                                   =
           if (ServerRawResponse(operation).getOrElse(false)) {
             t"HttpResponse"
           } else {
@@ -1057,7 +1057,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
         orderedParameters = List((pathArgs ++ qsArgs ++ bodyArgs ++ formArgs ++ headerArgs).toList) ++ extractionTracingParameters
 
-        entityProcessor = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
+        entityProcessor  = akkaBody.orElse(akkaForm).getOrElse(q"discardEntity")
         fullRouteMatcher = {
           def bindParams(pairs: List[(Term, List[Term.Name])]): Term => Term =
             NonEmptyList

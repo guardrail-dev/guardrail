@@ -55,7 +55,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
       for {
         (init, last) <- xs.initLast
         (head, tail) <- ys.uncons
-        combined <- ((last, head) match {
+        combined     <- ((last, head) match {
           case (StructuredLogBlock(lastLines), StructuredLogBlock(headLines)) =>
             Some(StructuredLogBlock(lastLines ++ headLines))
           case (_, _) => None
@@ -64,7 +64,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
     }
   }
   implicit object StructuredLoggerMonoid extends Monoid[StructuredLogger] {
-    def empty: StructuredLogger = StructuredLogger(Chain.empty)
+    def empty: StructuredLogger                                             = StructuredLogger(Chain.empty)
     def combine(x: StructuredLogger, y: StructuredLogger): StructuredLogger = StructuredLogger((x.entries, y.entries) match {
       case StructuredLogEntryCombine(combined) => combined
       case (xs, ys)                            => Monoid[Chain[StructuredLogEntry]].combine(xs, ys)
@@ -81,7 +81,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
           case ((acc, newHistory), StructuredLoggerReset) =>
             (acc, Chain.empty)
           case ((acc, newHistory), StructuredLogBlock(lines)) =>
-            val history = NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>"))
+            val history                                                     = NonEmptyChain.fromChain[String](newHistory).getOrElse(NonEmptyChain("<root>"))
             val nextLines: Chain[(LogLevel, NonEmptyChain[String], String)] = lines
               .filter(_._1 >= desiredLevel)
               .map { case (level, message) => (level, history, message) }
@@ -89,7 +89,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
         }
         ._1
         .foldLeft((Chain.empty[String], Chain.empty[String])) { case ((lastHistory, messages), (level, history, message)) =>
-          val showFullHistory = true
+          val showFullHistory                             = true
           def makePrefix(history: Vector[String]): String =
             history.foldLeft("  ") { case (a, b) =>
               (if (showFullHistory) {
@@ -101,7 +101,7 @@ sealed trait StructuredLoggerInstances extends StructuredLoggerLowPriority {
 
           val historyVec         = history.toChain.toVector
           val commonPrefixLength = historyVec.length - lastHistory.toVector.zip(historyVec).takeWhile(((_: String) == (_: String)).tupled).length
-          val histories = if (!showFullHistory) {
+          val histories          = if (!showFullHistory) {
             (1 until commonPrefixLength).map(i => s"${level.show} ${makePrefix(historyVec.take(i))}")
           } else Nil
           val prefix    = s"${level.show} ${makePrefix(historyVec)}: "
