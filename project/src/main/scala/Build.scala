@@ -106,7 +106,7 @@ object Build {
     scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
     scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
     Test / parallelExecution := true,
-    addCompilerPlugin("org.typelevel" % "kind-projector"  % "0.13.2" cross CrossVersion.full),
+    addCompilerPlugin("org.typelevel" % "kind-projector"  % "0.13.4" cross CrossVersion.full),
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
     addCompilerPlugin(scalafixSemanticdb),
   )
