@@ -67,7 +67,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
-      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
+      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType)                                                   =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
@@ -129,7 +129,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
-      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
+      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType)                                                   =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
@@ -177,7 +177,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
-      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
+      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType)                                                   =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
@@ -203,7 +203,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
   test("round-trip: Raw type parameters") {
     val petId: Long    = 123L
     val apiKey: String = "foobar"
-    val httpClient = Route.toFunction(PetResource.routes(new PetHandler {
+    val httpClient     = Route.toFunction(PetResource.routes(new PetHandler {
       def deletePet(respond: PetResource.DeletePetResponse.type)(
           _petId: Long,
           includeChildren: Option[Boolean],
@@ -221,7 +221,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
-      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
+      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType)                                                   =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,
@@ -252,7 +252,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
   test("round-trip: File uploads") {
     val petId: Long    = 123L
     val apiKey: String = "foobar"
-    val httpClient = Route.toFunction(PetResource.routes(new PetHandler {
+    val httpClient     = Route.toFunction(PetResource.routes(new PetHandler {
       def addPet(respond: PetResource.AddPetResponse.type)(body: sdefs.Pet) = ???
       def deletePet(
           respond: PetResource.DeletePetResponse.type
@@ -263,7 +263,7 @@ class AkkaHttpRoundTripTest extends AnyFunSuite with Matchers with EitherValues 
       def getPetById(respond: PetResource.GetPetByIdResponse.type)(petId: Long)                                                                           = ???
       def updatePet(respond: PetResource.UpdatePetResponse.type)(body: sdefs.Pet)                                                                         = ???
       def updatePetWithForm(respond: PetResource.UpdatePetWithFormResponse.type)(petId: Long, name: Option[String] = None, status: Option[String] = None) = ???
-      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType) =
+      def uploadFileMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType)                                                   =
         java.io.File.createTempFile("download_", ".dat", new java.io.File("/tmp"))
       def uploadFile(respond: PetResource.UploadFileResponse.type)(
           petId: examples.support.PositiveLong,

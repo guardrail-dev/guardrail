@@ -51,7 +51,7 @@ class CoreTermInterp[L <: LA](
   def extractGenerator(context: Context, vendorDefaultFramework: Option[String]) =
     Target.log.function("extractGenerator") {
       for {
-        _ <- Target.log.debug("Looking up framework")
+        _         <- Target.log.debug("Looking up framework")
         framework <- NonEmptyList
           .fromList(context.modules)
           .toRight(context.framework)
@@ -107,7 +107,7 @@ class CoreTermInterp[L <: LA](
         kind       = args.kind
         dtoPackage = args.dtoPackage
         context    = args.context
-        _ <- verifyPropertyRequirement(context.propertyRequirement)
+        _             <- verifyPropertyRequirement(context.propertyRequirement)
         customImports <- args.imports
           .traverse(x =>
             for {
@@ -128,7 +128,7 @@ class CoreTermInterp[L <: LA](
               _                  <- Sw.log.debug("Running guardrail codegen")
               formattedPkgName   <- Sc.formatPackageName(pkgName)
               definitionsPkgName <- Sc.fullyQualifyPackageName(formattedPkgName)
-              (proto, codegen) <- Common
+              (proto, codegen)   <- Common
                 .prepareDefinitions[L, Target](
                   kind,
                   context,
@@ -137,7 +137,7 @@ class CoreTermInterp[L <: LA](
                   definitionsPkgName :+ "support"
                 )
               protocolSupport <- Ps.generateSupportDefinitions()
-              result <- Common
+              result          <- Common
                 .writePackage[L, Target](proto, codegen, context)(Paths.get(outputPath), formattedPkgName.toList, dtoPackage, customImports, protocolSupport)
             } yield result
           } catch {

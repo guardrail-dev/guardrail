@@ -78,10 +78,10 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      clients <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+      clients            <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
         val routes = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
         for {
-          clientName <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
+          clientName         <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
           responseClientPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
             for {
               operationId         <- getOperationId(operation)
@@ -97,7 +97,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
           tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
           ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
           staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
-          client <- buildClient(
+          client      <- buildClient(
             clientName,
             tracingName,
             serverUrls,
@@ -131,7 +131,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
       responses: Responses[ScalaLanguage]
   ): Target[RenderedClientOperation[ScalaLanguage]] = {
     val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
-    val containerTransformations = Map[String, Term => Term](
+    val containerTransformations                                        = Map[String, Term => Term](
       "Iterable"   -> identity _,
       "List"       -> (term => q"$term.toList"),
       "Vector"     -> (term => q"$term.toVector"),
@@ -297,7 +297,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
         defaultHeaders                 = param"headers: List[Header.ToRaw] = List.empty"
         safeBody: Option[(Term, Type)] = body.map(sp => (sp.paramName, sp.argType))
 
-        formDataNeedsMultipart = consumes.exists(ContentType.isSubtypeOf[MultipartFormData])
+        formDataNeedsMultipart   = consumes.exists(ContentType.isSubtypeOf[MultipartFormData])
         formEntity: Option[Term] = formDataParams.map { formDataParams =>
           if (formDataNeedsMultipart) {
             q"""_multipart"""
@@ -330,9 +330,9 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
           } else {
             List(q"val allHeaders: List[org.http4s.Header.ToRaw] = $acceptHeader ++ headers ++ $headerParams")
           }
-        methodExpr = q"Method.${Term.Name(httpMethod.toString.toUpperCase)}"
-        reqBinding = q"req"
-        req        = q"Request[F](method = ${methodExpr}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
+        methodExpr  = q"Method.${Term.Name(httpMethod.toString.toUpperCase)}"
+        reqBinding  = q"req"
+        req         = q"Request[F](method = ${methodExpr}, uri = ${urlWithParams}, headers = Headers(allHeaders))"
         reqWithBody = formEntity
           .map(e => q"$req.withEntity($e)")
           .orElse(safeBody.map(_._1).map(e => q"$req.withEntity($e)(${Term.Name(s"${methodName}Encoder")})"))
@@ -390,7 +390,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
           if (isGeneric) p"case resp => F.raiseError[$baseResponseTypeRef[F]](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
           else p"case resp => F.raiseError[$baseResponseTypeRef](UnexpectedStatus(resp.status, ${methodExpr}, ${reqBinding}.uri))"
         responseTypeRef = if (isGeneric) t"cats.effect.Resource[F, $baseResponseTypeRef[F]]" else t"F[$baseResponseTypeRef]"
-        executeReqExpr =
+        executeReqExpr  =
           if (isGeneric) List(q"""$httpClientName.run(${reqBinding}).evalMap(${Term.PartialFunction(cases :+ unexpectedCase)})""")
           else List(q"""$httpClientName.run(${reqBinding}).use(${Term.PartialFunction(cases :+ unexpectedCase)})""")
         methodBody: Term = embedMultipart(tracingExpr ++ headersExpr ++ reqExpr ++ executeReqExpr)

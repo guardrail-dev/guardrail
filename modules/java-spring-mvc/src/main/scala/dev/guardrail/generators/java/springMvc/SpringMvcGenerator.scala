@@ -16,7 +16,7 @@ import dev.guardrail.terms.framework.FrameworkTerms
 class SpringMvcGeneratorLoader extends FrameworkGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  val apply =
+  val apply   =
     ModuleLoadResult.forProduct2(
       FrameworkGeneratorLoader.label   -> Seq(SpringMvcVersion.mapping),
       CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping)
