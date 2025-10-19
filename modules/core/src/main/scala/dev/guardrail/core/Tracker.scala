@@ -43,7 +43,7 @@ trait HighPriorityTrackerEvidence extends LowPriorityTrackerEvidence {
   implicit def optionalListConvincer[A]: Tracker.Convincer[Option[List[A]], List[A]]             = Tracker.Convincer(_.getOrElse(List.empty[A]))
   implicit def optionaljuCollectionConvincer[A]: Tracker.Convincer[Option[java.util.Collection[A]], List[A]] =
     Tracker.Convincer(_.fold(List.empty[A])(_.asScala.toList))
-  implicit def optionalOptionConvincer[A]: Tracker.Convincer[Option[Option[A]], Option[A]] = Tracker.Convincer(_.flatten)
+  implicit def optionalOptionConvincer[A]: Tracker.Convincer[Option[Option[A]], Option[A]]                       = Tracker.Convincer(_.flatten)
   implicit def optionaljuMapConvincer[K, V]: Tracker.Convincer[Option[java.util.Map[K, V]], Mappish[List, K, V]] =
     Tracker.Convincer(_.fold(Mappish(List.empty[(K, V)]))(x => Mappish(x.asScala.toList)))
   implicit def optionalMapConvincer[K, V]: Tracker.Convincer[Option[Map[K, V]], Mappish[List, K, V]] =

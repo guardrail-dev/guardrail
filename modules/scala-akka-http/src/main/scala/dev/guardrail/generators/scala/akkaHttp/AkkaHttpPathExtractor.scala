@@ -11,25 +11,25 @@ object AkkaHttpPathExtractor
       pathSegmentConverter = { case (LanguageParameter(_, param, _, argName, argType), base, modelGeneratorType) =>
         base.fold {
           argType match {
-            case t"String" => Right(q"Segment")
-            case t"Double" => Right(q"DoubleNumber")
+            case t"String"     => Right(q"Segment")
+            case t"Double"     => Right(q"DoubleNumber")
             case t"BigDecimal" =>
               Right(q"Segment.map(BigDecimal.apply _)")
             case t"Int"    => Right(q"IntNumber")
             case t"Long"   => Right(q"LongNumber")
             case t"BigInt" => Right(q"Segment.map(BigInt.apply _)")
-            case tpe =>
+            case tpe       =>
               AkkaHttpHelper
                 .fromStringConverter(tpe, modelGeneratorType)
                 .map(tpe => q"Segment.flatMap(str => ${tpe})")
           }
         } { segment =>
           argType match {
-            case t"String" => Right(segment)
+            case t"String"     => Right(segment)
             case t"BigDecimal" =>
               Right(q"${segment}.map(BigDecimal.apply _)")
             case t"BigInt" => Right(q"${segment}.map(BigInt.apply _)")
-            case tpe =>
+            case tpe       =>
               AkkaHttpHelper
                 .fromStringConverter(tpe, modelGeneratorType)
                 .map(tpe => q"${segment}.flatMap(str => ${tpe})")

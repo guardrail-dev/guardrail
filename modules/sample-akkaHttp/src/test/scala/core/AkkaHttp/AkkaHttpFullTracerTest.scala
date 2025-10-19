@@ -69,7 +69,7 @@ class AkkaHttpFullTracerTest extends AnyFunSuite with Matchers with EitherValues
       UsersResource.routes(
         new UsersHandler {
           // ... using the "Address" server explicitly in the addressesClient
-          val addressesClient = AddressesClient.httpClient(server2)
+          val addressesClient                                                                              = AddressesClient.httpClient(server2)
           def getUser(respond: UsersResource.GetUserResponse.type)(id: String)(traceBuilder: TraceBuilder) =
             addressesClient
               .getAddress(traceBuilder, "addressId")

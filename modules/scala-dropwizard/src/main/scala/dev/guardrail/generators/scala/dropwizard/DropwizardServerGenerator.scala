@@ -71,7 +71,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
     for {
       extraImports       <- getExtraImports(context.tracing, supportPackage)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+      servers            <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
         val routes = unsortedRoutes
           .groupBy(_.path.unwrapTracker.indexOf('{'))
           .view
@@ -99,7 +99,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
             )
           }
           (responseDefinitions, serverOperations) = responseServerPair.unzip
-          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+          securityExposure                        = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
             case Nil => SecurityExposure.Undefined
             case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
           }
@@ -376,7 +376,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
       responses: Responses[ScalaLanguage],
       protocolElems: List[StrictProtocolElems[ScalaLanguage]]
   ): Target[List[Defn]] = {
-    val responseClsType = Type.Name(responseClsName)
+    val responseClsType                       = Type.Name(responseClsName)
     val responseInstances: List[(Defn, Defn)] = responses.value.map { response =>
       val responseClsSubType = Type.Name(s"$responseClsName${response.statusCodeName}")
       val responseClsSubTerm = Term.Name(s"$responseClsName${response.statusCodeName}")
@@ -449,7 +449,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
             case _                                                             => false
           }
 
-        val allProduces = operation.downField("produces", _.produces).map(_.flatMap(ContentType.unapply)).unwrapTracker
+        val allProduces        = operation.downField("produces", _.produces).map(_.flatMap(ContentType.unapply)).unwrapTracker
         val producesAnnotation = NonEmptyList
           .fromList(
             responses.value
@@ -462,7 +462,7 @@ class DropwizardServerGenerator private extends ServerTerms[ScalaLanguage, Targe
         val methodAnnotations = pathAnnotation.toList ++ List(httpMethodAnnotation) ++ consumesAnnotation ++ producesAnnotation
 
         val formParamAnnot = if (consumes.exists(ContentType.isSubtypeOf[MultipartFormData])) "FormDataParam" else "FormParam"
-        val methodParams =
+        val methodParams   =
           parameters.pathParams.map(paramTransformers.transform(_, Some("PathParam"))) ++
             parameters.headerParams.map(paramTransformers.transform(_, Some("HeaderParam"))) ++
             parameters.queryStringParams.map(paramTransformers.transform(_, Some("QueryParam"))) ++

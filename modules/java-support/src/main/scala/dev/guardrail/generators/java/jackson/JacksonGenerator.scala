@@ -183,7 +183,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
   private[this] def getRequiredFieldsRec(root: Tracker[Schema[_]]): List[String] = {
     @scala.annotation.tailrec
     def work(values: List[Tracker[Schema[_]]], acc: List[String]): List[String] = {
-      val required: List[String] = values.flatMap(_.downField("required", _.getRequired()).unwrapTracker)
+      val required: List[String]         = values.flatMap(_.downField("required", _.getRequired()).unwrapTracker)
       val next: List[Tracker[Schema[_]]] =
         for {
           a <- values
@@ -388,7 +388,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
         for {
           typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
           propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
-          prefixes <- vendorPrefixes()
+          prefixes     <- vendorPrefixes()
           resolvedType <- ModelResolver
             .propMeta[JavaLanguage, Target](
               prop,
@@ -396,7 +396,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             ) // TODO: This should be resolved via an alternate mechanism that maintains references all the way through, instead of re-deriving and assuming that references are valid
           defValue  <- defaultValue(typeName, prop, propertyRequirement, definitions)
           fieldName <- formatFieldName(name)
-          res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
+          res       <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
             name,
             fieldName,
             prop,
@@ -447,7 +447,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     def processProperty(name: String, schema: Tracker[Schema[_]]): Target[Option[Either[String, NestedProtocolElems[JavaLanguage]]]] =
       for {
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
-        defn <- schema
+        defn            <- schema
           .refine[Target[Option[Either[String, NestedProtocolElems[JavaLanguage]]]]] { case ObjectExtractor(x) => x }(o =>
             for {
               defn <- fromModel(
@@ -465,7 +465,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
           )
           .orRefine { case o: ComposedSchema => o }(o =>
             for {
-              parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
+              parents              <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
               maybeClassDefinition <- fromModel(
                 nestedClassName,
                 o,
@@ -524,7 +524,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
         (s, ta) =>
           val a = ta.unwrapTracker
           s.find(p => p.name == a.name) match {
-            case None => (a :: s).pure[Target]
+            case None            => (a :: s).pure[Target]
             case Some(duplicate) =>
               for {
                 newDefaultValue <- findCommonDefaultValue(ta.showHistory, a.defaultValue, duplicate.defaultValue)
@@ -532,7 +532,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
               } yield {
                 val emptyToNull        = if (Set(a.emptyToNull, duplicate.emptyToNull).contains(EmptyIsNull)) EmptyIsNull else EmptyIsEmpty
                 val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
-                val mergedParameter = ProtocolParameter[JavaLanguage](
+                val mergedParameter    = ProtocolParameter[JavaLanguage](
                   a.term,
                   a.baseType,
                   a.name,
@@ -605,7 +605,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       .orRefineFallback(_ => None)
     for {
       prefixes <- vendorPrefixes()
-      tpe <- model.fold[Target[Type]](objectType(None)) { m =>
+      tpe      <- model.fold[Target[Type]](objectType(None)) { m =>
         for {
           (declType, _) <- ModelResolver.determineTypeName[JavaLanguage, Target](m, Tracker.cloneHistory(m, CustomTypeName(m, prefixes)), components)
         } yield declType
@@ -659,12 +659,12 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     import Sc._
 
     for {
-      a <- extractSuperClass(elem, definitions)
+      a      <- extractSuperClass(elem, definitions)
       supper <- a.flatTraverse { case (clsName, _extends, interfaces) =>
         val concreteInterfacesWithClass = for {
           interface      <- interfaces
           (cls, tracker) <- definitions
-          result <- tracker
+          result         <- tracker
             .refine[Tracker[Schema[_]]] {
               case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x
             }(
@@ -674,7 +674,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             .toOption
         } yield cls -> result
         val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
-        val classMapping = (for {
+        val classMapping            = (for {
           (cls, schema) <- concreteInterfacesWithClass
           (name, _)     <- schema.downField("properties", _.getProperties).indexedDistribute.value
         } yield (name, cls)).toMap
@@ -754,11 +754,11 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
         defaultPropertyRequirement,
         components
       )
-      encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
-      decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
-      tpe         <- parseTypeName(clsName.last)
-      fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
-      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
+      encoder       <- encodeModel(clsName.last, dtoPackage, params, parents)
+      decoder       <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
+      tpe           <- parseTypeName(clsName.last)
+      fullType      <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
+      staticDefns   <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
       nestedClasses <- nestedDefinitions.flatTraverse {
         case classDefinition: ClassDefinition[JavaLanguage] =>
           for {
@@ -806,13 +806,13 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       concreteTypes <- PropMeta.extractConcreteTypes[JavaLanguage, Target](definitions.value, components)
       polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
       prefixes <- vendorPrefixes()
-      elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
+      elems    <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model
           .refine { case c: ComposedSchema => c }(comp =>
             for {
               formattedClsName <- formatTypeName(clsName)
               parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components)
-              model <- fromModel(
+              model   <- fromModel(
                 clsName = NonEmptyList.of(formattedClsName),
                 model = comp,
                 parents = parents,
@@ -836,7 +836,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             for {
               formattedClsName <- formatTypeName(clsName)
               enum             <- fromEnum[Object](formattedClsName, m, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 m,
                 List.empty,
@@ -854,7 +854,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             for {
               formattedClsName <- formatTypeName(clsName)
               enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
                 List.empty,
@@ -873,7 +873,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             for {
               formattedClsName <- formatTypeName(clsName)
               enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
                 List.empty,
@@ -942,7 +942,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     parentOpt.foreach { parent =>
       val directParent = StaticJavaParser.parseClassOrInterfaceType(parent.clsName)
       val otherParents = parent.interfaces.map(StaticJavaParser.parseClassOrInterfaceType)
-      val _ = cls
+      val _            = cls
         .setExtendedTypes(new NodeList(directParent))
         .setImplementedTypes(otherParents.toNodeList)
     }
@@ -983,7 +983,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
                   if (term.fieldType.isOptionalType) {
                     val parameterValueExpr = term.emptyToNull match {
                       case EmptyIsEmpty => new NameExpr(term.parameterName)
-                      case EmptyIsNull =>
+                      case EmptyIsNull  =>
                         new MethodCallExpr(
                           new NameExpr(term.parameterName),
                           "filter",
@@ -1010,7 +1010,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
                   } else {
                     val parameterValueExpr = term.emptyToNull match {
                       case EmptyIsEmpty => new NameExpr(term.parameterName)
-                      case EmptyIsNull =>
+                      case EmptyIsNull  =>
                         new MethodCallExpr(
                           new MethodCallExpr(
                             new MethodCallExpr(
@@ -1262,7 +1262,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
 
     for {
       dtoClassType <- safeParseClassOrInterfaceType(clsName)
-      parentOpt <- (parentsWithDiscriminators, parents) match {
+      parentOpt    <- (parentsWithDiscriminators, parents) match {
         case _ if parentsWithDiscriminators.length > 1 =>
           Target.raiseUserError[Option[SuperClass[JavaLanguage]]](
             s"${clsName} requires unsupported multiple inheritance due to multiple parents with discriminators (${parentsWithDiscriminators.map(_.clsName).mkString(", ")})"
@@ -1305,7 +1305,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
             )
             .flatMap[Expression] {
               case expr: Expression => Target.pure(expr)
-              case node =>
+              case node             =>
                 Target.raiseError(
                   RuntimeFailure(s"BUG: JacksonHelpers.discriminatorExpression() returned a ${node.getClass.getSimpleName} when we need an Expression")
                 )
@@ -1627,7 +1627,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       }
 
       builderBuildTerms = withoutDiscriminators(parentTerms ++ terms)
-      _ = builderClass
+      _                 = builderClass
         .addMethod("build", PUBLIC)
         .setType(clsName)
         .setBody(
@@ -1735,7 +1735,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
 
         expressionDefaultValue <- (defaultValue match {
           case Some(e: Expression) => Target.pure(Some(e))
-          case Some(_) =>
+          case Some(_)             =>
             Target.log.warning(s"Can't generate default value for class $clsName and property $name.") >> Target.pure(None)
           case None => Target.pure(None)
         }): Target[Option[Expression]]
@@ -1802,7 +1802,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
     for {
       result <- arr match {
         case Right(core.Resolved(tpe, dep, default, _)) => Target.pure(tpe)
-        case Left(core.Deferred(tpeName)) =>
+        case Left(core.Deferred(tpeName))               =>
           Target.fromOption(lookupTypeName(tpeName, concreteTypes), UserError(s"Unresolved reference ${tpeName}"))
         case Left(core.DeferredArray(tpeName, containerTpe)) =>
           lookupTypeName(tpeName, concreteTypes)
@@ -1865,7 +1865,7 @@ class JacksonGenerator private (implicit Cl: CollectionsLibTerms[JavaLanguage, T
       parentParamNames                           = parentParams.map(_.name.value)
       (parentRequiredTerms, parentOptionalTerms) = sortParams(parentParams)
       parentTerms                                = parentRequiredTerms ++ parentOptionalTerms
-      params = parents.filterNot(parent => parentOpt.contains(parent)).flatMap(_.params) ++ selfParams.filterNot(param =>
+      params                                     = parents.filterNot(parent => parentOpt.contains(parent)).flatMap(_.params) ++ selfParams.filterNot(param =>
         parentParamNames.contains(param.term.getName.getIdentifier)
       )
       (requiredTerms, optionalTerms) = sortParams(params)

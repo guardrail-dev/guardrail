@@ -25,12 +25,12 @@ object DropwizardResourceTest {
     override def createUser(respond: UserResource.CreateUserResponse.type)(body: User)                                       = respond.OK.pure[Future]
     override def createUsersWithArrayInput(respond: UserResource.CreateUsersWithArrayInputResponse.type)(body: Vector[User]) = respond.OK.pure[Future]
     override def createUsersWithListInput(respond: UserResource.CreateUsersWithListInputResponse.type)(body: Vector[User])   = respond.OK.pure[Future]
-    override def loginUser(respond: UserResource.LoginUserResponse.type)(username: String, password: String) =
+    override def loginUser(respond: UserResource.LoginUserResponse.type)(username: String, password: String)                 =
       (username, password) match {
         case (USERNAME, PASSWORD) => respond.OK(TOKEN).pure[Future]
         case _                    => respond.BadRequest.pure[Future]
       }
-    override def logoutUser(respond: UserResource.LogoutUserResponse.type)() = respond.OK.pure[Future]
+    override def logoutUser(respond: UserResource.LogoutUserResponse.type)()                       = respond.OK.pure[Future]
     override def getUserByName(respond: UserResource.GetUserByNameResponse.type)(username: String) = username match {
       case USERNAME => respond.OK(USER).pure[Future]
       case " "      => respond.BadRequest.pure[Future]
