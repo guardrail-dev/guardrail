@@ -31,7 +31,7 @@ class ScalaCollectionsGenerator private extends CollectionsLibTerms[ScalaLanguag
   def liftSomeTerm(value: Term): Target[Term]     = Target.pure(q"Some($value)")
   def emptyOptionalTerm(): Target[Term]           = Target.pure(q"None")
 
-  def arrayType(format: Option[String]): Target[Type] = Target.pure(t"Iterable[String]")
+  def arrayType(format: Option[String]): Target[Type]                    = Target.pure(t"Iterable[String]")
   def liftVectorType(value: Type, customTpe: Option[Type]): Target[Type] =
     Target.pure(t"${customTpe.getOrElse(t"Vector")}[$value]")
   def liftVectorTerm(value: Term): Target[Term] = Target.pure(q"Vector($value)")
@@ -47,7 +47,7 @@ class ScalaCollectionsGenerator private extends CollectionsLibTerms[ScalaLanguag
 
   def liftMapType(value: Type, customTpe: Option[Type]): Target[Type] =
     Target.pure(t"${customTpe.getOrElse(t"Map")}[String, $value]")
-  def emptyMap(): Target[Term] = Target.pure(q"Map.empty")
+  def emptyMap(): Target[Term]                                                                                                      = Target.pure(q"Map.empty")
   def embedMap(tpe: core.LazyResolvedType[ScalaLanguage], containerTpe: Option[Type]): Target[core.LazyResolvedType[ScalaLanguage]] = tpe match {
     case core.Deferred(inner) =>
       Target.pure(core.DeferredMap[ScalaLanguage](inner, containerTpe))

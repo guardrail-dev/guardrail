@@ -23,7 +23,7 @@ object WriteTree {
         for {
           writeState <-
             if (Files.exists(path)) {
-              val exists: Array[Byte] = Files.readAllBytes(path)
+              val exists: Array[Byte]  = Files.readAllBytes(path)
               val diffIdx: Option[Int] =
                 exists
                   .zip(data)

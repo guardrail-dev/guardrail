@@ -150,7 +150,7 @@ class Issue314 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
         _,
         Clients(Client(_, _, _, staticDefns, cls, _) :: _, Nil),
         _
-      ) = runSwaggerSpec(scalaInterpreter)(swagger(config))(Context.empty.withTagsBehaviour(TagsBehaviour.PackageFromTags), "akka-http")
+      )       = runSwaggerSpec(scalaInterpreter)(swagger(config))(Context.empty.withTagsBehaviour(TagsBehaviour.PackageFromTags), "akka-http")
       val cmp = companionForStaticDefns(staticDefns)
 
       verifyTree(cls.head.value, client(expectedClassPrefix))

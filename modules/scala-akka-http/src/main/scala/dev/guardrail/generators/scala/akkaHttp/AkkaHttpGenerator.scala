@@ -12,10 +12,10 @@ import dev.guardrail.terms.framework._
 class AkkaHttpGeneratorLoader extends FrameworkGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply =
+  val apply   =
     ModuleLoadResult.forProduct2(
       FrameworkGeneratorLoader.label -> Seq(AkkaHttpVersion.mapping),
-      ProtocolGeneratorLoader.label -> Seq(
+      ProtocolGeneratorLoader.label  -> Seq(
         CirceModelGenerator.mapping,
         CirceRefinedModelGenerator.mapping.view.mapValues(_.toCirce).toMap,
         JacksonModelGenerator.mapping
@@ -31,7 +31,7 @@ object AkkaHttpGenerator {
 }
 
 class AkkaHttpGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGeneratorType: ModelGeneratorType) extends FrameworkTerms[ScalaLanguage, Target] {
-  override def fileType(format: Option[String]) = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
+  override def fileType(format: Option[String])   = Target.pure(format.fold[Type](t"BodyPartEntity")(Type.Name(_)))
   override def objectType(format: Option[String]) =
     modelGeneratorType match {
       case _: CirceModelGenerator   => Target.pure(t"io.circe.Json")
