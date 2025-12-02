@@ -75,6 +75,7 @@ object core {
             param"propertyRequirement: dev.guardrail.terms.protocol.PropertyRequirement.Configured",
             param"tagsBehaviour: dev.guardrail.TagsBehaviour",
             param"authImplementation: dev.guardrail.AuthImplementation",
+            param"scalaVersion: dev.guardrail.generators.ScalaVersion",
           ),
           List(
             q"""
@@ -88,7 +89,8 @@ object core {
                   dev.guardrail.terms.protocol.PropertyRequirement.OptionalLegacy
                 ),
                 tagsBehaviour = TagsBehaviour.TagsAreIgnored,
-                authImplementation = AuthImplementation.Disable
+                authImplementation = AuthImplementation.Disable,
+                scalaVersion = dev.guardrail.generators.ScalaVersion.default
               )
             """
           ),

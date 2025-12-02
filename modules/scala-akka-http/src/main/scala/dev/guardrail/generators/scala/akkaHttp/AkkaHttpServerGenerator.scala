@@ -25,8 +25,10 @@ import dev.guardrail.generators.scala.CirceModelGenerator
 import dev.guardrail.generators.scala.CirceRefinedModelGenerator
 import dev.guardrail.generators.scala.JacksonModelGenerator
 import dev.guardrail.generators.scala.ModelGeneratorType
+import dev.guardrail.generators.scala.Scala3Compat
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
+import dev.guardrail.generators.ScalaVersion
 import dev.guardrail.generators.spi.ModuleLoadResult
 import dev.guardrail.generators.spi.ProtocolGeneratorLoader
 import dev.guardrail.generators.spi.ServerGeneratorLoader
@@ -150,7 +152,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
               operationId           <- getOperationId(operation)
               responses             <- Responses.getResponses[ScalaLanguage, Target](operationId, operation, protocolElems, components)
               responseClsName       <- formatTypeName(operationId, Some("Response"))
-              responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems)
+              responseDefinitions   <- generateResponseDefinitions(responseClsName, responses, protocolElems, context.scalaVersion)
               methodName            <- formatMethodName(operationId)
               parameters            <- route.getParameters[ScalaLanguage, Target](components, protocolElems)
               customExtractionField <- buildCustomExtractionFields(operation, className, context.customExtraction)
@@ -174,7 +176,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
             protocolElems,
             securitySchemes,
             securityExposure,
-            context.authImplementation
+            context.authImplementation,
+            context.scalaVersion
           )
           handlerSrc <- renderHandler(
             handlerName,
@@ -202,7 +205,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
             renderedRoutes.supportDefinitions,
             renderedRoutes.securitySchemesDefinitions,
             context.customExtraction,
-            context.authImplementation
+            context.authImplementation,
+            context.scalaVersion
           )
         } yield Server[ScalaLanguage](className, frameworkImports ++ extraImports, handlerSrc, classSrc)
       }
@@ -217,7 +221,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
   private def generateResponseDefinitions(
       responseClsName: String,
       responses: Responses[ScalaLanguage],
-      protocolElems: List[StrictProtocolElems[ScalaLanguage]]
+      protocolElems: List[StrictProtocolElems[ScalaLanguage]],
+      scalaVersion: ScalaVersion
   ) =
     for {
       _ <- Target.pure(())
@@ -287,6 +292,9 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
         }
       protocolImplicits <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
       toResponseImplicits = List(param"ec: scala.concurrent.ExecutionContext") ++ protocolImplicits
+      implicitParamClause = NonEmptyList
+        .fromList(protocolImplicits)
+        .fold(List.empty[Term.ParamClause])(nel => List(Scala3Compat.implicitsClause(nel.toList, scalaVersion)))
       companion = q"""
           object ${responseSuperTerm} {
           ${Defn.Def(
@@ -295,7 +303,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           List(
             Member.ParamClauseGroup(
               Type.ParamClause(Nil),
-              NonEmptyList.fromList(protocolImplicits).fold(List.empty[Term.ParamClause])(nel => List(Term.ParamClause(nel.toList, Some(Mod.Implicit()))))
+              implicitParamClause
             )
           ),
           Some(t"ToResponseMarshaller[${responseSuperType}]"),
@@ -304,9 +312,9 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
             implicit def ${Term
           .Name(
             s"${responseClsName.uncapitalized}TR"
-          )}(value: ${responseSuperType})(..${Term.ParamClause(
+          )}(value: ${responseSuperType})(..${Scala3Compat.implicitsClause(
           toResponseImplicits,
-          Some(Mod.Implicit())
+          scalaVersion
         )}): scala.concurrent.Future[List[Marshalling[HttpResponse]]] =
               ${Term.Match(Term.Name("value"), marshallers, Nil)}
 
@@ -371,10 +379,11 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       protocolElems: List[StrictProtocolElems[ScalaLanguage]],
       securitySchemes: Map[String, SecurityScheme[ScalaLanguage]],
       securityExposure: SecurityExposure,
-      authImplementation: AuthImplementation
+      authImplementation: AuthImplementation,
+      scalaVersion: ScalaVersion
   ) =
     for {
-      renderedRoutes <- routes.traverse(generateRoute(resourceName, basePath))
+      renderedRoutes <- routes.traverse(generateRoute(resourceName, basePath, scalaVersion))
       routeTerms = renderedRoutes.map(_.route)
       combinedRouteTerms <- combineRouteTerms(routeTerms)
       methodSigs = renderedRoutes.map(_.methodSig)
@@ -433,7 +442,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       supportDefinitions: List[scala.meta.Defn],
       securitySchemesDefinitions: List[scala.meta.Defn],
       customExtraction: Boolean,
-      authImplementation: AuthImplementation
+      authImplementation: AuthImplementation,
+      scalaVersion: ScalaVersion
   ): Target[List[Defn]] =
     for {
       _                 <- Target.log.debug(s"renderClass(${resourceName}, ${handlerName}, <combinedRouteTerms>, ${extraRouteParams})")
@@ -453,7 +463,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
           List(param"handler: $handlerType") ++ extraRouteParams,
           None
         ),
-        Term.ParamClause(List(param"mat: akka.stream.Materializer") ++ protocolImplicits, Some(Mod.Implicit()))
+        Scala3Compat.implicitsClause(List(param"mat: akka.stream.Materializer") ++ protocolImplicits, scalaVersion)
       )
       List(q"""
         object ${Term.Name(resourceName)} {
@@ -1002,7 +1012,8 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
 
   private def generateRoute(
       resourceName: String,
-      basePath: Option[String]
+      basePath: Option[String],
+      scalaVersion: ScalaVersion
   ): GenerateRouteMeta[ScalaLanguage] => Target[RenderedRoute] = {
     case GenerateRouteMeta(_, methodName, responseClsName, customExtractionFields, tracingFields, route, parameters, responses) =>
       // Generate the pair of the Handler method and the actual call to `complete(...)`
@@ -1107,7 +1118,7 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
             )
           )
         )
-        codecs <- generateCodecs(methodName, bodyArgs, responses, consumes)
+        codecs <- generateCodecs(methodName, bodyArgs, responses, consumes, scalaVersion)
       } yield RenderedRoute(
         fullRoute,
         q"""def ${Term.Name(methodName)}(...${params}): scala.concurrent.Future[${responseType}]""",
@@ -1142,26 +1153,29 @@ class AkkaHttpServerGenerator private (akkaHttpVersion: AkkaHttpVersion, modelGe
       methodName: String,
       bodyArgs: Option[LanguageParameter[ScalaLanguage]],
       responses: Responses[ScalaLanguage],
-      consumes: Tracker[NonEmptyList[ContentType]]
+      consumes: Tracker[NonEmptyList[ContentType]],
+      scalaVersion: ScalaVersion
   ): Target[List[Defn.Def]] =
-    generateDecoders(methodName, bodyArgs, consumes)
+    generateDecoders(methodName, bodyArgs, consumes, scalaVersion)
 
   private def generateDecoders(
       methodName: String,
       bodyArgs: Option[LanguageParameter[ScalaLanguage]],
-      consumes: Tracker[NonEmptyList[ContentType]]
+      consumes: Tracker[NonEmptyList[ContentType]],
+      scalaVersion: ScalaVersion
   ): Target[List[Defn.Def]] =
     bodyArgs.toList.traverse { case LanguageParameter(_, _, _, _, argType) =>
       for {
         (decoder, baseType) <- AkkaHttpHelper.generateDecoder(argType, consumes, modelGeneratorType)
         decoderImplicits    <- AkkaHttpHelper.protocolImplicits(modelGeneratorType)
+        decoderImplicitClause = if (decoderImplicits.nonEmpty) List(Scala3Compat.implicitsClause(decoderImplicits, scalaVersion)) else Nil
       } yield Defn.Def(
         mods = List.empty,
         Term.Name(s"${methodName}Decoder"),
         List(
           Member.ParamClauseGroup(
             Type.ParamClause(Nil),
-            List(decoderImplicits).filter(_.nonEmpty)
+            decoderImplicitClause
           )
         ),
         Some(t"FromRequestUnmarshaller[$baseType]"),

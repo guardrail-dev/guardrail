@@ -18,8 +18,10 @@ import dev.guardrail.generators.scala.CirceRefinedModelGenerator
 import dev.guardrail.generators.scala.JacksonModelGenerator
 import dev.guardrail.generators.scala.ModelGeneratorType
 import dev.guardrail.generators.scala.ResponseADTHelper
+import dev.guardrail.generators.scala.Scala3Compat
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
+import dev.guardrail.generators.ScalaVersion
 import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.generators.spi.ModuleLoadResult
 import dev.guardrail.generators.spi.ProtocolGeneratorLoader
@@ -108,8 +110,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
           }
           (responseDefinitions, clientOperations) = responseClientPair.unzip
           tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
-          ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
-          staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
+          ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing, context.scalaVersion)
+          staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing, context.scalaVersion)
           client <- buildClient(
             clientName,
             tracingName,
@@ -492,7 +494,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
   private def clientClsArgs(
       tracingName: Option[String],
       serverUrls: Option[NonEmptyList[URI]],
-      tracing: Boolean
+      tracing: Boolean,
+      scalaVersion: ScalaVersion
   ): Target[List[Term.ParamClause]] = {
     val implicits = List(
       param"httpClient: HttpRequest => Future[HttpResponse]",
@@ -508,7 +511,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
                                          else None),
         None
       ),
-      Term.ParamClause(implicits ++ protocolImplicits, Some(Mod.Implicit()))
+      Scala3Compat.implicitsClause(implicits ++ protocolImplicits, scalaVersion)
     )
   }
   private def generateResponseDefinitions(
@@ -527,7 +530,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
       tracingName: Option[String],
       serverUrls: Option[NonEmptyList[URI]],
       ctorArgs: List[Term.ParamClause],
-      tracing: Boolean
+      tracing: Boolean,
+      scalaVersion: ScalaVersion
   ): Target[StaticDefns[ScalaLanguage]] = {
     def extraConstructors(
         tracingName: Option[String],
@@ -553,7 +557,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
             List(param"httpClient: HttpRequest => Future[HttpResponse]", formatHost(serverUrls)) ++ tracingParams,
             None
           ),
-          Term.ParamClause(implicits ++ protocolImplicits, Some(Mod.Implicit()))
+          Scala3Compat.implicitsClause(implicits ++ protocolImplicits, scalaVersion)
         )
       } yield List(
         q"""def httpClient(...${args}): $tpe = $ctorCall"""
