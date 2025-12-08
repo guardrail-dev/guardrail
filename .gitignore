@@ -10,3 +10,4 @@ vendor/
 metals.sbt
 .sbtopts
 node_modules/
+.direnv/
