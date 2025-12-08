@@ -30,7 +30,7 @@ on:
 jobs:
   publish:
     name: 'Publish release'
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: 'Extract project from tag'
         id: set-project-from-tag

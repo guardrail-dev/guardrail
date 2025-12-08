@@ -12,7 +12,7 @@ on:
 jobs:
   core:
     name: Run core tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         java: [ '1.14' ]
@@ -51,7 +51,7 @@ jobs:
         verbose: true
         token: ${{ secrets.CODECOV_TOKEN }}
   java:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [core]
     strategy:
       matrix:
@@ -87,7 +87,7 @@ jobs:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
   scala:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [core]
     strategy:
       matrix:
