@@ -8,7 +8,6 @@ import com.github.sbt.git.SbtGit._
 import com.github.sbt.git.SbtGit.GitKeys.gitReader
 import wartremover.WartRemover.autoImport._
 import scalafix.sbt.ScalafixPlugin.autoImport._
-import xerial.sbt.Sonatype.autoImport._
 import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
 
 object Build {
@@ -110,7 +109,6 @@ object Build {
     addCompilerPlugin("org.typelevel" % "kind-projector"  % "0.13.2" cross CrossVersion.full),
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
     addCompilerPlugin(scalafixSemanticdb),
-    sonatypeCredentialHost := "s01.oss.sonatype.org",
   )
 
   def commonModule(moduleSegment: String) =
