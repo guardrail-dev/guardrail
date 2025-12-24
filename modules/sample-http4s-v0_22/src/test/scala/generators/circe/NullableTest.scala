@@ -72,6 +72,6 @@ class NullableTest extends AnyFunSuite with Matchers with EitherValues {
   }
 
   private def getKey(json: Json, key: String): Option[Json] = json.hcursor.downField(key).as[Json].toOption
-  private def dropKey(json: Json, key: String): Json =
+  private def dropKey(json: Json, key: String): Json        =
     json.mapObject(_.filterKeys(_ != key))
 }

@@ -133,7 +133,7 @@ class Issue325Suite extends AnyFunSuite with Matchers with EitherValues with Sca
           sreq     <- req.toStrict(Duration(5, SECONDS))
           chunks   <- Unmarshaller.multipartFormDataUnmarshaller.apply(sreq.entity)
           elements <- chunks.parts.runFold(List.empty[Multipart.FormData.BodyPart])(_ :+ _)
-          res <- elements.groupBy(_.name).toList.traverse { case (name, chunks) =>
+          res      <- elements.groupBy(_.name).toList.traverse { case (name, chunks) =>
             for {
               chunks <- chunks.traverse[Future, Multipart.FormData.BodyPart.Strict](_.toStrict(Duration(5, SECONDS)))
             } yield p(name, chunks)
