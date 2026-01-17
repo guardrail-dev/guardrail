@@ -267,13 +267,13 @@ abstract class LanguageTerms[L <: LA, F[_]] { self =>
     val newWrapToObject               = wrapToObject
 
     new LanguageTerms[L, F] {
-      def litString(value: String)                                  = newLitString(value)
-      def litFloat(value: Float)                                    = newLitFloat(value)
-      def litDouble(value: Double)                                  = newLitDouble(value)
-      def litInt(value: Int)                                        = newLitInt(value)
-      def litLong(value: Long)                                      = newLitLong(value)
-      def litBoolean(value: Boolean)                                = newLitBoolean(value)
-      def fullyQualifyPackageName(rawPkgName: NonEmptyList[String]) = newFullyQualifyPackageName(rawPkgName)
+      def litString(value: String)                                                               = newLitString(value)
+      def litFloat(value: Float)                                                                 = newLitFloat(value)
+      def litDouble(value: Double)                                                               = newLitDouble(value)
+      def litInt(value: Int)                                                                     = newLitInt(value)
+      def litLong(value: Long)                                                                   = newLitLong(value)
+      def litBoolean(value: Boolean)                                                             = newLitBoolean(value)
+      def fullyQualifyPackageName(rawPkgName: NonEmptyList[String])                              = newFullyQualifyPackageName(rawPkgName)
       def lookupEnumDefaultValue(tpe: L#TypeName, defaultValue: L#Term, values: RenderedEnum[L]) =
         newLookupEnumDefaultValue(tpe, defaultValue, values)
       def formatPackageName(packageName: List[String]): F[NonEmptyList[String]]         = newFormatPackageName(packageName)

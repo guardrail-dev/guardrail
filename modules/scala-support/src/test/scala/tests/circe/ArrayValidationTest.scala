@@ -47,7 +47,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
   "Array Validation" - {
 
     implicit def CollectionsLibInterp = ScalaCollectionsGenerator()
-    implicit val mockFW = new FrameworkTerms[ScalaLanguage, Target] {
+    implicit val mockFW               = new FrameworkTerms[ScalaLanguage, Target] {
       def fileType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"String")
       def getFrameworkDefinitions(
           tracing: Boolean
@@ -55,7 +55,7 @@ class ArrayValidationTest extends AnyFreeSpec with Matchers with SwaggerSpecRunn
         ???
       def getFrameworkImplicits(): dev.guardrail.Target[Option[
         (dev.guardrail.generators.scala.ScalaLanguage#TermName, dev.guardrail.generators.scala.ScalaLanguage#ObjectDefinition)
-      ]] = ???
+      ]]                                                                                                                             = ???
       def getFrameworkImports(tracing: Boolean): dev.guardrail.Target[List[dev.guardrail.generators.scala.ScalaLanguage#Import]]     = ???
       def lookupStatusCode(key: Tracker[String]): dev.guardrail.Target[(Int, dev.guardrail.generators.scala.ScalaLanguage#TermName)] = ???
       def objectType(format: Option[String]): dev.guardrail.Target[dev.guardrail.generators.scala.ScalaLanguage#Type] = Target.pure(t"io.circe.Json")

@@ -37,7 +37,7 @@ class Issue148Suite extends AnyFunSuite with Matchers with EitherValues with Sca
         IO.pure(respond.Accepted(Bar("bar")))
     })
 
-    val client = Client.fromHttpApp[IO](route.orNotFound)
+    val client                                       = Client.fromHttpApp[IO](route.orNotFound)
     def failedResponseBody(req: Request[IO]): String =
       client
         .run(req)

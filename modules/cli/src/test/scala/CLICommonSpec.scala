@@ -12,7 +12,7 @@ class CLICommonSpec extends AnyFunSuite with SwaggerSpecRunner with Matchers wit
     parseArgsLang("scala", args)
   def parseArgsLang(language: String, args: Array[String]): Vector[String] = {
     val state = new AtomicReference(Vector.empty[String])
-    val impl = new CLICommon {
+    val impl  = new CLICommon {
       val AnsiColor = new {
         val BLUE: String  = ""
         val BOLD: String  = ""
