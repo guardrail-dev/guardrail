@@ -71,7 +71,7 @@ object ResponseHelpers {
 
     def checkMatch(matching: List[String], headsToCheck: List[Option[String]], restOfHeads: List[List[String]]): List[String] =
       headsToCheck match {
-        case Nil => matching
+        case Nil     => matching
         case x :: xs =>
           x.fold(matching) { first =>
             if (xs.forall(_.contains(first))) {

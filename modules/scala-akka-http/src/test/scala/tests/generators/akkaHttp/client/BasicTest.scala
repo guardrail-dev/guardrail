@@ -89,7 +89,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with Sc
       ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""

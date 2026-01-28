@@ -26,7 +26,7 @@ class Issue143 extends AnyFunSuite with Matchers with EitherValues with ScalaFut
 
   test("Ensure that failed uploads are cleaned up afterwards") {
     val tempDest = File.createTempFile("guardrail.", ".dat")
-    val route = Resource.routes(new Handler {
+    val route    = Resource.routes(new Handler {
       def uploadFile(
           respond: Resource.UploadFileResponse.type
       )(file: (File, Option[String], akka.http.scaladsl.model.ContentType)): Future[Resource.UploadFileResponse] =
@@ -38,7 +38,7 @@ class Issue143 extends AnyFunSuite with Matchers with EitherValues with ScalaFut
     val chunks        = 1000
     val data          = "foo"
     val contentLength = chunks * data.length
-    val req = Post("/file").withEntity(
+    val req           = Post("/file").withEntity(
       Multipart
         .FormData(
           Multipart.FormData.BodyPart(

@@ -99,7 +99,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )                = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val companion    = companionForStaticDefns(staticDefns)
     val companionCat = companionForStaticDefns(staticDefnsCat)
 
@@ -269,8 +269,8 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     val (
       ProtocolDefinitions(
         ClassDefinition(namePersianCat, tpePersianCat, fullTypePersioanCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
-          :: ClassDefinition(nameDog, tpeDog, fullTypeDog, clsDog, staticDefnsDog, dogParents)
-          :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, fullTypeCat, trtCat, staticDefnsCat) :: Nil,
+        :: ClassDefinition(nameDog, tpeDog, fullTypeDog, clsDog, staticDefnsDog, dogParents)
+        :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, fullTypeCat, trtCat, staticDefnsCat) :: Nil,
         _,
         _,
         _,
@@ -278,7 +278,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )                       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
     val companionDog        = companionForStaticDefns(staticDefnsDog)
     val companionPet        = companionForStaticDefns(staticDefnsPet)
@@ -466,8 +466,8 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     val (
       ProtocolDefinitions(
         ClassDefinition(nameDog, tpeDog, fullTypeDog, clsDog, staticDefnsDog, dogParents)
-          :: ClassDefinition(namePersianCat, tpePersianCat, fullTypePersianCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
-          :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, fullTypeCat, trtCat, staticDefnsCat) :: Nil,
+        :: ClassDefinition(namePersianCat, tpePersianCat, fullTypePersianCat, clsPersianCat, staticDefnsPersianCat, persianCatParents)
+        :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameCat, tpeCat, fullTypeCat, trtCat, staticDefnsCat) :: Nil,
         _,
         _,
         _,
@@ -475,7 +475,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )                       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val companionPersianCat = companionForStaticDefns(staticDefnsPersianCat)
     val companionCat        = companionForStaticDefns(staticDefnsCat)
 
@@ -566,7 +566,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
     val (
       ProtocolDefinitions(
         ClassDefinition(nameCat, tpeCat, fullTypeCat, clsCat, staticDefnsCat, catParents)
-          :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameMammal, tpeMammal, fullTypeMammal, trtMammal, staticDefnsMammal) :: Nil,
+        :: ADT(namePet, tpePet, fullTypePet, trtPet, staticDefnsPet) :: ADT(nameMammal, tpeMammal, fullTypeMammal, trtMammal, staticDefnsMammal) :: Nil,
         _,
         _,
         _,
@@ -574,7 +574,7 @@ class Issue43 extends AnyFunSpec with Matchers with SwaggerSpecRunner {
       ),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )                   = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val companionCat    = companionForStaticDefns(staticDefnsCat)
     val companionPet    = companionForStaticDefns(staticDefnsPet)
     val companionMammal = companionForStaticDefns(staticDefnsMammal)

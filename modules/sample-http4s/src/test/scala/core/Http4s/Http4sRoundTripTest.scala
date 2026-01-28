@@ -55,11 +55,11 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       def deletePet(
           respond: DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Vector[String])                      = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus) = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Vector[String])                            = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                             = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                               = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Vector[String])                                   = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Vector[String])                                         = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
       )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
@@ -119,10 +119,10 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       def deletePet(
           respond: DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Vector[String]) = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Vector[String])       = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                        = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)          = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Vector[String])                                   = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Vector[String])                                         = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
       )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
@@ -170,10 +170,10 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
       def deletePet(
           respond: DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus) = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Vector[String])                            = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                             = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                               = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(tags: Vector[String])                                         = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
       )(petId: Long, name: Option[String] = None, status: Option[String] = None) =
@@ -198,7 +198,7 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   test("round-trip: Raw type parameters") {
     val petId: Long    = 123L
     val apiKey: String = "foobar"
-    val httpService = new PetResource().routes(new PetHandler[IO] {
+    val httpService    = new PetResource().routes(new PetHandler[IO] {
       def deletePet(respond: DeletePetResponse.type)(
           _petId: Long,
           includeChildren: Option[Boolean],
@@ -243,16 +243,16 @@ class Http4sRoundTripTest extends AnyFunSuite with Matchers with EitherValues {
   test("round-trip: File uploads") {
     val petId: Long    = 123L
     val apiKey: String = "foobar"
-    val httpService = new PetResource().routes(new PetHandler[IO] {
+    val httpService    = new PetResource().routes(new PetHandler[IO] {
       def addPet(respond: AddPetResponse.type)(body: sdefs.definitions.Pet) = ???
       def deletePet(
           respond: DeletePetResponse.type
       )(_petId: Long, includeChildren: Option[Boolean], status: Option[sdefs.definitions.PetStatus], apiKey: Option[String]) = ???
-      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Vector[String])                      = ???
-      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus) = ???
-      def findPetsByTags(respond: FindPetsByTagsResponse.type)(ags: Vector[String])                             = ???
-      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                             = ???
-      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                               = ???
+      def findPetsByStatus(respond: FindPetsByStatusResponse.type)(status: Vector[String])                                   = ???
+      def findPetsByStatusEnum(respond: FindPetsByStatusEnumResponse.type)(status: sdefs.definitions.PetStatus)              = ???
+      def findPetsByTags(respond: FindPetsByTagsResponse.type)(ags: Vector[String])                                          = ???
+      def getPetById(respond: GetPetByIdResponse.type)(petId: Long)                                                          = ???
+      def updatePet(respond: UpdatePetResponse.type)(body: sdefs.definitions.Pet)                                            = ???
       def updatePetWithForm(
           respond: UpdatePetWithFormResponse.type
       )(petId: Long, name: Option[String] = None, status: Option[String] = None) =

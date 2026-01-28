@@ -21,7 +21,7 @@ class JavaCollectionsGeneratorLoader extends CollectionsGeneratorLoader {
 
 object JavaCollectionsGenerator {
   def apply(): CollectionsLibTerms[JavaLanguage, Target] = new JavaCollectionsGenerator
-  val mapping: Map[String, JavaCollectionsGenerator] = Map(
+  val mapping: Map[String, JavaCollectionsGenerator]     = Map(
     "java-stdlib" -> new JavaCollectionsGenerator
   )
 }
