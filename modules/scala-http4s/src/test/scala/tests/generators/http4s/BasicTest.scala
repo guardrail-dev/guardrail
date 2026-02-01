@@ -91,7 +91,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with Sc
         ProtocolDefinitions(_ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
         _,
         _
-      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
+      )       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
       val cmp = companionForStaticDefns(staticDefns)
 
       val definition = q"""
@@ -116,7 +116,7 @@ class BasicTest extends AnyFunSuite with Matchers with SwaggerSpecRunner with Sc
         _,
         Clients(Client(tags, className, _, staticDefns, cls, statements) :: _, Nil),
         _
-      ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
+      )       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, version.value)
       val cmp = companionForStaticDefns(staticDefns)
 
       val companion = q"""object Client {

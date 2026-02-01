@@ -34,7 +34,7 @@ class DropwizardMultiPartTest extends AnyFreeSpec with ResourceTestSupport with 
       .build()
 
   "Multi-part form data with jsr310 date-times works" in {
-    val now: OffsetDateTime = OffsetDateTime.now.withOffsetSameInstant(ZoneOffset.UTC)
+    val now: OffsetDateTime          = OffsetDateTime.now.withOffsetSameInstant(ZoneOffset.UTC)
     val multiPart: FormDataMultiPart = new FormDataMultiPart()
       .field("id", "42")
       .field("date", now.toString)

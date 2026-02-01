@@ -8,7 +8,7 @@ import cats.implicits._
 
 object ModuleLoadResult {
   implicit val moduleLoadResultApplicative: Applicative[ModuleLoadResult] = new Applicative[ModuleLoadResult] {
-    def pure[A](x: A): ModuleLoadResult[A] = new ModuleLoadSuccess(Set.empty, Set.empty, x)
+    def pure[A](x: A): ModuleLoadResult[A]                                                   = new ModuleLoadSuccess(Set.empty, Set.empty, x)
     def ap[A, B](ff: ModuleLoadResult[A => B])(fa: ModuleLoadResult[A]): ModuleLoadResult[B] = ff match {
       case f: ModuleLoadSuccess[A => B] =>
         fa match {
@@ -35,7 +35,7 @@ object ModuleLoadResult {
   }
 
   implicit def moduleLoadResultSemigroup[A]: Monoid[ModuleLoadResult[A]] = new Monoid[ModuleLoadResult[A]] {
-    def empty: ModuleLoadResult[A] = ModuleLoadFailed.of(Set.empty, Set.empty, Map.empty)
+    def empty: ModuleLoadResult[A]                                                   = ModuleLoadFailed.of(Set.empty, Set.empty, Map.empty)
     def combine(a: ModuleLoadResult[A], b: ModuleLoadResult[A]): ModuleLoadResult[A] =
       (a, b) match {
         case (a: ModuleLoadConflict, _) =>
@@ -84,13 +84,13 @@ object ModuleLoadResult {
     }
   }
 
-  private[this] def extractLabel[A](descriptor: ModuleDescriptor[A]): Set[String] = Set(descriptor._1)
+  private[this] def extractLabel[A](descriptor: ModuleDescriptor[A]): Set[String]                = Set(descriptor._1)
   private[this] def extractChoices[A](descriptor: ModuleDescriptor[A]): Map[String, Set[String]] = {
     val (label, mappings) = descriptor
     Map(label -> mappings.flatMap(_.keys).toSet)
   }
 
-  def emitDefault[A](a: A): Set[String] => ModuleLoadResult[A] = _ => new ModuleLoadSuccess[A](Set.empty, Set.empty, a)
+  def emitDefault[A](a: A): Set[String] => ModuleLoadResult[A]                                       = _ => new ModuleLoadSuccess[A](Set.empty, Set.empty, a)
   def forProduct1[A, Z](a: ModuleDescriptor[A])(combine: A => Z): Set[String] => ModuleLoadResult[Z] =
     wrapper(module => work[A](a)(module))(_.map(combine)).map(_.getOrElse(ModuleLoadFailed.of(Set.empty, Set.empty, extractChoices(a))))
   def forProduct2[A, B, Z](a: ModuleDescriptor[A], b: ModuleDescriptor[B])(combine: (A, B) => Z): Set[String] => ModuleLoadResult[Z] =

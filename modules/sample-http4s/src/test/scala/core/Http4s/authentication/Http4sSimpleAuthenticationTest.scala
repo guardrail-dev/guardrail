@@ -111,7 +111,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
   test("processing order: shortcut on the first 'or' success") {
     import AuthResource.AuthSchemes
 
-    val invoked = mutable.ArrayBuffer.empty[AuthSchemes]
+    val invoked                                                                                                    = mutable.ArrayBuffer.empty[AuthSchemes]
     val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (authScheme, scopes, req) =>
       invoked += authScheme
       authScheme match {
@@ -132,7 +132,7 @@ class Http4sSimpleAuthenticationTest extends AnyFunSuite with Matchers with Eith
   test("processing order: shortcut on the first 'and' failure") {
     import AuthResource.AuthSchemes
 
-    val invoked = mutable.ArrayBuffer.empty[AuthSchemes]
+    val invoked                                                                                                    = mutable.ArrayBuffer.empty[AuthSchemes]
     val authMiddleware: (AuthSchemes, Set[String], Request[IO]) => IO[Either[AuthResource.AuthError, AuthContext]] = { (authScheme, scopes, req) =>
       invoked += authScheme
       authScheme match {

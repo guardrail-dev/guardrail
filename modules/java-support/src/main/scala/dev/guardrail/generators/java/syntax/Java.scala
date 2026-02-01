@@ -72,7 +72,7 @@ package object syntax {
     case t: com.github.javaparser.ParseProblemException =>
       val problems     = t.getProblems().asScala.toVector
       val msgSeparator = if (problems.length > 1) "\n" else " "
-      val msgs = problems
+      val msgs         = problems
         .map(problem =>
           problem.getCause.asScala
             .flatMap {
@@ -92,7 +92,7 @@ package object syntax {
       val msg = msgs match {
         case Vector()    => "\n" + t.getMessage()
         case Vector(msg) => msg
-        case rest =>
+        case rest        =>
           rest.zipWithIndex
             .map { case (msg, idx) =>
               s"""Problem ${idx + 1}:
@@ -283,7 +283,7 @@ package object syntax {
         .replaceAll("^_+", "")
         .replaceAll("_+$", "")
 
-    def escapeReservedWord: String = if (reservedWords.contains(s)) s + "_" else s
+    def escapeReservedWord: String   = if (reservedWords.contains(s)) s + "_" else s
     def unescapeReservedWord: String =
       if (s.endsWith("_")) {
         val prefix = s.substring(0, s.length - 1)

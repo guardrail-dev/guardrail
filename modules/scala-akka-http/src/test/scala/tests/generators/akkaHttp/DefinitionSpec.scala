@@ -77,7 +77,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
       ProtocolDefinitions(ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -101,7 +101,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
       ProtocolDefinitions(_ :: _ :: EnumDefinition(_, _, _, _, cls, staticDefns) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -137,7 +137,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
       ProtocolDefinitions(_ :: _ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""
@@ -161,7 +161,7 @@ class DefinitionSpec extends AnyFunSuite with Matchers with SwaggerSpecRunner wi
       ProtocolDefinitions(_ :: _ :: _ :: _ :: _ :: ClassDefinition(_, _, _, cls, staticDefns, _) :: _, _, _, _, _),
       _,
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val definition = q"""

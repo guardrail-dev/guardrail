@@ -57,7 +57,7 @@ class Issue542Suite extends AnyFunSuite with Matchers with EitherValues with Sca
 
     def staticClient: Http4sClient[IO] = {
       implicit val fooOkEncoder = jsonEncoderOf[IO, Foo]
-      val response = new Http4sDsl[IO] {
+      val response              = new Http4sDsl[IO] {
         def route: HttpApp[IO] = Kleisli.liftF(Ok(Foo(Some(Base64String("foo".getBytes())))))
       }
       Http4sClient.fromHttpApp[IO](response.route)

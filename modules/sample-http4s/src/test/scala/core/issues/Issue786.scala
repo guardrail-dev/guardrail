@@ -17,8 +17,8 @@ class Issue786Suite extends AnyFunSuite with Matchers {
     import issues.issue786.server.http4s.{ Handler, Resource }
 
     val route = new Resource[IO]().routes(new Handler[IO] {
-      val dog    = Dog("bones", "black")
-      val turtle = Turtle("turtle food")
+      val dog                                                                                      = Dog("bones", "black")
+      val turtle                                                                                   = Turtle("turtle food")
       def getAnimals(respond: Resource.GetAnimalsResponse.type)(): IO[Resource.GetAnimalsResponse] =
         IO.pure(respond.Ok(Vector(dog, turtle)))
       def getDogs(respond: Resource.GetDogsResponse.type)(): IO[Resource.GetDogsResponse] =
