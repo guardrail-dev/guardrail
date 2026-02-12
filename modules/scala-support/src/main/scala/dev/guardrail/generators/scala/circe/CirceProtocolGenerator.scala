@@ -43,7 +43,7 @@ import dev.guardrail.{ Target, UserError }
 class CirceProtocolGeneratorLoader extends ProtocolGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply =
+  val apply   =
     ModuleLoadResult.forProduct1(ProtocolGeneratorLoader.label -> Seq(CirceModelGenerator.mapping))(circeVersion => CirceProtocolGenerator(circeVersion))
 }
 
@@ -86,13 +86,13 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       concreteTypes <- PropMeta.extractConcreteTypes[ScalaLanguage, Target](definitions.value, components)
       polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
       prefixes <- vendorPrefixes()
-      elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
+      elems    <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model
           .refine { case c: ComposedSchema => c }(comp =>
             for {
               formattedClsName <- formatTypeName(clsName)
               parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components)
-              model <- fromModel(
+              model   <- fromModel(
                 clsName = NonEmptyList.of(formattedClsName),
                 model = comp,
                 parents = parents,
@@ -126,7 +126,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             for {
               formattedClsName <- formatTypeName(clsName)
               enum_            <- fromEnum[Object](formattedClsName, m, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 clsName = NonEmptyList.of(formattedClsName),
                 model = m,
                 parents = List.empty,
@@ -154,7 +154,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             for {
               formattedClsName <- formatTypeName(clsName)
               enum_            <- fromEnum(formattedClsName, x, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
                 List.empty,
@@ -174,7 +174,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             for {
               formattedClsName <- formatTypeName(clsName)
               enum_            <- fromEnum(formattedClsName, x, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
                 List.empty,
@@ -186,7 +186,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
                 components
               )
               (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](x, Tracker.cloneHistory(x, CustomTypeName(x, prefixes)), components)
-              oneOf <- fromOneOf(
+              oneOf         <- fromOneOf(
                 clsName = NonEmptyList.of(formattedClsName),
                 model = x,
                 definitions.value,
@@ -225,7 +225,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
   private[this] def getRequiredFieldsRec(root: Tracker[Schema[_]]): List[String] = {
     @scala.annotation.tailrec
     def work(values: List[Tracker[Schema[_]]], acc: List[String]): List[String] = {
-      val required: List[String] = values.flatMap(_.downField("required", _.getRequired()).unwrapTracker)
+      val required: List[String]         = values.flatMap(_.downField("required", _.getRequired()).unwrapTracker)
       val next: List[Tracker[Schema[_]]] =
         for {
           a <- values
@@ -369,7 +369,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       props <- extractProperties(hierarchy.model)
       requiredFields = hierarchy.required ::: hierarchy.children.flatMap(_.required)
       prefixes <- vendorPrefixes()
-      params <- props.traverse { case (name, prop) =>
+      params   <- props.traverse { case (name, prop) =>
         for {
           typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
           propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
@@ -380,7 +380,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             ) // TODO: This should be resolved via an alternate mechanism that maintains references all the way through, instead of re-deriving and assuming that references are valid
           defValue  <- defaultValue(typeName, prop, propertyRequirement, definitions)
           fieldName <- formatFieldName(name)
-          res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
+          res       <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
             name,
             fieldName,
             prop,
@@ -431,12 +431,12 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     import Sc._
 
     for {
-      a <- extractSuperClass(elem, definitions)
+      a      <- extractSuperClass(elem, definitions)
       supper <- a.flatTraverse { case (clsName, _extends, interfaces) =>
         val concreteInterfacesWithClass = for {
           interface      <- interfaces
           (cls, tracker) <- definitions
-          result <- tracker
+          result         <- tracker
             .refine[Tracker[Schema[_]]] {
               case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x
             }(
@@ -446,7 +446,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             .toOption
         } yield cls -> result
         val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
-        val classMapping = (for {
+        val classMapping            = (for {
           (cls, schema) <- concreteInterfacesWithClass
           (name, _)     <- schema.downField("properties", _.getProperties).indexedDistribute.value
         } yield (name, cls)).toMap
@@ -565,15 +565,15 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         defaultPropertyRequirement,
         components
       )
-      encoder  <- encodeModel(clsName.last, dtoPackage, params, parents)
-      decoder  <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
-      tpe      <- parseTypeName(clsName.last)
-      fullType <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
+      encoder       <- encodeModel(clsName.last, dtoPackage, params, parents)
+      decoder       <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
+      tpe           <- parseTypeName(clsName.last)
+      fullType      <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
       nestedClasses <- nestedDefinitions.flatTraverse {
         case classDefinition: ClassDefinition[ScalaLanguage] =>
           for {
-            widenClass    <- widenClassDefinition(classDefinition.cls)
-            companionTerm <- pureTermName(classDefinition.name)
+            widenClass          <- widenClassDefinition(classDefinition.cls)
+            companionTerm       <- pureTermName(classDefinition.name)
             companionDefinition <- wrapToObject(
               companionTerm,
               classDefinition.staticDefns.extraImports,
@@ -632,7 +632,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           (rawTypes, nestedClasses) <- xs
             .traverse { model =>
               for {
-                resolved <- ModelResolver.propMetaWithName[ScalaLanguage, Target](() => getNewName().flatMap(Sc.selectType), model, components)
+                resolved                 <- ModelResolver.propMetaWithName[ScalaLanguage, Target](() => getNewName().flatMap(Sc.selectType), model, components)
                 (rawType, nestedClasses) <- resolved
                   .bitraverse(
                     deferred =>
@@ -756,7 +756,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             q"object members { ..${members.toList} }",
             q"def apply[A](value: A)(implicit ev: A => ${Type.Name(clsName.last)}): ${Type.Name(clsName.last)} = ev(value)"
           ) ++ applyAdapters.toList ++ nestedDefns ++ nestedEncoders.flatten ++ nestedDecoders.flatten
-          defn = q"""sealed abstract class ${Type.Name(clsName.last)} {}"""
+          defn        = q"""sealed abstract class ${Type.Name(clsName.last)} {}"""
           staticDefns = StaticDefns[ScalaLanguage](
             className = clsName.last,
             extraImports = List.empty,
@@ -811,7 +811,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       for {
         ()              <- Target.log.debug(s"processProperty: ${name} ${schema.unwrapTracker.showNotNull}")
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
-        defn <- schema
+        defn            <- schema
           .refine[Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]]] { case ObjectExtractor(x) => x }(o =>
             for {
               defn <- fromModel(
@@ -830,7 +830,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
           .orRefine { case o: ComposedSchema => o }(o =>
             for {
               parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
-              model <- fromModel(
+              model   <- fromModel(
                 clsName = nestedClassName,
                 model = o,
                 parents = parents,
@@ -863,7 +863,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       } yield defn
 
     for {
-      prefixes <- vendorPrefixes()
+      prefixes                   <- vendorPrefixes()
       paramsAndNestedDefinitions <- props.traverse[Target, (Tracker[ProtocolParameter[ScalaLanguage]], Option[NestedProtocolElems[ScalaLanguage]])] {
         case (name, schema) =>
           for {
@@ -902,7 +902,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       ) { (s, ta) =>
         val a = ta.unwrapTracker
         s.find(p => p.name == a.name) match {
-          case None => (a :: s).pure[Target]
+          case None            => (a :: s).pure[Target]
           case Some(duplicate) =>
             for {
               newDefaultValue <- findCommonDefaultValue(ta.showHistory, a.defaultValue, duplicate.defaultValue)
@@ -910,7 +910,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             } yield {
               val emptyToNull        = if (Set(a.emptyToNull, duplicate.emptyToNull).contains(EmptyIsNull)) EmptyIsNull else EmptyIsEmpty
               val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
-              val mergedParameter = ProtocolParameter[ScalaLanguage](
+              val mergedParameter    = ProtocolParameter[ScalaLanguage](
                 a.term,
                 a.baseType,
                 a.name,
@@ -1195,11 +1195,11 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       encoder: scala.meta.Defn,
       decoder: scala.meta.Defn
   ): Target[StaticDefns[ScalaLanguage]] = {
-    val longType = Type.Name(clsName)
+    val longType              = Type.Name(clsName)
     val terms: List[Defn.Val] = accessors.map { pascalValue =>
       q"val ${Pat.Var(pascalValue)}: ${longType} = members.${pascalValue}"
     }.toList
-    val values: Defn.Val = q"val values = _root_.scala.Vector(..$accessors)"
+    val values: Defn.Val          = q"val values = _root_.scala.Vector(..$accessors)"
     val implicits: List[Defn.Val] = List(
       q"implicit val ${Pat.Var(Term.Name(s"show${clsName}"))}: Show[${longType}] = Show[${tpe}].contramap[${longType}](_.value)"
     )
@@ -1303,7 +1303,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
               validatedType <- applyValidations(clsName, tpe, property)
             } yield (validatedType, Option.empty, ReifiedRawType.ofMap(fallbackRawType))
         }
-        fieldPattern: Tracker[Option[String]] = property.downField("pattern", _.getPattern)
+        fieldPattern: Tracker[Option[String]]             = property.downField("pattern", _.getPattern)
         collectionElementPattern: Option[Tracker[String]] =
           property.downField("items", _.getItems).indexedDistribute.flatMap(_.downField("pattern", _.getPattern).indexedDistribute)
 
@@ -1314,7 +1314,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
         presence     <- Lt.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         (finalDeclType, finalDefaultValue) = requirement match {
-          case PropertyRequirement.Required => tpe -> defaultValue
+          case PropertyRequirement.Required                                                                                              => tpe -> defaultValue
           case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
             t"$presenceType[$tpe]" -> defaultValue.map(t => q"$presence.Present($t)").orElse(Some(q"$presence.Absent"))
           case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
@@ -1349,7 +1349,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       () <- Target.pure(())
       discriminators     = parents.flatMap(_.discriminators)
       discriminatorNames = discriminators.map(_.propertyName).toSet
-      parentOpt =
+      parentOpt          =
         if (parents.exists(s => s.discriminators.nonEmpty)) {
           parents.headOption
         } else {
@@ -1420,7 +1420,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       (discriminatorParams, params) = allParams.partition(param => discriminatorNames.contains(param.name.value))
       readOnlyKeys: List[String]    = params.flatMap(_.readOnlyKey).toList
       typeName                      = Type.Name(clsName)
-      encVal = {
+      encVal                        = {
         def encodeStatic(param: ProtocolParameter[ScalaLanguage], clsName: String) =
           q"""(${Lit.String(param.name.value)}, _root_.io.circe.Json.fromString(${Lit.String(clsName)}))"""
 
@@ -1450,7 +1450,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
 
         val pairsWithStatic = pairs ++ discriminatorParams.map(encodeStatic(_, clsName))
         val simpleCase      = q"_root_.scala.Vector(..${pairsWithStatic})"
-        val allFields = optional.foldLeft[Term](simpleCase) { (acc, field) =>
+        val allFields       = optional.foldLeft[Term](simpleCase) { (acc, field) =>
           q"$acc ++ $field"
         }
 
@@ -1488,7 +1488,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
       needsEmptyToNull: Boolean = params.exists(_.emptyToNull == EmptyIsNull)
       paramCount                = params.length
       presence <- Lt.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
-      decVal <-
+      decVal   <-
         if (paramCount == 0) {
           Target.pure(
             q"""
@@ -1503,7 +1503,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
             .traverse { case (param, idx) =>
               for {
                 rawTpe <- Target.fromOption(param.term.decltpe, UserError("Missing type"))
-                tpe <- rawTpe match {
+                tpe    <- rawTpe match {
                   case tpe: Type => Target.pure(tpe)
                   case x         => Target.raiseUserError(s"Unsure how to map ${x.structure}, please report this bug!")
                 }
@@ -1609,7 +1609,7 @@ class CirceProtocolGenerator private (circeVersion: CirceModelGenerator, applyVa
     for {
       result <- arr match {
         case Right(core.Resolved(tpe, dep, default, _)) => Target.pure(tpe)
-        case Left(core.Deferred(tpeName)) =>
+        case Left(core.Deferred(tpeName))               =>
           Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
         case Left(core.DeferredArray(tpeName, containerTpe)) =>
           Target.fromOption(

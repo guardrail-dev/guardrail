@@ -32,7 +32,7 @@ class ModuleLoadResultSpec extends AnyFunSuite with Matchers with OptionValues {
   test("ModuleLoadResult forProduct2") {
     val a: Map[String, Boolean] = Map("false" -> false)
     val b: Map[String, Long]    = Map("1" -> 1L)
-    val extractor = ModuleLoadResult.forProduct2(
+    val extractor               = ModuleLoadResult.forProduct2(
       ("A Component", Seq(a)),
       ("B Component", Seq(b))
     )((a, b) => (a, b))
@@ -45,7 +45,7 @@ class ModuleLoadResultSpec extends AnyFunSuite with Matchers with OptionValues {
     val b: Map[String, Long]    = Map("1" -> 1L)
     val c: Map[String, Int]     = Map("1" -> 2)
     val d: Map[String, Char]    = Map("c" -> 'c')
-    val extractor = ModuleLoadResult.forProduct4(
+    val extractor               = ModuleLoadResult.forProduct4(
       ("A Component", Seq(a)),
       ("B Component", Seq(b)),
       ("C Component", Seq(c)),
@@ -66,7 +66,7 @@ class ModuleLoadResultSpec extends AnyFunSuite with Matchers with OptionValues {
     val c: Map[String, Int]     = Map("1" -> 2)
     val d: Map[String, Char]    = Map("c" -> 'c')
     val e: Map[String, Float]   = Map("pi" -> 3.14f)
-    val extractor = ModuleLoadResult.forProduct5(
+    val extractor               = ModuleLoadResult.forProduct5(
       ("A Component", Seq(a)),
       ("B Component", Seq(b)),
       ("C Component", Seq(c)),
@@ -90,7 +90,7 @@ class ModuleLoadResultSpec extends AnyFunSuite with Matchers with OptionValues {
     val d: Map[String, Char]    = Map("c" -> 'c')
     val e: Map[String, Float]   = Map("pi" -> 3.14f)
     val f: Map[String, String]  = Map("foo" -> "foo")
-    val extractor = ModuleLoadResult.forProduct6(
+    val extractor               = ModuleLoadResult.forProduct6(
       ("A Component", Seq(a)),
       ("B Component", Seq(b)),
       ("C Component", Seq(c)),

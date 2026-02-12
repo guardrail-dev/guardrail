@@ -99,7 +99,7 @@ class Http4sCustomAuthenticationTest extends AnyFunSuite with Matchers with Eith
 
     val authMiddleware = (config: NonEmptyList[NonEmptyMap[AuthSchemes, Set[String]]], _: AuthResource.AuthSchemes.AuthRequirement, _: Request[IO]) =>
       IO.pure {
-        val c = config.toList.map(_.toSortedMap.toMap)
+        val c        = config.toList.map(_.toSortedMap.toMap)
         val expected = List(
           Map(AuthSchemes.Basic  -> Set("bar:basic"), AuthSchemes.Jwt        -> Set("foo:read", "bar:write")),
           Map(AuthSchemes.ApiKey -> Set("bar:api"), AuthSchemes.SecretHeader -> Set("bar:admin")),

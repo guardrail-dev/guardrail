@@ -56,7 +56,7 @@ class Issue122 extends AnyFunSuite with Matchers with SwaggerSpecRunner with Sca
       _,
       Clients(Client(tags, className, imports, staticDefns, cls, _) :: _, Nil),
       _
-    ) = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
+    )       = runSwaggerSpec(scalaInterpreter)(spec)(Context.empty, "akka-http")
     val cmp = companionForStaticDefns(staticDefns)
 
     val client = q"""

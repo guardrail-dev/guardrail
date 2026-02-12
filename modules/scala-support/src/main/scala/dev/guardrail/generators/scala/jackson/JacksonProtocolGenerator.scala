@@ -89,7 +89,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       emptyIsNullDeserType: Type,
       emptyIsNullOptionDeserType: Type
   ): List[Mod] = {
-    val jsonProperty = List(mod"@com.fasterxml.jackson.annotation.JsonProperty(${Lit.String(param.name.value)})")
+    val jsonProperty           = List(mod"@com.fasterxml.jackson.annotation.JsonProperty(${Lit.String(param.name.value)})")
     val containerDeserializers = param.term.decltpe match {
       case Some(t"Vector[$inner]")        => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
       case Some(t"List[$inner]")          => List(mod"@com.fasterxml.jackson.databind.annotation.JsonDeserialize(contentAs = classOf[$inner])")
@@ -193,13 +193,13 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
 
       concreteTypes <- PropMeta.extractConcreteTypes[ScalaLanguage, Target](definitions.value, components)
       polyADTs <- hierarchies.traverse(fromPoly(_, concreteTypes, definitions.value, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components))
-      elems <- definitionsWithoutPoly.traverse { case (clsName, model) =>
+      elems    <- definitionsWithoutPoly.traverse { case (clsName, model) =>
         model
           .refine { case c: ComposedSchema => c }(comp =>
             for {
               formattedClsName <- formatTypeName(clsName)
               parents <- extractParents(comp, definitions.value, concreteTypes, dtoPackage, supportPackage.toList, defaultPropertyRequirement, components)
-              model <- fromModel(
+              model   <- fromModel(
                 clsName = NonEmptyList.of(formattedClsName),
                 model = comp,
                 parents = parents,
@@ -223,7 +223,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             for {
               formattedClsName <- formatTypeName(clsName)
               enum             <- fromEnum[Object](formattedClsName, m, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 m,
                 List.empty,
@@ -241,7 +241,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             for {
               formattedClsName <- formatTypeName(clsName)
               enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
                 List.empty,
@@ -261,7 +261,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             for {
               formattedClsName <- formatTypeName(clsName)
               enum             <- fromEnum(formattedClsName, x, dtoPackage, components)
-              model <- fromModel(
+              model            <- fromModel(
                 NonEmptyList.of(formattedClsName),
                 x,
                 List.empty,
@@ -304,7 +304,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
   private[this] def getRequiredFieldsRec(root: Tracker[Schema[_]]): List[String] = {
     @scala.annotation.tailrec
     def work(values: List[Tracker[Schema[_]]], acc: List[String]): List[String] = {
-      val required: List[String] = values.flatMap(_.downField("required", _.getRequired()).unwrapTracker)
+      val required: List[String]         = values.flatMap(_.downField("required", _.getRequired()).unwrapTracker)
       val next: List[Tracker[Schema[_]]] =
         for {
           a <- values
@@ -454,7 +454,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
         for {
           typeName <- formatTypeName(name).map(formattedName => NonEmptyList.of(hierarchy.name, formattedName))
           propertyRequirement = getPropertyRequirement(prop, requiredFields.contains(name), defaultPropertyRequirement)
-          prefixes <- vendorPrefixes()
+          prefixes     <- vendorPrefixes()
           resolvedType <- ModelResolver
             .propMeta[ScalaLanguage, Target](
               prop,
@@ -462,7 +462,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             ) // TODO: This should be resolved via an alternate mechanism that maintains references all the way through, instead of re-deriving and assuming that references are valid
           defValue  <- defaultValue(typeName, prop, propertyRequirement, definitions)
           fieldName <- formatFieldName(name)
-          res <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
+          res       <- transformProperty(hierarchy.name, dtoPackage, supportPackage, concreteTypes)(
             name,
             fieldName,
             prop,
@@ -506,12 +506,12 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
     import Sc._
 
     for {
-      a <- extractSuperClass(elem, definitions)
+      a      <- extractSuperClass(elem, definitions)
       supper <- a.flatTraverse { case (clsName, _extends, interfaces) =>
         val concreteInterfacesWithClass = for {
           interface      <- interfaces
           (cls, tracker) <- definitions
-          result <- tracker
+          result         <- tracker
             .refine[Tracker[Schema[_]]] {
               case x: ComposedSchema if interface.downField("$ref", _.get$ref()).exists(_.unwrapTracker.endsWith(s"/${cls}")) => x
             }(
@@ -521,7 +521,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             .toOption
         } yield cls -> result
         val (_, concreteInterfaces) = concreteInterfacesWithClass.unzip
-        val classMapping = (for {
+        val classMapping            = (for {
           (cls, schema) <- concreteInterfacesWithClass
           (name, _)     <- schema.downField("properties", _.getProperties).indexedDistribute.value
         } yield (name, cls)).toMap
@@ -601,11 +601,11 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
         defaultPropertyRequirement,
         components
       )
-      encoder     <- encodeModel(clsName.last, dtoPackage, params, parents)
-      decoder     <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
-      tpe         <- parseTypeName(clsName.last)
-      fullType    <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
-      staticDefns <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
+      encoder       <- encodeModel(clsName.last, dtoPackage, params, parents)
+      decoder       <- decodeModel(clsName.last, dtoPackage, supportPackage, params, parents)
+      tpe           <- parseTypeName(clsName.last)
+      fullType      <- selectType(dtoPackage.foldRight(clsName)((x, xs) => xs.prepend(x)))
+      staticDefns   <- renderDTOStaticDefns(clsName.last, List.empty, encoder, decoder, params)
       nestedClasses <- nestedDefinitions.flatTraverse {
         case classDefinition: ClassDefinition[ScalaLanguage] =>
           for {
@@ -656,7 +656,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       for {
         ()              <- Target.log.debug(s"processProperty: ${name} ${schema.unwrapTracker.showNotNull}")
         nestedClassName <- formatTypeName(name).map(formattedName => getClsName(name).append(formattedName))
-        defn <- schema
+        defn            <- schema
           .refine[Target[Option[Either[String, NestedProtocolElems[ScalaLanguage]]]]] { case ObjectExtractor(x) => x }(o =>
             for {
               defn <- fromModel(
@@ -674,7 +674,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
           )
           .orRefine { case o: ComposedSchema => o }(o =>
             for {
-              parents <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
+              parents              <- extractParents(o, definitions, concreteTypes, dtoPackage, supportPackage, defaultPropertyRequirement, components)
               maybeClassDefinition <- fromModel(
                 nestedClassName,
                 o,
@@ -735,7 +735,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       ) { (s, ta) =>
         val a = ta.unwrapTracker
         s.find(p => p.name == a.name) match {
-          case None => (a :: s).pure[Target]
+          case None            => (a :: s).pure[Target]
           case Some(duplicate) =>
             for {
               newDefaultValue <- findCommonDefaultValue(ta.showHistory, a.defaultValue, duplicate.defaultValue)
@@ -743,7 +743,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             } yield {
               val emptyToNull        = if (Set(a.emptyToNull, duplicate.emptyToNull).contains(EmptyIsNull)) EmptyIsNull else EmptyIsEmpty
               val redactionBehaviour = if (Set(a.dataRedaction, duplicate.dataRedaction).contains(DataRedacted)) DataRedacted else DataVisible
-              val mergedParameter = ProtocolParameter[ScalaLanguage](
+              val mergedParameter    = ProtocolParameter[ScalaLanguage](
                 a.term,
                 a.baseType,
                 a.name,
@@ -816,7 +816,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       .orRefineFallback(_ => None)
     for {
       prefixes <- vendorPrefixes()
-      tpe <- model.fold[Target[scala.meta.Type]](objectType(None)) { m =>
+      tpe      <- model.fold[Target[scala.meta.Type]](objectType(None)) { m =>
         for {
           (declType, _) <- ModelResolver.determineTypeName[ScalaLanguage, Target](m, Tracker.cloneHistory(m, CustomTypeName(m, prefixes)), components)
         } yield declType
@@ -1060,11 +1060,11 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
       encoder: Option[scala.meta.Defn],
       decoder: Option[scala.meta.Defn]
   ): Target[StaticDefns[ScalaLanguage]] = {
-    val longType = Type.Name(className)
+    val longType              = Type.Name(className)
     val terms: List[Defn.Val] = accessors.map { pascalValue =>
       q"val ${Pat.Var(pascalValue)}: ${longType} = members.${pascalValue}"
     }.toList
-    val values: Defn.Val = q"val values = _root_.scala.Vector(..$accessors)"
+    val values: Defn.Val          = q"val values = _root_.scala.Vector(..$accessors)"
     val implicits: List[Defn.Val] = List(
       q"implicit val ${Pat.Var(Term.Name(s"show${className}"))}: Show[${longType}] = Show[${tpe}].contramap[${longType}](_.value)"
     )
@@ -1164,7 +1164,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             val tpe          = t"${customTpe.getOrElse(t"_root_.scala.Predef.Map")}[_root_.scala.Predef.String, $innerType]"
             Target.pure((tpe, Option.empty, ReifiedRawType.ofMap(fallbackRawType)))
         }
-        fieldPattern: Tracker[Option[String]] = property.downField("pattern", _.getPattern)
+        fieldPattern: Tracker[Option[String]]             = property.downField("pattern", _.getPattern)
         collectionElementPattern: Option[Tracker[String]] =
           property.downField("items", _.getItems).indexedDistribute.flatMap(_.downField("pattern", _.getPattern).indexedDistribute)
 
@@ -1175,7 +1175,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
         presence     <- Lt.selectTerm(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         presenceType <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage, "Presence"))
         (finalDeclType, finalDefaultValue) = requirement match {
-          case PropertyRequirement.Required => tpe -> defaultValue
+          case PropertyRequirement.Required                                                                                              => tpe -> defaultValue
           case PropertyRequirement.Optional | PropertyRequirement.Configured(PropertyRequirement.Optional, PropertyRequirement.Optional) =>
             t"$presenceType[$tpe]" -> defaultValue.map(t => q"$presence.Present($t)").orElse(Some(q"$presence.Absent"))
           case _: PropertyRequirement.OptionalRequirement | _: PropertyRequirement.Configured =>
@@ -1211,7 +1211,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
     for {
       discriminators <- discriminatorParams.traverse { case (discriminator, param) =>
         for {
-          discrimTpe <- Target.fromOption(param.term.decltpe, RuntimeFailure(s"Property ${param.name.value} has no type"))
+          discrimTpe   <- Target.fromOption(param.term.decltpe, RuntimeFailure(s"Property ${param.name.value} has no type"))
           discrimValue <- JacksonHelpers
             .discriminatorExpression(
               param.name.value,
@@ -1231,10 +1231,10 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
             )
         } yield (param.name.value, param.term.name.value, param.term.decltpe, discrimValue)
       }
-      presenceSerType        <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
-      presenceDeserType      <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
-      optionNonNullDeserType <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
-      emptyIsNullDeserType   <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
+      presenceSerType            <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceSerializer"))
+      presenceDeserType          <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "PresenceDeserializer"))
+      optionNonNullDeserType     <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "Presence", "OptionNonNullDeserializer"))
+      emptyIsNullDeserType       <- Lt.selectType(NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullDeserializer"))
       emptyIsNullOptionDeserType <- Lt.selectType(
         NonEmptyList.ofInitLast(supportPackage :+ "EmptyIsNullDeserializers", "EmptyIsNullOptionDeserializer")
       )
@@ -1378,7 +1378,7 @@ class JacksonProtocolGenerator private extends ProtocolTerms[ScalaLanguage, Targ
     for {
       result <- arr match {
         case Right(core.Resolved(tpe, dep, default, _)) => Target.pure(tpe)
-        case Left(core.Deferred(tpeName)) =>
+        case Left(core.Deferred(tpeName))               =>
           Target.fromOption(lookupTypeName(tpeName, concreteTypes)(identity), UserError(s"Unresolved reference ${tpeName}"))
         case Left(core.DeferredArray(tpeName, containerTpe)) =>
           Target.fromOption(

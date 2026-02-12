@@ -129,7 +129,7 @@ case class RouteMeta(path: Tracker[String], method: HttpMethod, operation: Track
     type Count               = Int
     type ParameterCountState = (Count, Map[HashCode, Count])
     val contentTypes: List[ContentType] = fields.value.collect { case (ContentType(ct), _) => ct }
-    val ((maxCount, instances), ps) = fields.value
+    val ((maxCount, instances), ps)     = fields.value
       .flatMap { case (_, mt) =>
         for {
           mtSchema <- mt.downField("schema", _.getSchema()).indexedCosequence.toList

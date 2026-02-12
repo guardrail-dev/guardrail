@@ -110,11 +110,11 @@ trait CLICommon extends GuardrailRunner {
         def Return(x: To): Target[Either[From, To]]     = Target.pure(Either.right(x))
         def Bail(x: Error): Target[Either[From, To]]    = Target.raiseError(x)
         for {
-          _ <- debug(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
+          _    <- debug(s"Processing: ${rest.take(5).mkString(" ")}${if (rest.length > 3) "..." else ""} of ${rest.length}")
           step <- pair match {
             case (already, Nil) =>
               debug("Finished") >> Return(already)
-            case (Nil, xs @ (_ :: _)) => Continue((empty :: Nil, xs))
+            case (Nil, xs @ (_ :: _))                   => Continue((empty :: Nil, xs))
             case (sofar :: already, "--defaults" :: xs) =>
               Continue((empty.withDefaults(true) :: sofar :: already, xs))
             case (sofar :: already, "--client" :: xs) =>
@@ -187,7 +187,7 @@ trait CLICommon extends GuardrailRunner {
         guardrailRunner(language, args.toArray)
       }
 
-    val fallback = List.empty[Path]
+    val fallback          = List.empty[Path]
     val paths: List[Path] = result
       .fold(
         {
