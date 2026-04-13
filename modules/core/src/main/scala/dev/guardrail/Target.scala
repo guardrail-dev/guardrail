@@ -12,9 +12,9 @@ object Target {
   def pushLogger(value: StructuredLogger): Target[Unit] = new TargetValue((), if (loggerEnabled.get) value else StructuredLogger.Empty)
   def pure[T](x: T): Target[T]                          = new TargetValue(x, StructuredLogger.Empty)
 
-  def raiseError[T](x: Error): Target[T]      = new TargetError(x, StructuredLogger.Empty)
-  def raiseUserError[T](x: String): Target[T] = raiseError(UserError(x))
-  def raiseException[T](x: String): Target[T] = raiseError(RuntimeFailure(x))
+  def raiseError[T](x: Error): Target[T]            = new TargetError(x, StructuredLogger.Empty)
+  def raiseUserError[T](x: String): Target[T]       = raiseError(UserError(x))
+  def raiseException[T](x: String): Target[T]       = raiseError(RuntimeFailure(x))
   def fromEither[T](x: Either[Error, T]): Target[T] =
     x.fold[Target[T]](err => new TargetError(err, StructuredLogger.Empty), value => new TargetValue(value, StructuredLogger.Empty))
   def fromOption[T](x: Option[T], default: => Error): Target[T] =
@@ -68,13 +68,13 @@ object Target {
   }
 
   object log {
-    def push(name: String): Target[Unit] = pushLogger(StructuredLogger.push(name))
-    def pop: Target[Unit]                = pushLogger(StructuredLogger.pop)
+    def push(name: String): Target[Unit]                  = pushLogger(StructuredLogger.push(name))
+    def pop: Target[Unit]                                 = pushLogger(StructuredLogger.pop)
     def function[A](name: String): Target[A] => Target[A] = { func =>
       (push(name) *> func) <* pop
     }
-    def debug(message: String): Target[Unit] = pushLogger(StructuredLogger.debug(message))
-    def info(message: String): Target[Unit]  = pushLogger(StructuredLogger.info(message))
+    def debug(message: String): Target[Unit]   = pushLogger(StructuredLogger.debug(message))
+    def info(message: String): Target[Unit]    = pushLogger(StructuredLogger.info(message))
     def warning(message: String): Target[Unit] = {
       println(message)
       pushLogger(StructuredLogger.warning(message))

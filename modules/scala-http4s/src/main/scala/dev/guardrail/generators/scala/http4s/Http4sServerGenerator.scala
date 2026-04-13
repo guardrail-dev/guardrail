@@ -102,7 +102,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     for {
       extraImports       <- getExtraImports(context.tracing, supportPackage)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+      servers            <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
         val routes = unsortedRoutes
           .groupBy(_.path.unwrapTracker.indexOf('{'))
           .view
@@ -130,7 +130,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
             )
           }
           (responseDefinitions, serverOperations) = responseServerPair.unzip
-          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+          securityExposure                        = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
             case Nil => SecurityExposure.Undefined
             case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
           }
@@ -197,7 +197,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
 
   private def buildCustomExtractionFields(operation: Tracker[Operation], resourceName: List[String], customExtraction: Boolean) =
     for {
-      _ <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
+      _   <- Target.log.debug(s"buildCustomExtractionFields(${operation.unwrapTracker.showNotNull}, ${resourceName}, ${customExtraction})")
       res <-
         if (customExtraction) {
           for {
@@ -216,7 +216,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
 
   private def buildTracingFields(operation: Tracker[Operation], resourceName: List[String], tracing: Boolean) =
     Target.log.function("buildTracingFields")(for {
-      _ <- Target.log.debug(s"Args: ${operation}, ${resourceName}, ${tracing}")
+      _   <- Target.log.debug(s"Args: ${operation}, ${resourceName}, ${tracing}")
       res <-
         if (tracing) {
           for {
@@ -275,13 +275,13 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       securityRequirements: List[SecurityRequirements],
       authImplementation: AuthImplementation
   ): Target[List[scala.meta.Defn]] = {
-    val schemesNames = securitySchemes.keySet
+    val schemesNames                              = securitySchemes.keySet
     val uniqueRequirements: List[Tracker[String]] =
       securityRequirements.flatMap(_.requirements.flatMap(_.map(_.keys.toNonEmptyList).indexedDistribute).toList).distinctBy(_.unwrapTracker)
 
-    val errorTermName = Term.Name(authErrorTypeName.value)
+    val errorTermName                           = Term.Name(authErrorTypeName.value)
     val (simpleAuthErrors, simpleAuthenticator) = if (authImplementation == AuthImplementation.Simple) {
-      val errorInit = Init(authErrorTypeName, Name(""), List.empty[Term.ArgClause])
+      val errorInit  = Init(authErrorTypeName, Name(""), List.empty[Term.ArgClause])
       val authErrors = List(
         q"""sealed trait $authErrorTypeName""",
         q"""
@@ -370,7 +370,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     Target.log.function("renderHandler")(for {
       _ <- Target.log.debug(s"Args: ${handlerName}, ${methodSigs}")
       extractType = if (customExtraction) List(tparam"-$customExtractionTypeName") else List.empty
-      authType =
+      authType    =
         if (authImplementation == Native || (authImplementation != Disable && securityExposure != SecurityExposure.Undefined)) {
           List(tparam"$authContextTypeName")
         } else List.empty
@@ -405,7 +405,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         if (tracing) {
           Option(param"""trace: String => Request[F] => TraceBuilder[F]""")
         } else Option.empty
-      resourceTerm = Term.Name(resourceName)
+      resourceTerm    = Term.Name(resourceName)
       authentication_ = authImplementation match {
         case Simple if securityExposure != SecurityExposure.Undefined =>
           val authType = Type.Select(resourceTerm, authSchemesTypeName)
@@ -449,10 +449,10 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         extractType     = List(customExtractionTypeName).map(x => tparam"$x").filter(_ => customExtraction)
         authType        = List(tparam"$authContextTypeName").filter(_ => securitySchemesDefinitions.nonEmpty || authImplementation == AuthImplementation.Native)
         resourceTParams = List(tparam"F[_]") ++ extractType ++ authType
-        handlerTParams = List(Type.Name("F")) ++
+        handlerTParams  = List(Type.Name("F")) ++
           List(customExtractionTypeName).filter(_ => customExtraction) ++
           List(authContextTypeName).filter(_ => securitySchemesDefinitions.nonEmpty || authImplementation == AuthImplementation.Native)
-        routesParams = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
+        routesParams     = List(param"handler: ${Type.Name(handlerName)}[..$handlerTParams]")
         routesDefinition = authImplementation match {
           case Native => q"""
             def routes(..${routesParams}): AuthedRoutes[$authContextTypeName, F] = AuthedRoutes.of {
@@ -594,7 +594,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       arg => _ => _ => Target.raiseUserError(s"Unsupported Option[Iterable[${arg}]]"),
       arg => {
         case t"String" => Target.pure(Param(None, None, q"req.headers.get(CIString(${arg.argName.toLit})).map(_.head.value)"))
-        case tpe =>
+        case tpe       =>
           Target.pure(
             Param(
               None,
@@ -618,7 +618,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         arg => _ => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})"),
         arg => _ => Target.pure(p"${Term.Name(s"${methodName.capitalize}${arg.argName.value.capitalize}Matcher")}(${Pat.Var(arg.paramName)})")
       )(params).map {
-        case Nil => Option.empty
+        case Nil     => Option.empty
         case x :: xs =>
           Some(xs.foldLeft[Pat](x) { case (a, n) => p"${a} +& ${n}" })
       }
@@ -664,7 +664,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
       },
       arg => {
         case t"String" => lift => Target.pure(Param(None, None, q"urlForm.values.get(${arg.argName.toLit}).map(${lift(q"_")})"))
-        case tpe =>
+        case tpe       =>
           lift =>
             Target.pure(
               Param(
@@ -867,7 +867,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         http4sHeaders      <- headersToHttp4s(headerArgs)
         supportDefinitions <- generateSupportDefinitions(route, parameters)
       } yield {
-        val resourceTerm = Term.Name(resourceName)
+        val resourceTerm                                   = Term.Name(resourceName)
         val (responseCompanionTerm, responseCompanionType) =
           (Term.Name(responseClsName), Type.Name(responseClsName))
         val responseType = ServerRawResponse(operation)
@@ -876,7 +876,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         val authContext: Option[(LanguageParameter[ScalaLanguage], Term => Term)] = authImplementation match {
           case Disable => None
           case Native  => Some((LanguageParameter.fromParam(param"authContext: $authContextTypeName"), identity _))
-          case Custom =>
+          case Custom  =>
             securityRequirements.map { sr =>
               val arg                  = LanguageParameter.fromParam(param"authContext: $authContextTypeName")
               val securityRequirements = renderCustomSecurityRequirements(sr)
@@ -903,7 +903,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
           case Simple =>
             securityRequirements.map { sr =>
               val errorTermName = Term.Name(authErrorTypeName.value)
-              val inner = if (sr.optional) {
+              val inner         = if (sr.optional) {
                 t"Either[${Type.Singleton(Term.Select(Term.Select(Term.Name(resourceName), errorTermName), q"Forbidden"))}, Option[$authContextTypeName]]"
               } else {
                 t"Either[${Term.Name(resourceName)}.$authErrorTypeName, $authContextTypeName]"
@@ -973,8 +973,8 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
         ) ++
           tracingFields.map(_.param.paramName).map(List(_)) ++
           customExtractionFields.map(_.param.paramName).map(List(_))
-        val handlerCall = q"handler.${Term.Name(methodName)}(...${handlerCallArgs})"
-        val isGeneric   = ResponseADTHelper.isDefinitionGeneric(responses)
+        val handlerCall  = q"handler.${Term.Name(methodName)}(...${handlerCallArgs})"
+        val isGeneric    = ResponseADTHelper.isDefinitionGeneric(responses)
         val responseExpr = ServerRawResponse(operation)
           .filter(_ == true)
           .fold[Term] {
@@ -1010,7 +1010,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
             }
             q"$handlerCall flatMap ${Term.PartialFunction(marshallers)}"
           }(_ => handlerCall)
-        val matchers = (http4sForm ++ http4sHeaders).flatMap(_.matcher)
+        val matchers        = (http4sForm ++ http4sHeaders).flatMap(_.matcher)
         val responseInMatch = NonEmptyList.fromList(matchers).fold(responseExpr) {
           case NonEmptyList((expr, pat), Nil) =>
             Term.Match(expr, List(Case(pat, None, responseExpr), Case(p"_", None, q"""BadRequest("Invalid data")""")), Nil)
@@ -1204,7 +1204,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
           "Seq"        -> (term => q"$term.map(_.toSeq)"),
           "IndexedSeq" -> (term => q"$term.map(_.toIndexedSeq)")
         )
-        val matcherName = Term.Name(s"${methodName.capitalize}${argName.value.capitalize}Matcher")
+        val matcherName                                      = Term.Name(s"${methodName.capitalize}${argName.value.capitalize}Matcher")
         val (queryParamMatcher: Defn.Object, elemType: Type) = param match {
           case param"$_: Option[$container[$tpe]]" if containerTransformations.contains(container.syntax) =>
             val transform = containerTransformations(container.syntax)
@@ -1257,7 +1257,7 @@ class Http4sServerGenerator private (version: Http4sVersion) extends ServerTerms
     if (parameters.exists(param => param.paramName.syntax != param.paramName.value)) {
       // let's try to prefix them all with underscore and see if it helps
       for {
-        _ <- Target.log.debug("Found that not all parameters could be represented as unescaped terms")
+        _   <- Target.log.debug("Found that not all parameters could be represented as unescaped terms")
         res <- parameters.traverse[Target, LanguageParameter[ScalaLanguage]] { param =>
           for {
             _ <- Target.log.debug(s"Escaping param ${param.argName.value}")

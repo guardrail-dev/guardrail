@@ -70,7 +70,7 @@ import scala.util.Try
 class SpringMvcServerGeneratorLoader extends ServerGeneratorLoader {
   type L = JavaLanguage
   override def reified = typeTag[Target[JavaLanguage]]
-  val apply =
+  val apply            =
     ModuleLoadResult.forProduct3(
       ServerGeneratorLoader.label      -> Seq(SpringMvcVersion.mapping),
       CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
@@ -106,7 +106,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
     for {
       extraImports       <- getExtraImports(context.tracing, supportPackage)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+      servers            <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
         val routes = unsortedRoutes
           .groupBy(_.path.unwrapTracker.indexOf('{'))
           .view
@@ -134,7 +134,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
             )
           }
           (responseDefinitions, serverOperations) = responseServerPair.unzip
-          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+          securityExposure                        = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
             case Nil => SecurityExposure.Undefined
             case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
           }
@@ -209,7 +209,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
 
     def checkMatch(matching: List[String], headsToCheck: List[Option[String]], restOfHeads: List[List[String]]): List[String] =
       headsToCheck match {
-        case Nil => matching
+        case Nil     => matching
         case x :: xs =>
           x.fold(matching) { first =>
             if (xs.forall(_.contains(first))) {
@@ -340,7 +340,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
         }
         .fold[(List[BodyDeclaration[_ <: BodyDeclaration[_]]], BodyDeclaration[_ <: BodyDeclaration[_]])] {
           val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
-          val _ = constructor.setBody(
+          val _           = constructor.setBody(
             new BlockStmt(
               new NodeList(
                 new ExpressionStmt(
@@ -480,7 +480,7 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
           parameters.parameters.foreach(p => p.param.setType(p.param.getType.unbox))
 
           val httpMethodAnnotationName = s"${httpMethod.toString.toLowerCase.capitalize}Mapping"
-          val pathSuffix = splitPathComponents(path.unwrapTracker)
+          val pathSuffix               = splitPathComponents(path.unwrapTracker)
             .drop(commonPathPrefix.length)
             .mkString("/", "/", "")
 
@@ -535,8 +535,8 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
           }
 
           def transformJsr310Params(parameter: Parameter): Parameter = {
-            val isOptional = parameter.getType.isOptionalType
-            val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
+            val isOptional                                   = parameter.getType.isOptionalType
+            val tpe                                          = if (isOptional) parameter.getType.containedType else parameter.getType
             def transform(dateTimeFormat: String): Parameter = {
               parameter.getAnnotations.addLast(
                 new NormalAnnotationExpr(
@@ -618,8 +618,8 @@ class SpringMvcServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLan
 
           val (responseName, responseType, resultResumeBody) =
             hasServerRawResponse.fold {
-              val responseName = s"$handlerName.$responseClsName"
-              val responseType = StaticJavaParser.parseClassOrInterfaceType(responseName)
+              val responseName       = s"$handlerName.$responseClsName"
+              val responseType       = StaticJavaParser.parseClassOrInterfaceType(responseName)
               val entitySetterIfTree = NonEmptyList
                 .fromList(responses.value.collect { case Response(statusCodeName, Some(_), _) =>
                   statusCodeName
