@@ -71,7 +71,7 @@ import scala.reflect.runtime.universe.typeTag
 class DropwizardServerGeneratorLoader extends ServerGeneratorLoader {
   type L = JavaLanguage
   override def reified = typeTag[Target[JavaLanguage]]
-  val apply =
+  val apply            =
     ModuleLoadResult.forProduct3(
       ServerGeneratorLoader.label      -> Seq(DropwizardVersion.mapping),
       CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
@@ -107,7 +107,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
     for {
       extraImports       <- getExtraImports(context.tracing, supportPackage)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      servers <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+      servers            <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
         val routes = unsortedRoutes
           .groupBy(_.path.unwrapTracker.indexOf('{'))
           .view
@@ -135,7 +135,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
             )
           }
           (responseDefinitions, serverOperations) = responseServerPair.unzip
-          securityExposure = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
+          securityExposure                        = serverOperations.flatMap(_.routeMeta.securityRequirements) match {
             case Nil => SecurityExposure.Undefined
             case xs  => if (xs.exists(_.optional)) SecurityExposure.Optional else SecurityExposure.Required
           }
@@ -268,7 +268,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
         }
         .fold[(List[BodyDeclaration[_ <: BodyDeclaration[_]]], BodyDeclaration[_ <: BodyDeclaration[_]])] {
           val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
-          val _ = constructor.setBody(
+          val _           = constructor.setBody(
             new BlockStmt(
               new NodeList(
                 new ExpressionStmt(
@@ -574,14 +574,14 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
               methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
               _            = methodParams.foreach(method.addParameter)
-              _ = method.addParameter(
+              _            = method.addParameter(
                 new Parameter(new NodeList(finalModifier), ASYNC_RESPONSE_TYPE.clone(), new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
               )
 
               (responseType, resultResumeBody) = ServerRawResponse(operation)
                 .filter(_ == true)
                 .fold {
-                  val responseName = s"$handlerName.$responseClsName"
+                  val responseName       = s"$handlerName.$responseClsName"
                   val entitySetterIfTree = NonEmptyList
                     .fromList(responses.value.collect { case Response(statusCodeName, Some(_), _) =>
                       statusCodeName

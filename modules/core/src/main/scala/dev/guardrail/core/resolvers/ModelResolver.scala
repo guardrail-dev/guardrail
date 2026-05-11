@@ -97,7 +97,7 @@ object ModelResolver {
           )
           .orRefine { case arr: ArraySchema => arr }(arr =>
             for {
-              items <- getItems(arr)
+              items             <- getItems(arr)
               dereferencedItems <- items
                 .downField("$ref", _.get$ref())
                 .indexedDistribute
@@ -107,7 +107,7 @@ object ModelResolver {
               itemsRawFormat = dereferencedItems.downField("format", _.getFormat())
               prefixes  <- vendorPrefixes()
               arrayType <- CustomArrayTypeName(arr, prefixes).flatTraverse(x => parseType(Tracker.cloneHistory(arr, x)))
-              res <- meta match {
+              res       <- meta match {
                 case Right(core.Resolved(inner, dep, default, _)) =>
                   (liftVectorType(inner, arrayType), default.traverse(liftVectorTerm))
                     .mapN((t, d) =>
@@ -136,7 +136,7 @@ object ModelResolver {
                 }
               prefixes <- vendorPrefixes()
               mapType  <- CustomMapTypeName(map, prefixes).flatTraverse(x => parseType(Tracker.cloneHistory(map, x)))
-              res <- rec match {
+              res      <- rec match {
                 case Right(core.Resolved(inner, dep, _, rawType)) =>
                   liftMapType(inner, mapType).map(t => Right(core.Resolved[L](t, dep, None, ReifiedRawType.ofMap(rawType))))
                 case Left(x: core.DeferredMap[L])   => embedMap(x, mapType).map(Left(_))

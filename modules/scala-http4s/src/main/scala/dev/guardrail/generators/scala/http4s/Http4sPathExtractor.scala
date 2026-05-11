@@ -18,7 +18,7 @@ object Http4sPathExtractor
             case t"java.util.UUID"              => Right(p"UUIDVar(${Pat.Var(paramName)})")
             case Type.Name(tpe)                 => Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
             case Type.Select(_, Type.Name(tpe)) => Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
-            case tpe =>
+            case tpe                            =>
               println(s"Doing our best turning ${tpe} into an extractor")
               Right(p"${Term.Name(s"${tpe}Var")}(${Pat.Var(paramName)})")
           }

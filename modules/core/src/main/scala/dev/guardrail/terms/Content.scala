@@ -7,7 +7,7 @@ import java.util.Locale
 import scala.reflect.ClassTag
 
 sealed abstract class ContentType(val value: String) {
-  override val toString: String = value
+  override val toString: String        = value
   override def equals(x: Any): Boolean = x match {
     case x: ContentType => x.value == value
     case _              => false

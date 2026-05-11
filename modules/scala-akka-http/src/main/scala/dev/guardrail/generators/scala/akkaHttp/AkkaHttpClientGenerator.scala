@@ -38,8 +38,8 @@ import scala.reflect.runtime.universe.typeTag
 class AkkaHttpClientGeneratorLoader extends ClientGeneratorLoader {
   type L = ScalaLanguage
   def reified = typeTag[Target[ScalaLanguage]]
-  val apply = ModuleLoadResult.forProduct2(
-    ClientGeneratorLoader.label -> Seq(AkkaHttpVersion.mapping),
+  val apply   = ModuleLoadResult.forProduct2(
+    ClientGeneratorLoader.label   -> Seq(AkkaHttpVersion.mapping),
     ProtocolGeneratorLoader.label -> Seq(
       CirceModelGenerator.mapping,
       CirceRefinedModelGenerator.mapping.view.mapValues(_.toCirce).toMap,
@@ -91,10 +91,10 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      clients <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+      clients            <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
         val routes = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
         for {
-          clientName <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
+          clientName         <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
           responseClientPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
             for {
               operationId         <- getOperationId(operation)
@@ -110,7 +110,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
           tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
           ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
           staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
-          client <- buildClient(
+          client      <- buildClient(
             clientName,
             tracingName,
             serverUrls,
@@ -144,7 +144,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
       responses: Responses[ScalaLanguage]
   ): Target[RenderedClientOperation[ScalaLanguage]] = {
     val RouteMeta(pathStr, httpMethod, operation, securityRequirements) = route
-    val containerTransformations = Map[String, Term => Term](
+    val containerTransformations                                        = Map[String, Term => Term](
       "Iterable"   -> identity _,
       "List"       -> (term => q"$term.toList"),
       "Vector"     -> (term => q"$term.toVector"),
@@ -285,8 +285,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
         headerArgs: List[LanguageParameter[ScalaLanguage]],
         extraImplicits: List[Term.Param]
     ): Target[RenderedClientOperation[ScalaLanguage]] = {
-      val implicitParams = Option(extraImplicits).filter(_.nonEmpty)
-      val defaultHeaders = param"headers: List[HttpHeader] = Nil"
+      val implicitParams                         = Option(extraImplicits).filter(_.nonEmpty)
+      val defaultHeaders                         = param"headers: List[HttpHeader] = Nil"
       val fallbackHttpBody: Option[(Term, Type)] =
         if (Set(HttpMethod.PUT, HttpMethod.POST) contains httpMethod)
           Some((q"HttpEntity.Empty", t"HttpEntity.Strict"))
@@ -329,8 +329,8 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
         }
       def buildRequiredHeaders(headers: List[Header[ScalaLanguage]]) =
         headers.map { header =>
-          val lit  = Lit.String(header.name.toLowerCase)
-          val expr = q"resp.headers.find(_.is($lit)).map(_.value())"
+          val lit        = Lit.String(header.name.toLowerCase)
+          val expr       = q"resp.headers.find(_.is($lit)).map(_.value())"
           val errLiteral =
             Lit.String(s"Expected required HTTP header '${header.name}'")
           enumerator"${Pat.Var(header.term)} <- $expr.toRight(Left(new Exception($errLiteral)))"
@@ -340,7 +340,7 @@ class AkkaHttpClientGenerator private (modelGeneratorType: ModelGeneratorType) e
 
         val optionalVals  = buildOptionalHeaders(optional)
         val forGenerators = buildRequiredHeaders(required)
-        val body = if (forGenerators.isEmpty) {
+        val body          = if (forGenerators.isEmpty) {
           q"Right($term)"
         } else {
           q"""for {

@@ -68,7 +68,7 @@ import scala.reflect.runtime.universe.typeTag
 class AsyncHttpClientClientGeneratorLoader extends ClientGeneratorLoader {
   type L = JavaLanguage
   def reified = typeTag[Target[JavaLanguage]]
-  val apply = ModuleLoadResult.forProduct3(
+  val apply   = ModuleLoadResult.forProduct3(
     ClientGeneratorLoader.label      -> Seq(AsyncHttpClientVersion.mapping),
     CollectionsGeneratorLoader.label -> Seq(JavaVavrCollectionsGenerator.mapping, JavaCollectionsGenerator.mapping),
     CollectionsGeneratorLoader.label -> Seq(JavaStdLibCollections.mapping, JavaVavrCollections.mapping)
@@ -107,10 +107,10 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       clientImports      <- getImports(context.tracing)
       clientExtraImports <- getExtraImports(context.tracing)
       supportDefinitions <- generateSupportDefinitions(context.tracing, securitySchemes)
-      clients <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
+      clients            <- groupedRoutes.traverse { case (className, unsortedRoutes) =>
         val routes = unsortedRoutes.sortBy(r => (r.path.unwrapTracker, r.method))
         for {
-          clientName <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
+          clientName         <- formatTypeName(className.lastOption.getOrElse(""), Some("Client"))
           responseClientPair <- routes.traverse { case route @ RouteMeta(path, method, operation, securityRequirements) =>
             for {
               operationId         <- getOperationId(operation)
@@ -126,7 +126,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
           tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
           ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
           staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
-          client <- buildClient(
+          client      <- buildClient(
             clientName,
             tracingName,
             serverUrls,
@@ -443,7 +443,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       cls.addConstructor(PRIVATE)
 
       val ahcConfigBuilder = new ObjectCreationExpr(null, DEFAULT_ASYNC_HTTP_CLIENT_CONFIG_BUILDER_TYPE, new NodeList())
-      val ahcConfig = new MethodCallExpr(
+      val ahcConfig        = new MethodCallExpr(
         List(
           ("setMaxRequestRetry", 2),
           ("setConnectTimeout", 3000),
@@ -577,7 +577,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
 
       pathExpr <- pathExprNode match {
         case e: Expression => Target.pure(e)
-        case x =>
+        case x             =>
           Target.raiseUserError[Expression](s"BUG: Returned node from generateUrlPathParams() was a ${x.getClass.getName}, not an Expression as expected")
       }
     } yield {
@@ -618,7 +618,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       val allConsumes = operation.unwrapTracker.consumes.flatMap(ContentType.unapply).toList
       val consumes    = ResponseHelpers.getBestConsumes(operation, allConsumes, parameters)
       val allProduces = operation.unwrapTracker.produces.flatMap(ContentType.unapply).toList
-      val produces =
+      val produces    =
         responses.value
           .map(resp => (resp.statusCode, ResponseHelpers.getBestProduces(operation, allProduces, resp, _.isPlain)))
           .toMap
@@ -855,7 +855,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
                                                 case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
                                                 case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
                                                 case _ if valueType.isNamed("String")      => "getResponseBody"
-                                                case _ =>
+                                                case _                                     =>
                                                   println(
                                                     s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
                                                   )
@@ -1167,7 +1167,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
             )
           )
         )
-    val nonNullInitializer: String => Target[Expression] = name => Target.pure(requireNonNullExpr(name))
+    val nonNullInitializer: String => Target[Expression]                                  = name => Target.pure(requireNonNullExpr(name))
     def optionalInitializer(valueArg: String => Expression): String => Target[Expression] =
       name => Cl.liftOptionalTerm(valueArg(name)).flatMap(_.toExpression)
 
@@ -1178,9 +1178,9 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
       optionalObjectMapperType       <- Cl.liftOptionalType(OBJECT_MAPPER_TYPE)
       emptyOptionalTerm              <- Cl.emptyOptionalTerm().flatMap(_.toExpression)
 
-      builderBaseUrlSetter    <- serverUrl.traverse(_ => createSetter(URI_TYPE, "baseUrl", nonNullInitializer))
-      builderClientNameSetter <- tracingName.filter(_ => tracing).traverse(_ => createSetter(STRING_TYPE, "clientName", nonNullInitializer))
-      builderHttpClientSetter <- createSetter(httpClientFunctionType, "httpClient", optionalInitializer(new NameExpr(_)))
+      builderBaseUrlSetter      <- serverUrl.traverse(_ => createSetter(URI_TYPE, "baseUrl", nonNullInitializer))
+      builderClientNameSetter   <- tracingName.filter(_ => tracing).traverse(_ => createSetter(STRING_TYPE, "clientName", nonNullInitializer))
+      builderHttpClientSetter   <- createSetter(httpClientFunctionType, "httpClient", optionalInitializer(new NameExpr(_)))
       builderObjectMapperSetter <- createSetter(
         OBJECT_MAPPER_TYPE,
         "objectMapper",
@@ -1216,7 +1216,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
         val (modifiers, declarator) = tracingName.fold(
           (new NodeList(privateModifier, finalModifier), new VariableDeclarator(STRING_TYPE, "clientName"))
         )(_ => (new NodeList(privateModifier), new VariableDeclarator(STRING_TYPE, "clientName", new NameExpr("DEFAULT_CLIENT_NAME"))))
-        val clientNameField = new FieldDeclaration(modifiers, declarator)
+        val clientNameField        = new FieldDeclaration(modifiers, declarator)
         val defaultClientNameField = tracingName.map { tracingName =>
           new FieldDeclaration(
             new NodeList(privateModifier, staticModifier, finalModifier),
@@ -1250,7 +1250,7 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
         )
       )
 
-      val builderConstructor = new ConstructorDeclaration(new NodeList(publicModifier), "Builder")
+      val builderConstructor                                             = new ConstructorDeclaration(new NodeList(publicModifier), "Builder")
       def createConstructorParameter(tpe: Type, name: String): Parameter =
         new Parameter(new NodeList(finalModifier), tpe, new SimpleName(name))
       def createBuilderConstructorAssignment(name: String): Statement =
