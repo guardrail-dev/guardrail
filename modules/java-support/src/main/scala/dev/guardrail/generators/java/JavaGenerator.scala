@@ -48,6 +48,10 @@ object JavaGenerator {
 
 @SuppressWarnings(Array("org.wartremover.warts.NonUnitStatements", "org.wartremover.warts.Null"))
 class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
+  private def cloneNodeList[A <: Node](nodes: NodeList[A]): NodeList[A] =
+    new NodeList[A](nodes.iterator.asScala.map(_.clone().asInstanceOf[A]).toSeq: _*)
+
   private def buildPkgDecl(parts: NonEmptyList[String]): Target[PackageDeclaration] =
     safeParseName(parts.toList.mkString(".")).map(new PackageDeclaration(_))
 
@@ -182,7 +186,7 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
       tpe: com.github.javaparser.ast.`type`.Type,
       default: Option[com.github.javaparser.ast.Node]
   ): Target[com.github.javaparser.ast.body.Parameter] =
-    safeParseSimpleName(nameStr.asString).map(name => new Parameter(new NodeList(finalModifier), tpe, name))
+    safeParseSimpleName(nameStr.asString).map(name => new Parameter(new NodeList(finalModifier), tpe.clone(), name))
   override def typeNamesEqual(a: JavaTypeName, b: JavaTypeName): Target[Boolean] = Target.pure(a.asString == b.asString)
   override def typesEqual(a: com.github.javaparser.ast.`type`.Type, b: com.github.javaparser.ast.`type`.Type): Target[Boolean] = Target.pure(a.equals(b))
   override def extractTypeName(tpe: com.github.javaparser.ast.`type`.Type): Target[Option[JavaTypeName]] = {
@@ -211,11 +215,11 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
     safeParseSimpleName(name.asString).map(
       new Parameter(
         param.getTokenRange.orElse(null),
-        param.getModifiers,
-        param.getAnnotations,
-        param.getType,
+        cloneNodeList(param.getModifiers),
+        cloneNodeList(param.getAnnotations),
+        param.getType.clone(),
         param.isVarArgs,
-        param.getVarArgsAnnotations,
+        cloneNodeList(param.getVarArgsAnnotations),
         _
       )
     )

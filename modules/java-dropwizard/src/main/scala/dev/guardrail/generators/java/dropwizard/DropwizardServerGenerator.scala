@@ -254,7 +254,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
       clsType <- safeParseClassOrInterfaceType(clsName)
     } yield {
       val cls = new ClassOrInterfaceDeclaration(new NodeList(publicModifier, staticModifier), false, clsName)
-        .setExtendedTypes(new NodeList(superClassType))
+        .setExtendedTypes(new NodeList(superClassType.clone()))
         .addAnnotation(generatedAnnotation(getClass))
 
       val (classDecls, creator) = response.value
@@ -283,12 +283,12 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
           val creator = new FieldDeclaration(
             new NodeList(publicModifier, staticModifier, finalModifier),
-            new VariableDeclarator(clsType, clsName, new ObjectCreationExpr(null, clsType, new NodeList))
+            new VariableDeclarator(clsType.clone(), clsName, new ObjectCreationExpr(null, clsType.clone(), new NodeList))
           )
 
           (List(constructor), creator)
         } { valueType =>
-          val constructParam = new Parameter(new NodeList(finalModifier), valueType.unbox, new SimpleName("entityBody"))
+          val constructParam = new Parameter(new NodeList(finalModifier), valueType.unbox.clone(), new SimpleName("entityBody"))
 
           val constructor = new ConstructorDeclaration(new NodeList(privateModifier), clsName)
             .addParameter(constructParam)
@@ -314,10 +314,10 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
 
           val entityBodyField = new FieldDeclaration(
             new NodeList(privateModifier, finalModifier),
-            new VariableDeclarator(valueType, "entityBody")
+            new VariableDeclarator(valueType.clone(), "entityBody")
           )
 
-          val entityBodyGetter = new MethodDeclaration(new NodeList(publicModifier), valueType, "getEntityBody")
+          val entityBodyGetter = new MethodDeclaration(new NodeList(publicModifier), valueType.clone(), "getEntityBody")
             .setBody(
               new BlockStmt(
                 new NodeList(
@@ -326,12 +326,12 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
               )
             )
 
-          val creator = new MethodDeclaration(new NodeList(publicModifier, staticModifier), clsType, clsName)
-            .addParameter(constructParam)
+          val creator = new MethodDeclaration(new NodeList(publicModifier, staticModifier), clsType.clone(), clsName)
+            .addParameter(constructParam.clone())
             .setBody(
               new BlockStmt(
                 new NodeList(
-                  new ReturnStmt(new ObjectCreationExpr(null, clsType, new NodeList(constructParam.getNameAsExpression)))
+                  new ReturnStmt(new ObjectCreationExpr(null, clsType.clone(), new NodeList(constructParam.getNameAsExpression)))
                 )
               )
             )
@@ -460,7 +460,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
               val tpe        = if (isOptional) parameter.getType.containedType else parameter.getType
 
               def transform(to: Type): Target[Parameter] = {
-                parameter.setType(if (isOptional) to.liftOptionalType else to)
+                parameter.setType(if (isOptional) to.clone().liftOptionalType else to.clone())
                 if (!isOptional) {
                   parameter.getAnnotations.add(0, new MarkerAnnotationExpr("UnwrapValidatedValue"))
                 }
@@ -490,8 +490,8 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
             // on disk and use java.io.File.
             def transformMultipartFile(parameter: Parameter, param: LanguageParameter[JavaLanguage]): Target[Parameter] =
               (param.isFile, param.required) match {
-                case (true, true)  => Target.pure(parameter.setType(FILE_TYPE))
-                case (true, false) => Cl.liftOptionalType(FILE_TYPE).map(parameter.setType)
+                case (true, true)  => Target.pure(parameter.setType(FILE_TYPE.clone()))
+                case (true, false) => Cl.liftOptionalType(FILE_TYPE.clone()).map(parameter.setType)
                 case _             => Target.pure(parameter)
               }
 
@@ -575,7 +575,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
               methodParams = (annotatedMethodParams ++ bareMethodParams).map(boxParameterTypes)
               _            = methodParams.foreach(method.addParameter)
               _ = method.addParameter(
-                new Parameter(new NodeList(finalModifier), ASYNC_RESPONSE_TYPE, new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
+                new Parameter(new NodeList(finalModifier), ASYNC_RESPONSE_TYPE.clone(), new SimpleName("asyncResponse")).addMarkerAnnotation("Suspended")
               )
 
               (responseType, resultResumeBody) = ServerRawResponse(operation)
@@ -616,7 +616,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
                         new ExpressionStmt(
                           new VariableDeclarationExpr(
                             new VariableDeclarator(
-                              RESPONSE_BUILDER_TYPE,
+                              RESPONSE_BUILDER_TYPE.clone(),
                               "builder",
                               new MethodCallExpr(
                                 new NameExpr("Response"),
@@ -640,7 +640,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
                   )
                 } { _ =>
                   (
-                    RESPONSE_TYPE,
+                    RESPONSE_TYPE.clone(),
                     new NodeList(
                       new ExpressionStmt(
                         new MethodCallExpr(
@@ -737,7 +737,7 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
     } yield {
       val resourceConstructor = new ConstructorDeclaration(new NodeList(publicModifier), resourceName)
       resourceConstructor.addAnnotation(new MarkerAnnotationExpr(new Name("Inject")))
-      resourceConstructor.addParameter(new Parameter(new NodeList(finalModifier), handlerType, new SimpleName("handler")))
+      resourceConstructor.addParameter(new Parameter(new NodeList(finalModifier), handlerType.clone(), new SimpleName("handler")))
       resourceConstructor.setBody(
         new BlockStmt(
           new NodeList(
@@ -754,12 +754,12 @@ class DropwizardServerGenerator private (implicit Cl: CollectionsLibTerms[JavaLa
         new FieldDeclaration(
           new NodeList(privateModifier, staticModifier, finalModifier),
           new VariableDeclarator(
-            LOGGER_TYPE,
+            LOGGER_TYPE.clone(),
             "logger",
-            new MethodCallExpr(new NameExpr("LoggerFactory"), "getLogger", new NodeList[Expression](new ClassExpr(resourceType)))
+            new MethodCallExpr(new NameExpr("LoggerFactory"), "getLogger", new NodeList[Expression](new ClassExpr(resourceType.clone())))
           )
         ),
-        new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(handlerType, "handler")),
+        new FieldDeclaration(new NodeList(privateModifier, finalModifier), new VariableDeclarator(handlerType.clone(), "handler")),
         resourceConstructor
       )
 
