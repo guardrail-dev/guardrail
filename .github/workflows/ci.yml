@@ -13,6 +13,9 @@ jobs:
   core:
     name: Run core tests
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GUARDRAIL_CI: true
     strategy:
       matrix:
         java: [ '14' ]
@@ -43,9 +46,6 @@ jobs:
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
       run:  sbt ++${{ matrix.scala.version }} 'show stableVersion' clean samples/clean checkFormatting coverage test coverageAggregate versionPolicyCheck microsite/compile
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GUARDRAIL_CI: true
     - uses: codecov/codecov-action@84508663e988701840491b86de86b666e8a86bed # 4.3.0
       if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       with:
@@ -56,6 +56,9 @@ jobs:
   java:
     runs-on: ubuntu-latest
     needs: [core]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GUARDRAIL_CI: true
     strategy:
       matrix:
         java: [ '14', '17' ]
@@ -95,6 +98,9 @@ jobs:
   scala:
     runs-on: ubuntu-latest
     needs: [core]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GUARDRAIL_CI: true
     strategy:
       matrix:
         java: [ '14', '17' ]
