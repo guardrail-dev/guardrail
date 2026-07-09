@@ -47,16 +47,13 @@ object AkkaHttpHelper {
     case _                        => Left(s"Unknown modelGeneratorType: ${modelGeneratorType}")
   }
 
-  def protocolImplicits(modelGeneratorType: ModelGeneratorType): Target[Term.ParamClause] = modelGeneratorType match {
-    case _: CirceModelGenerator => Target.pure(Term.ParamClause(Nil))
+  def protocolImplicits(modelGeneratorType: ModelGeneratorType): Target[List[Term.Param]] = modelGeneratorType match {
+    case _: CirceModelGenerator => Target.pure(Nil)
     case _: JacksonModelGenerator =>
       Target.pure(
-        Term.ParamClause(
-          List(
-            param"mapper: com.fasterxml.jackson.databind.ObjectMapper",
-            param"validator: javax.validation.Validator"
-          ),
-          Some(Mod.Implicit())
+        List(
+          param"mapper: com.fasterxml.jackson.databind.ObjectMapper",
+          param"validator: javax.validation.Validator"
         )
       )
     case _ => Target.raiseError(RuntimeFailure(s"Unknown modelGeneratorType: ${modelGeneratorType}"))

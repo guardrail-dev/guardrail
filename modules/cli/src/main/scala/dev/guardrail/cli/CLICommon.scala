@@ -7,6 +7,7 @@ import scala.language.reflectiveCalls
 
 import dev.guardrail._
 import dev.guardrail.core.{ LogLevel, LogLevels }
+import dev.guardrail.generators.ScalaVersion
 import dev.guardrail.terms.protocol.PropertyRequirement
 import dev.guardrail.runner.GuardrailRunner
 
@@ -50,6 +51,7 @@ trait CLICommon extends GuardrailRunner {
     |   --module <module name>                           : Explicitly select libraries to satisfy composition requirements
     |   --custom-extraction                              : Permit supplying an akka-http Directive into the generated guardrail routing layer (server only)
     |   --package-from-tags                              : Use the tags, defined in the OpenAPI specification, to guide the generated package structures
+    |   --scala-version <version>                        : Target Scala version for generated code (2.12, 2.13, 3). Default: 2.13
     |
     |Examples:
     |  Generate two clients, put both in src/main/scala, under different packages, one with tracing, one without:
@@ -87,6 +89,12 @@ trait CLICommon extends GuardrailRunner {
       case "simple"  => Target.pure(AuthImplementation.Simple)
       case "custom"  => Target.pure(AuthImplementation.Custom)
       case _         => Target.raiseError(UnparseableArgument(s"${arg} ${value}", "Expected one of 'disable', 'native', 'simple' or 'custom'"))
+    }
+
+  def parseScalaVersion(arg: String, value: String): Target[ScalaVersion] =
+    ScalaVersion.fromString(value) match {
+      case Right(v)  => Target.pure(v)
+      case Left(err) => Target.raiseError(UnparseableArgument(arg, err))
     }
 
   def parseArgs(args: Array[String]): Target[List[Args]] = {
@@ -159,6 +167,11 @@ trait CLICommon extends GuardrailRunner {
               for {
                 auth <- parseAuthImplementation(arg, value)
                 res  <- Continue((sofar.modifyContext(_.withAuthImplementation(auth)) :: already, xs))
+              } yield res
+            case (sofar :: already, (arg @ "--scala-version") :: value :: xs) =>
+              for {
+                scalaVer <- parseScalaVersion(arg, value)
+                res      <- Continue((sofar.modifyContext(_.withScalaVersion(scalaVer)) :: already, xs))
               } yield res
             case (_, unknown) =>
               debug("Unknown argument") >> Bail(UnknownArguments(unknown))

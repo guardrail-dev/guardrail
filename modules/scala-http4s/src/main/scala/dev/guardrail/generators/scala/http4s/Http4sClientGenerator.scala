@@ -14,8 +14,10 @@ import dev.guardrail.generators.LanguageParameters
 import dev.guardrail.generators.RawParameterName
 import dev.guardrail.generators.RenderedClientOperation
 import dev.guardrail.generators.scala.ResponseADTHelper
+import dev.guardrail.generators.scala.Scala3Compat
 import dev.guardrail.generators.scala.ScalaLanguage
 import dev.guardrail.generators.scala.syntax._
+import dev.guardrail.generators.ScalaVersion
 import dev.guardrail.generators.spi.ClientGeneratorLoader
 import dev.guardrail.generators.spi.ModuleLoadResult
 import dev.guardrail.generators.syntax._
@@ -95,7 +97,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
           }
           (responseDefinitions, clientOperations) = responseClientPair.unzip
           tracingName                             = Option(className.mkString("-")).filterNot(_.isEmpty)
-          ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing)
+          ctorArgs    <- clientClsArgs(tracingName, serverUrls, context.tracing, context.scalaVersion)
           staticDefns <- buildStaticDefns(clientName, tracingName, serverUrls, ctorArgs, context.tracing)
           client <- buildClient(
             clientName,
@@ -485,7 +487,12 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
   }
   def getImports(tracing: Boolean): Target[List[scala.meta.Import]]      = Target.pure(List(q"import org.http4s.circe._"))
   def getExtraImports(tracing: Boolean): Target[List[scala.meta.Import]] = Target.pure(List.empty)
-  def clientClsArgs(tracingName: Option[String], serverUrls: Option[NonEmptyList[URI]], tracing: Boolean): Target[List[Term.ParamClause]] = {
+  def clientClsArgs(
+      tracingName: Option[String],
+      serverUrls: Option[NonEmptyList[URI]],
+      tracing: Boolean,
+      scalaVersion: ScalaVersion
+  ): Target[List[Term.ParamClause]] = {
     val ihc = param"httpClient: Http4sClient[F]"
     val ief = param"F: Async[F]"
     Target.pure(
@@ -496,7 +503,7 @@ class Http4sClientGenerator(version: Http4sVersion) extends ClientTerms[ScalaLan
                                            else None),
           None
         ),
-        Term.ParamClause(List(ief, ihc), Some(Mod.Implicit()))
+        Scala3Compat.implicitsClause(List(ief, ihc), scalaVersion)
       )
     )
   }
