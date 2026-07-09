@@ -46,7 +46,7 @@ jobs:
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
       run:  sbt ++${{ matrix.scala.version }} 'show stableVersion' clean samples/clean checkFormatting coverage test coverageAggregate versionPolicyCheck microsite/compile
-    - uses: codecov/codecov-action@84508663e988701840491b86de86b666e8a86bed # 4.3.0
+    - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # 7.0.0
       if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
@@ -89,7 +89,7 @@ jobs:
           ${{ runner.os }}-scala-${{ matrix.scala.version }}-
     - name: Run tests
       run:  sbt ++${{ matrix.scala.version }} clean samples/clean coverage "runExample java ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test coverageAggregate
-    - uses: codecov/codecov-action@84508663e988701840491b86de86b666e8a86bed # 4.3.0
+    - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # 7.0.0
       if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
@@ -137,7 +137,7 @@ jobs:
     - name: Run tests
       if: ${{ env.combo_enabled == 'true' }}
       run:  sbt ++${{ matrix.scala.version }} clean samples/clean coverage "runExample scala ${{ matrix.framework.framework }}" ${{ matrix.framework.project }}/test coverageAggregate
-    - uses: codecov/codecov-action@84508663e988701840491b86de86b666e8a86bed # 4.3.0
+    - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # 7.0.0
       if: ${{ env.combo_enabled == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
       with:
         file: ./target/scala-${{ matrix.scala.bincompat }}/scoverage-report/scoverage.xml
