@@ -24,8 +24,8 @@ trait IndexedDistributiveImplicits {
     def cotraverse[B](f: F[A] => B): G[B]                                 = IndexedDistributive.cotraverse(value)(f)
     def indexedCosequence: G[F[A]]                                        = cotraverse(identity)
     def flatCotraverse[B](f: F[A] => G[B])(implicit ev: FlatMap[G]): G[B] = ev.flatten(IndexedDistributive.cotraverse(value)(f))
-    def flatExtract[B](f: F[A] => G[B])(implicit G: MonoidK[G]): G[B]     = value.cotraverse(f).foldLeft(G.empty[B])(G.combineK)
-    def exists(f: F[A] => Boolean): Boolean                               = value.indexedDistribute.foldLeft(false) { case (acc, n) => acc || f(n) }
+    def flatExtract[B](f: F[A] => G[B])(implicit G: MonoidK[G]): G[B]     = cotraverse(f).foldLeft(G.empty[B])(G.combineK)
+    def exists(f: F[A] => Boolean): Boolean                               = indexedDistribute.foldLeft(false) { case (acc, n) => acc || f(n) }
   }
 
   // These don't belong here, but they intersect a lot with the usage of IndexedDistributive

@@ -82,7 +82,7 @@ object Build {
     organization := "dev.guardrail",
     licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
 
-    crossScalaVersions := Seq("2.12.18", "2.13.12"),
+    crossScalaVersions := Seq("2.12.18", "2.13.18"),
     scalaVersion := "2.12.18",
 
     // early-semver was a mistake. We already have early-semver guaratees during CI, but including this in the publishing POM
@@ -106,6 +106,13 @@ object Build {
     scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
     scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
     Test / parallelExecution := true,
+    ScoverageKeys.coverageScalacPluginVersion := {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) if scalaVersion.value == "2.12.16" => "2.3.0"
+        case _                                                => "2.5.2"
+      }
+    },
+    wartremoverCrossVersion := CrossVersion.binary,
     addCompilerPlugin("org.typelevel" % "kind-projector"  % "0.13.4" cross CrossVersion.full),
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
     addCompilerPlugin(scalafixSemanticdb),
