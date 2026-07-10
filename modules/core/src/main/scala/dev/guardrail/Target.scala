@@ -47,7 +47,7 @@ object Target {
             e match {
               case Left(b) =>
                 work(b, if (loggerEnabled.get) prependedLogs |+| la else prependedLogs)(f)
-              case Right(a) => new TargetValue(a, prependedLogs |+| la)
+              case Right(result) => new TargetValue(result, prependedLogs |+| la)
             }
         }
       work(a, StructuredLogger.Empty)(f)
