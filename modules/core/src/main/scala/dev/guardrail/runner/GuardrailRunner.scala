@@ -14,7 +14,7 @@ abstract class GuardrailRunner {
     for {
       args            <- Target.fromOption(NonEmptyList.fromList(args.toList), NoArgsSpecified)
       coreTermsLoader <- CoreTermsLoader.load(language, args, MissingDependency(s"${language}-support"))
-      result <- coreTermsLoader.toList.flatTraverse(rs =>
+      result          <- coreTermsLoader.toList.flatTraverse(rs =>
         ReadSpec
           .readSpec(rs)
           .flatMap(_.traverse(WriteTree.writeTree))

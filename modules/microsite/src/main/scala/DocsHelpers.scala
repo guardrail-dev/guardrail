@@ -58,7 +58,7 @@ object DocsHelpers {
             val o                                                             = q"object ${Term.Name(className)} { ..${definitions} }"
             val Right(q"""class ${name}(...${args}) {
               ..${defns}
-            }""") = g.client.head: @unchecked
+            }""")        = g.client.head: @unchecked
             val basePath = defns.collectFirst { case v @ q"val basePath: String = $_" =>
               v
             }
@@ -72,7 +72,7 @@ object DocsHelpers {
               case q"def ${name}(...${args}): $tpe = $_" if !firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
             }
             val matched = (basePath ++ firstDefn ++ rest).toList
-            val c = q"""class ${name}(...${args}) {
+            val c       = q"""class ${name}(...${args}) {
               ..${matched}
             }"""
 
@@ -123,7 +123,7 @@ object DocsHelpers {
             val o                                                             = q"object ${Term.Name(className)} { ..${definitions} }"
             val Right(q"""class ${name}[..${tparms}](...${args}) {
               ..${defns}
-            }""") = g.client.head: @unchecked
+            }""")        = g.client.head: @unchecked
             val basePath = defns.collectFirst { case v @ q"val basePath: String = $_" =>
               v
             }
@@ -137,7 +137,7 @@ object DocsHelpers {
               case q"def ${name}(...${args}): $tpe = $_" if !firstName.contains(name) => q"def ${name}(...${args}): $tpe = ???"
             }
             val matched = (basePath ++ firstDefn ++ rest).toList
-            val c = q"""class ${name}[..${tparms}](...${args}) {
+            val c       = q"""class ${name}[..${tparms}](...${args}) {
               ..${matched}
             }"""
 

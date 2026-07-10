@@ -9,7 +9,7 @@ import java.util.regex.Matcher.quoteReplacement
 
 package syntax {
   class RichNotNullShower[A](value: A) {
-    def showNotNull: String = showNotNullIndented(0)
+    def showNotNull: String                      = showNotNullIndented(0)
     def showNotNullIndented(indent: Int): String =
       ("  " * indent) + value.toString().linesIterator.filterNot(_.contains(": null")).mkString("\n" + ("  " * indent))
   }
@@ -40,7 +40,7 @@ package object syntax extends SpecializedSyntax {
    * ("foo9", "bar"), or ("foo", "9bar").  In these cases we'll choose to assume
    * that digits are not initial group characters.
    */
-  private val SPLIT_DELIMITERS = "[-_\\s\\.]+".r
+  private val SPLIT_DELIMITERS   = "[-_\\s\\.]+".r
   private val BOUNDARY_SPLITTERS = List(
     "([^A-Z])([A-Z])".r,
     "([A-Z]+)([A-Z][a-z]+)".r

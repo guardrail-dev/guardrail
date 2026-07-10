@@ -72,8 +72,8 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
           val _         = source.getChildNodes.asScala.headOption.fold(source.addOrphanComment _)(_.setComment)(GENERATED_CODE_COMMENT)
           val sourceStr = source.toString
           Future {
-            val className = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
-            val formatter = ToolFactory.createCodeFormatter(FORMATTER_OPTIONS)
+            val className                                      = Try[TypeDeclaration[_]](source.getType(0)).fold(_ => "(unknown)", _.getNameAsString)
+            val formatter                                      = ToolFactory.createCodeFormatter(FORMATTER_OPTIONS)
             val result: Either[Option[Throwable], Array[Byte]] = for {
               textEdit <- Option(formatter.format(CodeFormatter.K_COMPILATION_UNIT, sourceStr, 0, sourceStr.length, 0, "\n")).toRight(None)
               doc = new Document(sourceStr)
@@ -165,7 +165,7 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
   override def formatFieldName(fieldName: String): Target[String]         = Target.pure(fieldName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
   override def formatMethodName(methodName: String): Target[String]       = Target.pure(methodName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
   override def formatMethodArgName(methodArgName: String): Target[String] = Target.pure(methodArgName.escapeInvalidCharacters.toCamelCase.escapeIdentifier)
-  override def formatEnumName(enumValue: String): Target[String] =
+  override def formatEnumName(enumValue: String): Target[String]          =
     Target.pure(enumValue.escapeInvalidCharacters.toSnakeCase.toUpperCase(Locale.US).escapeIdentifier)
 
   override def parseType(tpe: Tracker[String]): Target[Option[com.github.javaparser.ast.`type`.Type]] =
@@ -175,7 +175,7 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
         println(s"Warning: Unparsable x-java-type: ${tpe.unwrapTracker} $err (${tpe.showHistory})")
         None
       }
-  override def parseTypeName(tpe: String): Target[Option[JavaTypeName]] = Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseTypeName)
+  override def parseTypeName(tpe: String): Target[Option[JavaTypeName]]               = Option(tpe).map(_.trim).filterNot(_.isEmpty).traverse(safeParseTypeName)
   override def pureTermName(tpe: String): Target[com.github.javaparser.ast.expr.Name] =
     Option(tpe).map(_.trim).filterNot(_.isEmpty).map(safeParseName).getOrElse(Target.raiseUserError("A structure's name is empty"))
   override def pureTypeName(tpe: String): Target[JavaTypeName] =
@@ -189,7 +189,7 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
     safeParseSimpleName(nameStr.asString).map(name => new Parameter(new NodeList(finalModifier), tpe.clone(), name))
   override def typeNamesEqual(a: JavaTypeName, b: JavaTypeName): Target[Boolean] = Target.pure(a.asString == b.asString)
   override def typesEqual(a: com.github.javaparser.ast.`type`.Type, b: com.github.javaparser.ast.`type`.Type): Target[Boolean] = Target.pure(a.equals(b))
-  override def extractTypeName(tpe: com.github.javaparser.ast.`type`.Type): Target[Option[JavaTypeName]] = {
+  override def extractTypeName(tpe: com.github.javaparser.ast.`type`.Type): Target[Option[JavaTypeName]]                       = {
     def extractTypeName(tpe: Type): Target[JavaTypeName] = tpe match {
       case a: AstArrayType if a.getComponentType.isPrimitiveType =>
         extractTypeName(new AstArrayType(a.getComponentType.asPrimitiveType().toBoxedType))
@@ -202,8 +202,8 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
     }
     extractTypeName(tpe).map(Option.apply)
   }
-  override def extractTermName(term: com.github.javaparser.ast.expr.Name): Target[String] = Target.pure(term.asString)
-  override def extractTermNameFromParam(param: Parameter): Target[String]                 = Target.pure(param.getNameAsString)
+  override def extractTermName(term: com.github.javaparser.ast.expr.Name): Target[String]                 = Target.pure(term.asString)
+  override def extractTermNameFromParam(param: Parameter): Target[String]                                 = Target.pure(param.getNameAsString)
   override def selectType(typeNames: NonEmptyList[String]): Target[com.github.javaparser.ast.`type`.Type] =
     safeParseType(typeNames.toList.mkString("."))
   override def selectTerm(termNames: NonEmptyList[String]): Target[com.github.javaparser.ast.Node] =
@@ -234,8 +234,8 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
   override def numberType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType("java.math.BigDecimal")
   override def intType(): Target[com.github.javaparser.ast.`type`.Type]                          = safeParseType("Integer")
   override def longType(): Target[com.github.javaparser.ast.`type`.Type]                         = safeParseType("Long")
-  override def integerType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType("java.math.BigInteger")
-  override def booleanType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] = safeParseType("Boolean")
+  override def integerType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type]                       = safeParseType("java.math.BigInteger")
+  override def booleanType(format: Option[String]): Target[com.github.javaparser.ast.`type`.Type]                       = safeParseType("Boolean")
   override def fallbackType(tpe: Option[String], format: Option[String]): Target[com.github.javaparser.ast.`type`.Type] =
     Target.fromOption(tpe, UserError("Missing type")).flatMap(safeParseType)
 
@@ -323,7 +323,7 @@ class JavaGenerator private extends LanguageTerms[JavaLanguage, Target] {
       extraTypes: List[com.github.javaparser.ast.Node]
   ): Target[Option[WriteTree]] =
     for {
-      pkgDecl <- dtoComponents.traverse(buildPkgDecl)
+      pkgDecl   <- dtoComponents.traverse(buildPkgDecl)
       writeTree <- pkgDecl.traverse(x =>
         prettyPrintSource(resolveFile(dtoPackagePath)(List.empty).resolve("package-info.java"), new CompilationUnit().setPackageDeclaration(x))
       )

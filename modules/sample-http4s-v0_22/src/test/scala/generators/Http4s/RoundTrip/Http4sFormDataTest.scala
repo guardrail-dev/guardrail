@@ -59,7 +59,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
       Client.fromHttpApp(
         new FooResource[IO]()
           .routes(new FooHandler[IO] {
-            def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status, description: String): IO[DoFooResponse] = ???
+            def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status, description: String): IO[DoFooResponse]                 = ???
             def doBar(respond: DoBarResponse.type)(status: Option[sdefs.definitions.Status], description: Option[String]): IO[DoBarResponse] =
               if (status.contains(sdefs.definitions.Status.Ok)) {
                 IO.pure(respond.Ok)
@@ -102,7 +102,7 @@ class Http4sFormDataTest extends AnyFunSuite with Matchers with EitherValues {
           .routes(new FooHandler[IO] {
             def doFoo(respond: DoFooResponse.type)(status: sdefs.definitions.Status, description: String): IO[DoFooResponse]                 = ???
             def doBar(respond: DoBarResponse.type)(status: Option[sdefs.definitions.Status], description: Option[String]): IO[DoBarResponse] = ???
-            def doBaz(respond: DoBazResponse.type)(status: Vector[String], description: Option[Vector[String]]): IO[DoBazResponse] =
+            def doBaz(respond: DoBazResponse.type)(status: Vector[String], description: Option[Vector[String]]): IO[DoBazResponse]           =
               if (status.size == 1 && status.iterator.next() == sdefs.definitions.Status.Ok.toString) {
                 IO.pure(respond.Ok)
               } else {
