@@ -850,17 +850,18 @@ class AsyncHttpClientClientGenerator private (implicit Cl: CollectionsLibTerms[J
                                               )
 
                                             case contentType =>
-                                              val bodyGetter = valueType match {
-                                                case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
-                                                case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
-                                                case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
-                                                case _ if valueType.isNamed("String")      => "getResponseBody"
-                                                case _                                     =>
-                                                  println(
-                                                    s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
-                                                  )
-                                                  "getResponseBody"
-                                              }
+                                              val bodyGetter =
+                                                valueType match {
+                                                  case _ if valueType.isNamed("InputStream") => "getResponseBodyAsStream"
+                                                  case _ if valueType.isNamed("byte[]")      => "getResponseBodyAsBytes"
+                                                  case _ if valueType.isNamed("ByteBuffer")  => "getResponseBodyAsByteBuffer"
+                                                  case _ if valueType.isNamed("String")      => "getResponseBody"
+                                                  case _                                     =>
+                                                    println(
+                                                      s"WARNING: Don't know how to handle response of type ${valueType.asString} for content type $contentType at ${operation.showHistory}; falling back to String"
+                                                    )
+                                                    "getResponseBody"
+                                                }
                                               val bodyGetterExpr = new MethodCallExpr(
                                                 new NameExpr("response"),
                                                 bodyGetter,
