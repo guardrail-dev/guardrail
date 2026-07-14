@@ -83,6 +83,7 @@ publishMavenStyle := true
 
 val javaSampleSettings = Seq(
     Test / testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+    Test / testOptions += Tests.Setup(() => System.setProperty("net.bytebuddy.experimental", "true")),
     javacOptions ++= Seq(
       "-Xlint:all"
     ),

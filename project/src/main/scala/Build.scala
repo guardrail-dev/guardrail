@@ -93,6 +93,7 @@ object Build {
       "-Xfatal-warnings",
       "-Ydelambdafy:method",
       "-Yrangepos",
+      "-release:17",
       // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/guardrail-dev/guardrail/pull/282
       "-feature",
       "-unchecked",
@@ -100,6 +101,7 @@ object Build {
       "-encoding",
       "utf8"
     ),
+    javacOptions ++= Seq("--release", "17"),
     Test / scalacOptions -= "-Xfatal-warnings",
     Compile / console / scalacOptions -= "-Xfatal-warnings",
     Compile / consoleQuick / scalacOptions -= "-Xfatal-warnings",
