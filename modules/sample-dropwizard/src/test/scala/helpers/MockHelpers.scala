@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
 import javax.ws.rs.container.AsyncResponse
+import org.mockito.Mockito
 import org.asynchttpclient.Response
 import org.asynchttpclient.uri.Uri
 import org.mockito.{ ArgumentMatchersSugar, MockitoSugar }
@@ -49,7 +50,7 @@ object MockHelpers extends Assertions with MockitoSugar with ArgumentMatchersSug
         when(response.getResponseBody(any)) thenReturn responseStr
         when(response.getResponseBody) thenReturn responseStr
         when(response.getResponseBodyAsStream) thenReturn new ByteArrayInputStream(responseBytes)
-        when(response.getResponseBodyAsByteBuffer) thenReturn ByteBuffer.wrap(responseBytes)
+        Mockito.doAnswer(_ => ByteBuffer.wrap(responseBytes)).when(response).getResponseBodyAsByteBuffer
         when(response.getResponseBodyAsBytes) thenReturn responseBytes
     }
     response
